@@ -1,3 +1,4 @@
+import { isR1DefaultImageFieldConfig } from '@shared/form/r1-normal-image-contract'
 import { appointmentReplacementContextFromRead, appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
 import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead, WorkflowNodeRead } from '@shared/ports'
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
@@ -16,6 +17,7 @@ import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead } fr
 import { parseR1RepeatGrant } from './r1-repeat-authorization'
 import { parseR1FormsGrant } from './r1-forms-authorization'
 import { assertSurveyLeakageCauseReadValue } from '@features/work-orders/survey-leakage-cause'
+import { createNormalR1FileCodec } from '@adapters/api/normal-r1-file-codec'
 
 type Row = Record<string, unknown>
 const deny = (): never => { throw Error('当前表单的身份、关联或完整性无法核实，请重新读取工单。') }
@@ -100,7 +102,7 @@ export function createNormalNodeFormsReader(input: {
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
     originals: ReadonlyMap<string, string>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
-    schemaAtRead: string; appointmentRoute?: true; appointmentSeal?: string } | null = null
+    schemaAtRead: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
   const appointmentReads = new WeakMap<object, {snapshot:R1NodeFormsSnapshot; fingerprint:string; schema:string; raw:string; recordId:string}>()
   const appointmentCurrent = (snapshot:R1NodeFormsSnapshot, recordId:string) => {
     if(!current?.appointmentRoute || current.snapshot!==snapshot || fingerprint()!==current.fingerprint
@@ -110,6 +112,7 @@ export function createNormalNodeFormsReader(input: {
       || !current.originals.has(recordId))return null
     return current
   }
+  const issuedFileRoutes = new WeakMap<object, { snapshot:R1NodeFormsSnapshot; fingerprint:string; schema:string }>()
   const issuedRoutes = new WeakMap<object, { snapshot: R1NodeFormsSnapshot; recordId: string;
     fingerprint: string; schemaAtRead: string; raw: string; original: Readonly<Record<string, unknown>> }>()
   const schemaIdentity = (snapshot: R1NodeFormsSnapshot) => JSON.stringify([snapshot.node,
@@ -147,6 +150,26 @@ export function createNormalNodeFormsReader(input: {
       if(!stamp||!source||stamp.snapshot!==snapshot||stamp.recordId!==recordId||stamp.fingerprint!==source.fingerprint
         ||stamp.schema!==source.schemaAtRead||stamp.raw!==source.originals.get(recordId))return false
       try{return formsExtsJson((evidence as {original:Row}).original)===stamp.raw}catch{return false}
+    },
+    currentNormalFileRoute(snapshot) {
+      if(!current?.fileRoute || current.snapshot!==snapshot || fingerprint()!==current.fingerprint
+        || snapshot.workOrderId!==current.fileRoute.workOrderId
+        || JSON.stringify(snapshot.records.map(record=>record.id))!==JSON.stringify([...current.originals.keys()])
+        || schemaIdentity(snapshot)!==current.schemaAtRead
+        || input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId)!==true)return null
+      const evidence=Object.freeze({...current.fileRoute})
+      issuedFileRoutes.set(evidence,{snapshot,fingerprint:current.fingerprint,schema:current.schemaAtRead})
+      return evidence
+    },
+    isCurrentNormalFileRoute(snapshot,evidence) {
+      if(!evidence || typeof evidence!=='object' || !current?.fileRoute)return false
+      const stamp=issuedFileRoutes.get(evidence)
+      return Boolean(stamp && current.snapshot===snapshot && stamp.snapshot===snapshot
+        && snapshot.workOrderId===current.fileRoute.workOrderId
+        && JSON.stringify(snapshot.records.map(record=>record.id))===JSON.stringify([...current.originals.keys()])
+        && fingerprint()===current.fingerprint && stamp.fingerprint===current.fingerprint
+        && stamp.schema===current.schemaAtRead && schemaIdentity(snapshot)===stamp.schema
+        && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId)===true)
     },
     isCurrent(snapshot) { return current?.snapshot === snapshot && fingerprint() === current.fingerprint
       && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true },
@@ -353,12 +376,35 @@ export function createNormalNodeFormsReader(input: {
         const binding = bindings[index]
         hydrated.push(binding ? { ...field, options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
       }
+      const routeColName=ext.colName
+      const routeFacts = node.sourceNodeType==='forms' && ext.type==='0'
+        && typeof routeColName==='string' && routeColName!=='serviceAppointment' && routeColName.trim()===routeColName
+        && ['id','extId','definitionId','formDefinitionId'].every(key=>!Object.hasOwn(ext,key)||ext[key]===definitionId)
+        && (!Object.hasOwn(ext,'collectionName')||ext.collectionName===''||ext.collectionName===routeColName)
+        && fields.every(field=>field.colName===routeColName
+          && (!Object.hasOwn(field,'collectionName')||field.collectionName===''||field.collectionName===routeColName))
+        ? Object.freeze({tenantId:input.tenantId,workOrderId,runtimeNodeId,workflowRunId:id(node.runId),
+          formDefinitionId:definitionId,type:'0' as const,colName:routeColName,collectionName:`frm_${input.tenantId}_${routeColName}`}) : undefined
+      // SOURCE create handles Survey/inspectionAppointment before checking type.
+      // Only the ordinary generic collection branch is eligible for this new
+      // file create route; the presence of a file field is never type evidence.
+      const fileRoute=routeFacts && fields.length<=50 && definition.purpose===undefined
+        && !['survey','inspectionAppointment','serviceAppointment'].includes(routeFacts.colName)
+        && hydrated.filter(field=>field.type==='file'&&!field.readOnly
+          && !node.formFieldIdsReadOnly?.includes(field.fieldId)&&fillableFieldIds?.includes(field.fieldId))
+          .every(field=>isR1DefaultImageFieldConfig(fields.find(raw=>raw._id===field.fieldId)))
+        && hydrated.some(field=>field.type==='file'&&!field.readOnly
+          && !node.formFieldIdsReadOnly?.includes(field.fieldId)&&fillableFieldIds?.includes(field.fieldId))
+        ?routeFacts:undefined
+      const normalFileCodec=fileRoute?createNormalR1FileCodec({...definition,fields:hydrated},
+        (fillableFieldIds??[]).filter(fieldId=>!node.formFieldIdsReadOnly?.includes(fieldId))):undefined
       // Attachment decoding belongs only to this read-only rollout, never the
       // scoped write snapshots consumed by edit/save/completion capabilities.
       const readOnlySurveyMedia = input.env.VITE_XLINK_ENABLE_REAL_WRITES === 'false'
         && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
         ? createSurveyReadOnlyMediaCodec(definition, ext.colName, fields) : undefined
-      const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia, scope: {
+      const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia:normalFileCodec?undefined:readOnlySurveyMedia,
+        ...(normalFileCodec?{valueCodec:normalFileCodec}:{}), scope: {
         tenantId: input.tenantId, workOrderId, runtimeNodeId, workflowRunId: id(node.runId),
         formDefinitionId: definitionId, sourceNodeType: node.sourceNodeType as 'forms' | 'repeat',
       }, isCurrent: () => ticket === generation && fingerprint() === identity,
@@ -390,18 +436,9 @@ export function createNormalNodeFormsReader(input: {
         && (!Object.hasOwn(ext,'collectionName')||ext.collectionName===''||ext.collectionName===ext.colName)
         && fields.every(f=>f.colName===ext.colName&&(!Object.hasOwn(f,'collectionName')||f.collectionName===''||f.collectionName===ext.colName))
         ?true:undefined
-      const routeColName=ext.colName
-      const genericRoute = node.sourceNodeType==='forms' && fields.length>50 && ext.type==='0'
-        && typeof routeColName==='string' && routeColName!=='serviceAppointment' && routeColName.trim()===routeColName
-        && ['id','extId','definitionId','formDefinitionId'].every(key=>!Object.hasOwn(ext,key)||ext[key]===definitionId)
-        && (!Object.hasOwn(ext,'collectionName')||ext.collectionName===''||ext.collectionName===routeColName)
-        && fields.every(field=>field.colName===routeColName
-          && (!Object.hasOwn(field,'collectionName')||field.collectionName===''||field.collectionName===routeColName))
-        ? Object.freeze({tenantId:input.tenantId,workOrderId,runtimeNodeId,workflowRunId:id(node.runId),
-          formDefinitionId:definitionId,type:'0' as const,colName:routeColName,collectionName:`frm_${input.tenantId}_${routeColName}`}) : undefined
+      const genericRoute = fields.length>50?routeFacts:undefined
       current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
-        ...(appointmentRoute?{appointmentRoute,appointmentSeal:JSON.stringify([workOrderId,schemaIdentity(snapshot)])}:{}),
-        ...(genericRoute?{genericRoute}:{}), ...(formsExts ? { formsExts } : {}) }
+        ...(appointmentRoute?{appointmentRoute,appointmentSeal:JSON.stringify([workOrderId,schemaIdentity(snapshot)])}:{}), ...(genericRoute?{genericRoute}:{}), ...(fileRoute?{fileRoute}:{}), ...(formsExts ? { formsExts } : {}) }
       return snapshot
     },
   }

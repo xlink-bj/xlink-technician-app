@@ -30,3 +30,26 @@ defineEmits<{
   (event: 'update:modelValue', value: string): void
 }>()
 </script>
+
+<style scoped>
+.app-choice-group {
+  flex-wrap: wrap;
+}
+
+.app-choice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  height: auto;
+  min-height: 44px;
+  min-height: max(44px, var(--app-control-height));
+  line-height: 1.35;
+  padding: var(--app-space-sm) var(--app-control-padding-x);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+</style>

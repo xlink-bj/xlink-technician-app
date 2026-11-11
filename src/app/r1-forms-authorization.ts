@@ -1,4 +1,4 @@
-import type { AuthSessionPort } from '@shared/ports'
+import type { AuthSessionPort, MediaFilePickerPort, MediaUploadQueuePort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatActionProvider } from '@features/work-orders/r1-repeat-actions-port'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
@@ -9,6 +9,7 @@ import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
 import { usesR1FormsScalarSubset } from '@features/work-orders/r1-forms-scalar-subset'
 import { projectR1GenericScalarEditValues,normalizeR1GenericScalarEditValues } from '@features/work-orders/r1-generic-scalar-edit-values'
 import { createR1FormsActions } from './r1-forms-actions'
+import { createR1NormalFormFileSession } from './r1-normal-form-media'
 import { isHandlerMatch, evaluateNodeVisibility } from '@runtimes/workflow/policy'
 import { asOpaqueId } from '@shared/types'
 const keys = ['tenantId','userId','roleId','workOrderId','workflowRunId','runtimeNodeId','formDefinitionId'] as const
@@ -40,7 +41,8 @@ export function parseR1FormsGrant(raw:unknown,now=Date.now()):R1FormsGrant|null 
   } catch{return null}
 }
 export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSessionPort,'getCurrentSession'>;
-  readonly reader:R1NodeFormsReader;readonly env:Record<string,unknown>;readonly origin:string}):R1RepeatActionProvider {
+  readonly reader:R1NodeFormsReader;readonly env:Record<string,unknown>;readonly origin:string;
+  readonly media?:{readonly picker:MediaFilePickerPort;readonly queue:MediaUploadQueuePort}}):R1RepeatActionProvider {
   const grant=()=>input.env.VITE_XLINK_R1_FORMS_ACTIONS==='true'&&localFormWritesEnabled(input.env,input.origin)
     ?parseR1FormsGrant(input.env.VITE_XLINK_R1_FORMS_GRANT):null
   const permitted=(s:R1RepeatScope)=>{const g=grant();return Boolean(g&&keys.every(k=>g.scope[k]===s[k]))}
@@ -56,6 +58,11 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       && snapshot.node.sourceNodeType==='forms')
   }
   return {forSnapshot(snapshot){
+    const fileMode=snapshot.node.sourceNodeType==='forms'&&Boolean(snapshot.definition.fields?.some(field=>field.type==='file'
+      &&!field.readOnly&&!snapshot.node.formFieldIdsReadOnly?.includes(field.fieldId)))
+    // First-record generic file create only. File edits/append/Process retain
+    // their existing refusal; no grant operation is silently reinterpreted.
+    if(fileMode&&(snapshot.records.length!==0||!input.media))return null
     const g=grant(),a=input.auth.getCurrentSession()
     if(!g||!schemaMatches(snapshot)||!input.reader.isCurrent(snapshot)||(g.version===1&&snapshot.records.length!==0)
       || !input.reader.currentFormsExts?.(snapshot)||a?.user.id!==g.scope.userId||a.currentRole?.id!==g.scope.roleId)return null
@@ -63,11 +70,23 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
     if(snapshot.node.lifecycle!=='active'||snapshot.node.nodeTypeEvidence!=='runtime_node_def'
       || !isHandlerMatch(actor,snapshot.node.handlers??[])||!evaluateNodeVisibility(snapshot.node,actor).visible)return null
     let lease=snapshot
+    const fileRouteIdentity=(s:R1NodeFormsSnapshot)=>{
+      const e=input.reader.currentNormalFileRoute?.(s)
+      if(!e||input.reader.isCurrentNormalFileRoute?.(s,e)!==true||e.type!=='0'
+        ||e.tenantId!==g.scope.tenantId||e.workOrderId!==g.scope.workOrderId||e.runtimeNodeId!==g.scope.runtimeNodeId
+        ||e.workflowRunId!==g.scope.workflowRunId||e.formDefinitionId!==g.scope.formDefinitionId
+        ||!e.colName||['survey','inspectionAppointment','serviceAppointment'].includes(e.colName)
+        ||e.collectionName!==`frm_${e.tenantId}_${e.colName}`)return null
+      return JSON.stringify([e.tenantId,e.workOrderId,e.runtimeNodeId,e.workflowRunId,e.formDefinitionId,e.type,e.colName,e.collectionName])
+    }
+    const initialFileRoute=fileMode?fileRouteIdentity(snapshot):undefined
+    if(fileMode&&!initialFileRoute)return null
     // Freeze the observed metadata as bytes, not a later view of shared objects.
     // Only the newly supported large forms subset gets this stricter lease.
-    const subsetSchema=usesR1FormsScalarSubset(snapshot)
+    const subsetSchema=usesR1FormsScalarSubset(snapshot)||fileMode
       ?JSON.stringify([snapshot.definition.fields,snapshot.definition.purpose,snapshot.node.formFieldIdsReadOnly,snapshot.fillableFieldIds]):undefined
     const permits=(op:R1FormsOperation,recordId?:string)=>{
+      if(fileMode&&(op!=='create'||recordId!==undefined))return false
       const fresh=grant()
       return Boolean(fresh&&permitted(g.scope)&&(fresh.operations as readonly string[]).includes(op)
         &&(op!=='edit'||(fresh.version===2&&Boolean(recordId)&&fresh.recordIds.includes(recordId!))))
@@ -101,11 +120,15 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
       return normalizeR1GenericScalarEditValues(s,raw,values)
     }
     const owns=(s:R1RepeatScope)=>permitted(s)&&input.reader.isCurrent(lease)
+      &&(!fileMode||fileRouteIdentity(lease)===initialFileRoute)
+    const fileMedia=fileMode?createR1NormalFormFileSession({scope:g.scope,queue:input.media!.queue,picker:input.media!.picker,
+      getSnapshot:()=>lease,isAuthorized:()=>owns(g.scope)&&schemaMatches(lease)&&permits('create')}):undefined
     const initialValues=(id:string)=>{try{return permits('edit',id)&&owns(g.scope)&&original(lease,id)
       ?usesR1FormsScalarSubset(lease)?projectR1GenericScalarEditValues(lease,original(lease,id)!):projectR1FormsEditValues(lease,original(lease,id)!):null}catch{return null}}
     const actions=createR1FormsActions({env:input.env,origin:input.origin,getSession:()=>input.auth.getCurrentSession(),hasExactGrant:owns,
       transport:createUniApiCommandTransport({apiBaseUrl:String(input.env.VITE_XLINK_API_BASE_URL),getSessionRef:()=>input.auth.getCurrentSession()?.sessionRef??null}),
       permits,original,normalizeExisting,
+      ...(fileMedia?{assertFileValues:(s:R1NodeFormsSnapshot,v:Readonly<Record<string,unknown>>)=>fileMedia.assertValues(s,v)}:{}),
       confirmCompletion:async s=>{
         if(!owns(g.scope)||!input.reader.confirmFormsCompletion)throw Error('完成结果无法核实')
         return input.reader.confirmFormsCompletion(s)
@@ -119,7 +142,8 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
         lease=latest;return latest
       }})
     return {locked:()=>!owns(g.scope)||actions.locked(g.scope),
-      canCreate:()=>owns(g.scope)&&permits(lease.records.length?'append':'create'),
+      ...(fileMedia?{fileMedia}:{}),
+      canCreate:()=>owns(g.scope)&&(!fileMode||lease.records.length===0)&&permits(lease.records.length?'append':'create'),
       canEdit:id=>owns(g.scope)&&permits('edit',id)&&lease.records.some(r=>r.id===id)&&Boolean(initialValues(id)),
       canComplete:()=>owns(g.scope)&&permits('complete')&&lease.records.length>0,
       canSaveAndComplete:()=>owns(g.scope)&&permits('save_finish'),
@@ -129,7 +153,13 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
         return Boolean(id?permits('edit',id)&&normalizeExisting(lease,original(lease,id)??{},values,id)
           :permits(lease.records.length?'append':'create')&&normalizeR1RepeatValues(lease,values))
       }catch{return false}},
-      saveOnly:(values,id)=>actions.saveOnly(g.scope,values,id),
+      saveOnly:async(values,id)=>{
+        const saved=await actions.saveOnly(g.scope,values,id)
+        // Cleanup is local and follows authoritative readback. A cleanup error
+        // must not turn an already verified business save into a replay prompt.
+        if(fileMedia)try{await fileMedia.finalize()}catch{/* queue retains local cleanup evidence */}
+        return saved
+      },
       saveAndComplete:(values,id)=>actions.saveAndComplete(g.scope,values,id),
       complete:()=>actions.complete(g.scope)}
   }}

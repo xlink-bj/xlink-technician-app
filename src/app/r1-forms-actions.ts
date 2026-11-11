@@ -4,6 +4,8 @@ import type { AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
 import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
 import { usesR1FormsScalarSubset } from '@features/work-orders/r1-forms-scalar-subset'
+import { sameR1NormalFileValues } from '@features/work-orders/r1-normal-file-values'
+import { isR1FileWireArray } from '@shared/types'
 import { planR1FormsUpdateExts } from '@features/work-orders/r1-forms-exts-plan'
 import { normalizeR1FormsEditValues } from '@features/work-orders/r1-forms-edit-values'
 import { r1SpecialFormUpsert, r1FormsUpdateExtsCommand, r1FormsAfterSaveProcess, r1FormsFinalizeProcess } from '@adapters/api/r1-special-workflow-wires'
@@ -61,6 +63,8 @@ export function createR1FormsActions(input: {
   /** Trusted provider callback, not a draft flag or standalone edit grant. */
   readonly normalizeExisting?: (snapshot:R1NodeFormsSnapshot,original:Readonly<Record<string,unknown>>,
     draft:Readonly<Record<string,unknown>>,recordId:string)=>{fields:Record<string,string|number|boolean>;clearedFieldKeys:readonly string[]}
+  /** Required for file creates: private exact-scope queue authority, not a URL flag. */
+  readonly assertFileValues?: (snapshot:R1NodeFormsSnapshot,values:Readonly<Record<string,unknown>>)=>Promise<void>
   readonly permits?: (operation: 'create' | 'append' | 'edit' | 'save_finish' | 'complete', recordId?: string) => boolean
   readonly confirmCompletion?: (snapshot: R1NodeFormsSnapshot) => Promise<{transitionVerified:true}>
   readonly transport: ApiCommandTransport
@@ -84,7 +88,8 @@ export function createR1FormsActions(input: {
   const allowed = (operation:'create'|'append'|'edit'|'save_finish'|'complete', recordId?:string) =>
     input.permits ? input.permits(operation,recordId) : operation==='create'
   async function execute(source:R1RepeatScope, values:Readonly<Record<string,unknown>>, recordId?:string, finish=false, onlyComplete=false) {
-    const s=Object.freeze({...source}),draft=Object.freeze({...values}),identity=fingerprint()
+    const s=Object.freeze({...source}),draft=Object.freeze(Object.fromEntries(Object.entries(values).map(([k,v])=>
+      [k,isR1FileWireArray(v)?Object.freeze(v.map(item=>Object.freeze({...item}))):v]))),identity=fingerprint()
     const check=()=>{
       const a=input.getSession()
       if(!identity || fingerprint()!==identity || a?.user.id!==s.userId || a.currentRole?.id!==s.roleId
@@ -145,6 +150,12 @@ export function createR1FormsActions(input: {
         ?input.normalizeExisting?input.normalizeExisting(snapshot,raw??deny(),draft,recordId):normalizeR1FormsEditValues(snapshot,raw??deny(),draft)
         :{fields:normalizeR1RepeatValues(snapshot,draft),clearedFieldKeys:[] as readonly string[]}
       const normalized=normalize(before.snapshot,original??undefined)
+      const fileKeys=Object.keys(normalized.fields).filter(k=>Array.isArray(normalized.fields[k]))
+      const fileCreate=Boolean(input.assertFileValues)||fileKeys.length>0
+      if(fileCreate){
+        if(recordId||!input.assertFileValues||!input.original)return deny()
+        await input.assertFileValues(before.snapshot,normalized.fields);check()
+      }
       const subsetMetadata=usesR1FormsScalarSubset(before.snapshot)
         ?JSON.stringify([before.snapshot.definition.fields,before.snapshot.definition.purpose,before.snapshot.node.formFieldIdsReadOnly,before.snapshot.fillableFieldIds]):undefined
       // Existing R1 formList entries retain their own title/metadata. The
@@ -180,7 +191,14 @@ export function createR1FormsActions(input: {
         ||(subsetMetadata!==undefined&&JSON.stringify([intermediate.snapshot.definition.fields,intermediate.snapshot.definition.purpose,
           intermediate.snapshot.node.formFieldIdsReadOnly,intermediate.snapshot.fillableFieldIds])!==subsetMetadata)
         || !allowed(operation,recordId) || (finish&&!allowed('save_finish',recordId))
-        || JSON.stringify(normalize(intermediate.snapshot,original??undefined))!==JSON.stringify(normalized)) return deny()
+        || (fileKeys.length?(()=>{
+          const again=normalize(intermediate.snapshot,original??undefined)
+          return JSON.stringify(Object.keys(again.fields).sort())!==JSON.stringify(Object.keys(normalized.fields).sort())
+            || Object.entries(normalized.fields).some(([k,v])=>Array.isArray(v)
+              ?!sameR1NormalFileValues(again.fields[k],v):again.fields[k]!==v)
+            || JSON.stringify(again.clearedFieldKeys)!==JSON.stringify(normalized.clearedFieldKeys)
+        })():JSON.stringify(normalize(intermediate.snapshot,original??undefined))!==JSON.stringify(normalized))) return deny()
+      if(fileCreate){await input.assertFileValues!(intermediate.snapshot,normalized.fields);check()}
       const planned=plan(savedId)
       receipt('exts_may_have_dispatched',savedId);check()
       success(await input.transport.execute(r1FormsUpdateExtsCommand({sourceNodeType:'forms',planned})));check()
@@ -190,8 +208,19 @@ export function createR1FormsActions(input: {
       const saved=after.snapshot.records.find(r=>r.id===savedId)
       if(JSON.stringify(after.exts)!==JSON.stringify(planned.body)
         || JSON.stringify(after.snapshot.records.map(r=>r.id))!==JSON.stringify(expectedIds)
-        || !saved || Object.entries(normalized.fields).some(([k,v])=>saved.values?.[k]!==v)
+        || !saved || Object.entries(normalized.fields).some(([k,v])=>Array.isArray(v)
+          ?!sameR1NormalFileValues(saved.values?.[k],v):saved.values?.[k]!==v)
         || normalized.clearedFieldKeys.some(k=>Object.hasOwn(saved.values??{},k))) return deny()
+      if(fileKeys.length){
+        const raw=input.original!(after.snapshot,savedId),sent=JSON.parse(String(request.body?.dataStr)) as Record<string,unknown>
+        if(!raw)return deny()
+        for(const fileKey of fileKeys)for(const slot of [undefined,'exts'] as const){
+          const expected=slot?(sent[slot]??{}) as Record<string,unknown>:sent
+          const actual=slot?(raw[slot]??{}) as Record<string,unknown>:raw
+          if(Object.hasOwn(expected,fileKey)!==Object.hasOwn(actual,fileKey)
+            || (Object.hasOwn(expected,fileKey)&&!sameR1NormalFileValues(expected[fileKey],actual[fileKey])))return deny()
+        }
+      }
       if(recordId){
         const reread=input.original?.(after.snapshot,savedId)
         const expected=JSON.parse(String(request.body?.dataStr)) as Record<string,unknown>

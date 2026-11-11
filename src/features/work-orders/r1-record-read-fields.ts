@@ -4,6 +4,7 @@ import { evaluateVisibility, isFieldApplicable } from '@runtimes/dynamic-form'
 import { actionFormConditionValues } from './action-form-condition-context'
 import { ACTION_FORM_SURFACE, actionFormSchemaFor } from './action-form-schema'
 import { surveyLeakageCauseExperienceFor, surveyLeakageCauseReadIds, surveyLeakageCauseLabels } from './survey-leakage-cause'
+import { isR1NormalImageWireArray } from '@shared/form/r1-normal-image-contract'
 
 export interface R1RecordReadField {
   readonly fieldId: string
@@ -70,6 +71,15 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
         unavailable: !empty && ids === null,
         text: value === undefined ? '未保存' : value === null ? '空值' : ids === null ? '已保存的渗漏原因格式无效'
           : ids.length ? surveyLeakageCauseLabels(ids, []).join(' / ') : '空值' })
+      continue
+    }
+    // The normal reader's definition-bound file codec is the only source of
+    // object arrays here. Unknown/image types retain their old projection.
+    if(!unsupported&&definition.purpose===undefined&&field.type==='file'&&Object.hasOwn(record.values??{},field.valueKey)){
+      const value=record.values?.[field.valueKey],files=isR1NormalImageWireArray(value)
+      result.push({fieldId:field.fieldId,valueKey:field.valueKey,label:field.label,
+        unavailable:!(files||value===null),text:value===null?'空值':files?(value.length?`${value.length} 个附件`:'空值')
+          :'已保存附件含当前未支持的历史元数据，不能编辑'})
       continue
     }
     const mediaText = !unsupported && isSurveyReadOnlyMediaField(definition, field)

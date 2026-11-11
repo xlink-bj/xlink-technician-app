@@ -7,6 +7,7 @@ import { r1SurveyPlaneAreaAfterChange } from './survey-plane-area'
 import type { R1LocalFieldValue } from './r1-local-form-fields'
 import type { FormFieldValue } from '@shared/ports'
 import { usesR1FormsScalarSubset, r1FormsScalarSubsetSchema, normalizeR1FormsScalarCreate } from './r1-forms-scalar-subset'
+import { usesR1NormalFileCreate, normalizeR1NormalFileCreate, projectR1NormalFileFields, type R1NormalFileCreateValues } from './r1-normal-file-values'
 const deny = (): never => { throw Error('字段、选项或规则尚未核实，不能保存。') }
 const validId = (v: unknown): v is string => typeof v === 'string' && v.length > 0 && v.trim() === v && !v.includes(',')
 const reserved = new Set(['id', '_id', 'dataId', 'formDataId', 'formDefId', 'definitionId', 'extId', 'tenantId', 'userId', 'roleId', 'sid', 'smodule', 'state', 'nodeId', 'runtimeNodeId', 'workOrderId', 'workflowId', 'workflowRunId', 'runId', 'workflow', 'formDefinitionId', 'dataStr', 'exts', '__proto__', 'prototype', 'constructor', 'createTime', 'createDateTime', 'createUser', 'createUserName', 'updateTime', 'updateDateTime', 'updateUser', 'updateUserName', 'orgId', 'belongTo', '_version', '_class'])
@@ -25,7 +26,8 @@ export function updateR1FormDraftValue(snapshot: R1NodeFormsSnapshot, values: Re
     || (typeof area.value === 'number' && !Number.isFinite(area.value))) return deny()
   return { ...next, planeArea: area.value }
 }
-export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): Record<string, string | number | boolean> {
+export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): R1NormalFileCreateValues {
+  if (usesR1NormalFileCreate(snapshot)) return normalizeR1NormalFileCreate(snapshot, values)
   if (usesR1FormsScalarSubset(snapshot)) return normalizeR1FormsScalarCreate(snapshot,values)
   const fields = snapshot.definition.fields
   if (!fields?.length || fields.length > 50 || !values || typeof values !== 'object' || Array.isArray(values)) return deny()
@@ -70,6 +72,7 @@ export function normalizeR1RepeatValues(snapshot: R1NodeFormsSnapshot, values: R
 
 /** Same schema and conditions as the submission validator, without granting a command. */
 export function projectR1RepeatFields(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): readonly (R1LocalField & { readonly visible: boolean })[] {
+  if (usesR1NormalFileCreate(snapshot)) return projectR1NormalFileFields(snapshot, values)
   if (usesR1FormsScalarSubset(snapshot)) {
     try {
       return r1FormsScalarSubsetSchema(snapshot).schema.map(field => {

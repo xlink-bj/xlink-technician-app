@@ -1,3 +1,5 @@
+import * as normalFileValues from '@features/work-orders/r1-normal-file-values'
+import * as sharedTypes from '@shared/types'
 import fs from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
@@ -32,7 +34,7 @@ function component(file:string, panel?:Vue.Component) {
  const filename=path.resolve('src/features/work-orders/'+file+'.vue'),{descriptor}=parse(fs.readFileSync(filename,'utf8'),{filename})
  const source=compileScript(descriptor,{id:'normal-forms-count-'+file,inlineTemplate:true}).content.replaceAll('import.meta.env','({DEV:false})')
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
- const modules:Record<string,unknown>={vue:Vue,'./r1-repeat-form':repeatForm,'./r1-record-read-fields':recordReadFields,'./r1-repeat-actions-port':actionPort,'./r1-node-forms-read':readerPort,
+ const modules:Record<string,unknown>={vue:Vue,'./r1-repeat-form':repeatForm, './r1-normal-file-values': normalFileValues, '@shared/types': sharedTypes, './R1NormalFileField.vue': { __esModule: true, default: Vue.defineComponent({ render: () => Vue.h('file-field') }) },'./r1-record-read-fields':recordReadFields,'./r1-repeat-actions-port':actionPort,'./r1-node-forms-read':readerPort,
  './r1-local-form-drafts':{useR1LocalFormDraftStore:()=>draftStore},'./R1NodeFormsReadPanel.vue':{__esModule:true,default:panel},'@shared/ui/AppButton.vue':{__esModule:true,default:Button},'@shared/ui/AppField.vue':{__esModule:true,default:Field},'./R1FormFieldControl.vue':{__esModule:true,default:Control},'@shared/ui/AppInput.vue':{__esModule:true,default:Field},'./R1LocalFormFieldEditor.vue':{__esModule:true,default:Field}}
  const module={exports:{} as {default:Vue.Component}};new Function('require','module','exports',js)((key:string)=>{if(!(key in modules))throw Error('Unstubbed '+key);return modules[key]},module,module.exports);return module.exports.default
 }

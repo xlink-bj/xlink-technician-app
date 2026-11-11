@@ -25,6 +25,9 @@ export interface R1GenericMapRouteRead {
   readonly collectionName: string
   readonly original: Readonly<Record<string, unknown>>
 }
+/** Definition routing facts for the separately bounded generic file-create
+ * path. This is neither an existing-record credential nor a write grant. */
+export type R1NormalFileRouteRead = Omit<R1GenericMapRouteRead, 'recordId' | 'original'>
 export interface R1RepeatAppointmentRead {
   readonly original: Readonly<Record<string, unknown>>
   readonly appointmentReplacement: AppointmentReplacementContext
@@ -42,6 +45,8 @@ export interface R1NodeFormsReader {
    * collection identities and exact selected original; never an ACK grant. */
   currentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string): R1GenericMapRouteRead | null
   isCurrentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string, evidence: unknown): boolean
+  currentNormalFileRoute?(snapshot: R1NodeFormsSnapshot): R1NormalFileRouteRead | null
+  isCurrentNormalFileRoute?(snapshot: R1NodeFormsSnapshot, evidence: unknown): boolean
   currentRepeatAppointment?(snapshot: R1NodeFormsSnapshot, recordId: string): R1RepeatAppointmentRead | null
   isCurrentRepeatAppointment?(snapshot: R1NodeFormsSnapshot, recordId: string, evidence: unknown): boolean
   /** Independent post-Process read; performs no mutation. */

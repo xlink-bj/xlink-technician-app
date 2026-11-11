@@ -186,7 +186,9 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
   }
 
   async function load(id: WorkOrderId): Promise<OperationSnapshot<WorkOrderDetail>> {
-    if (loadState.value === 'loading') {
+    // Only a duplicate for the same WorkOrder is suppressed. A new route
+    // must own a new generation so an old response cannot populate its page.
+    if (loadState.value === 'loading' && currentWorkOrderId.value === id) {
       return failure('validation', 'Work Order detail request is already in progress')
     }
 
@@ -220,7 +222,15 @@ export const useWorkOrderDetailStore = defineStore('workOrderDetail', () => {
     loadState.value = 'loading'
     error.value = null
 
-    const result = await api.getWorkOrderDetail(id)
+    let result: OperationSnapshot<WorkOrderDetail>
+    try {
+      result = await api.getWorkOrderDetail(id)
+    } catch {
+      result = {
+        state: 'failed_retryable',
+        error: createOperationError('network_retryable', 'Work Order detail read did not complete'),
+      }
+    }
     if (requestVersion !== loadVersion || scopeAtStart !== workOrderReadScopeKey(getSession())) {
       if (requestVersion === loadVersion) clear()
       return failure('authorization_denied', 'Work Order detail read belongs to a changed identity/role')
