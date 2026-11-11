@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
 test.describe('Stage 2D R1 temporal/rating record roundtrip', () => {
@@ -15,9 +16,7 @@ test.describe('Stage 2D R1 temporal/rating record roundtrip', () => {
       })
       await page.goto('/#/pages/index/index?devReview=1')
       await page.locator('.work-orders-entry').click()
-      await page.getByTestId('app-search-bar').locator('input').fill(kind === 'forms' ? 'MOCK-020' : 'MOCK-021')
-      await page.locator('.search-button').click()
-      await page.locator('.work-order-card').filter({ hasText: kind === 'forms' ? '韩先生' : '田女士' }).click()
+      await (await searchMockWorkOrder(page, kind === 'forms' ? '020' : '021')).click()
       const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
       await field('inspectionSummary').locator('textarea').fill('时间与评分完整回读')
       await field('inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()

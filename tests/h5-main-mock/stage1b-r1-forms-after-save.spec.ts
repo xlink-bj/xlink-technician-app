@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 
 /** Stage 1B: real uni-app H5 composition, Mock 020 only. Browser traffic to
@@ -21,9 +22,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
-    await page.getByTestId('app-search-bar').locator('input').fill('MOCK-020')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '韩先生' }).click()
+    await (await searchMockWorkOrder(page, '020')).click()
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     await expect(page.getByTestId('a-stage-special-panel')).not.toContainText(/DEV|Mock|fixture/i)
   }
@@ -44,9 +43,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
-    await page.getByTestId('app-search-bar').locator('input').fill('MOCK-020')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '韩先生' }).click()
+    await (await searchMockWorkOrder(page, '020')).click()
 
     const panel = page.getByTestId('a-stage-special-panel')
     await expect(panel).toBeVisible()

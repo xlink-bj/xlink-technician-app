@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 
 /** A-P1: actual uni-app Main App, credential-free DEV data and zero external
@@ -43,10 +44,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
-    await page.getByTestId('app-search-bar').locator('input').fill(`MOCK-${number}`)
-    await page.locator('.search-button').click()
-    const card = page.locator('.work-order-card').filter({ hasText: number === '020'
-      ? '韩先生' : '田女士' })
+    const card = await searchMockWorkOrder(page, number)
     await expect(card).toBeVisible()
     await card.click()
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
