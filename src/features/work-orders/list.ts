@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw, watch, type WatchStopHandle } from 'vue'
+import { computed, ref, toRaw, watch, type WatchStopHandle } from 'vue'
 import { workOrderReadScopeKey } from './read-identity-scope'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderCategories } from './list-categories'
@@ -337,6 +337,9 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
 
   return {
     loadState,
+    // Appending keeps the current page's listed membership. A fresh page-one
+    // intent must establish its membership again before cached cards navigate.
+    isAppending: computed(() => loadState.value === 'loading' && lastLoadWasAppend),
     items,
     page,
     pageSize,

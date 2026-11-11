@@ -80,12 +80,12 @@
           v-for="item in workOrders.items"
           :key="String(item.id)"
           class="work-order-card"
-          :hover-class="listActionFor(item).detailAccessible ? 'work-order-card-hover' : 'none'"
-          :role="listActionFor(item).detailAccessible ? 'link' : undefined"
-          :aria-disabled="!listActionFor(item).detailAccessible"
+          :hover-class="canOpenDetail(item) ? 'work-order-card-hover' : 'none'"
+          :role="canOpenDetail(item) ? 'link' : undefined"
+          :aria-disabled="!canOpenDetail(item)"
           @tap="openDetailIfAccessible(item)"
         >
-          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" accent interactive data-testid="ds02b-work-order-card-surface">
+          <AppRecordCard class="work-order-card-surface" layout="horizontal" :tone="workOrderCardToneFor(item.taskLabel)" accent :interactive="canOpenDetail(item)" data-testid="ds02b-work-order-card-surface">
           <view class="card-main">
             <view class="card-top-row">
               <AppRecordMark
@@ -312,10 +312,16 @@ function listActionFor(item: WorkOrderSummary) {
     : action
 }
 
+function canOpenDetail(item: WorkOrderSummary): boolean {
+  const current = workOrders.items.find(row => row.id === item.id)
+  return canAccess.value && (workOrders.loadState === 'succeeded' || workOrders.isAppending)
+    && Boolean(current && listActionFor(current).detailAccessible)
+}
+
 async function openDetailIfAccessible(item: WorkOrderSummary): Promise<void> {
   // A non-actionable card must not instantiate a navigator with an empty URL:
   // MP-WEIXIN reports a runtime error even when the card is never followed.
-  if (!listActionFor(item).detailAccessible) return
+  if (!canOpenDetail(item)) return
   await workOrders.navigateTo(workOrderDetailRouteFor(item.id))
 }
 

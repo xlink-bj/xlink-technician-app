@@ -22,6 +22,12 @@ const scalar = (value: unknown): value is string | number | boolean =>
 function displayValue(field: FormFieldRead, value: FormFieldValue | undefined): string {
   if (value === undefined) return '未保存'
   if (value === null || value === '') return '空值'
+  // Scalar choice contracts cannot acquire multi-choice meaning from a saved
+  // array. Keep malformed/empty arrays visibly unverified, never 'unsaved'.
+  if (Array.isArray(value) && (field.type === 'radio' || (field.type === 'select' && !field.multiple))) {
+    const text = value.length && value.every(scalar) ? value.map(String).join(' / ') : '已保存的选项格式异常'
+    return `${text}（选项未核实）`
+  }
   const values = Array.isArray(value) ? value : [value]
   if (!values.every(scalar)) return '该内容暂不支持展示'
   if (values.length === 0) return '空值'

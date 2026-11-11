@@ -247,6 +247,18 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/survey-conditional-create.config.ts
+      - name: Verify normal Survey regions and IS read-only option labels
+        env:
+          XLINK_H5_SURVEY_REGIONS_IS_READ: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/survey-regions-is-read.config.ts
+      - name: Verify normal App cached-card navigation during list refresh
+        env:
+          XLINK_H5_REFRESH_NAVIGATION: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/work-order-refresh-navigation.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -264,6 +276,8 @@ jobs:
             test-results/work-order-detail-lifecycle/
             test-results/survey-part-create/
             test-results/survey-conditional-create/
+            test-results/survey-regions-is-read/
+            test-results/work-order-refresh-navigation/
           if-no-files-found: warn
           retention-days: 7
 
