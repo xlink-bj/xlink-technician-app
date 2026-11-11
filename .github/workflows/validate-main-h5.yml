@@ -22,6 +22,13 @@ jobs:
     # Nightly/manual or explicitly marked high-risk PR Mock regression; real Production reads
     # and device UX remain separate manual acceptance gates.
     runs-on: ubuntu-latest
+    # Official image: browsers and OS libraries match the locked Playwright version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 15
     env:
       VITE_XLINK_ENABLE_REAL_WRITES: 'false'
@@ -33,7 +40,7 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: node scripts/check-playwright-runtime.mjs
       - name: Verify credential-free Production repeat panel interaction
         run: pnpm run test:r1-main-repeat-ui
       # Draft PRs intentionally skip the broader L3 H5 UX job below. Exercise
@@ -68,6 +75,13 @@ jobs:
     # while the broader L3/Owner/device visual acceptance remains separate.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
+    # Official image: browsers and OS libraries match the locked Playwright version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 15
     env:
       VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
@@ -80,7 +94,7 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: node scripts/check-playwright-runtime.mjs
       - name: Verify Stage 1B/2A and 020/021 CRUD at 375/390/430 (one browser boot)
         run: >-
           pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts
@@ -175,6 +189,13 @@ jobs:
     # Same automatic gate conditions, assertions and synthetic network fences.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
+    # Official image: browsers and OS libraries match the locked Playwright version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 15
     env:
       VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
@@ -187,7 +208,7 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      - run: node scripts/check-playwright-runtime.mjs
       - name: Verify duplicate file row identity in normal App forms and repeat
         env:
           XLINK_H5_DUPLICATE_FILE: 'true'
@@ -299,6 +320,13 @@ jobs:
     # L3 nightly/manual or explicitly marked high-risk PR; ordinary PR/main events keep a skipped check context.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[L3-H5]'))
     runs-on: ubuntu-latest
+    # Official image: browsers and OS libraries match the locked Playwright version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init
+    defaults:
+      run:
+        shell: bash
     timeout-minutes: 40
     env:
       VITE_XLINK_ENABLE_REAL_WRITES: 'false'
@@ -321,13 +349,8 @@ jobs:
       - name: Build main App H5 bundle (prevent runtime entry regressions)
         run: pnpm run build:h5
 
-      - name: Cache Playwright Chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
-      - name: Install headless Chromium for real H5 bootstrap smoke
-        run: pnpm exec playwright install --with-deps chromium
+      - name: Verify preinstalled Chromium and system dependencies
+        run: node scripts/check-playwright-runtime.mjs
 
       - name: Verify real main App H5 mounts Login without auth or external API
         run: pnpm run test:main-h5-boot
