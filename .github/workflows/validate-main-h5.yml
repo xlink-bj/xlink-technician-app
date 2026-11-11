@@ -217,6 +217,24 @@ jobs:
           XLINK_H5_REPEAT_APPOINTMENT_EDIT: 'true'
           VITE_XLINK_ENVIRONMENT: 'test'
         run: pnpm exec playwright test --config config/playwright/repeat-appointment-edit.config.ts
+      - name: Verify normal App image picker multipart save and readback
+        env:
+          XLINK_H5_NORMAL_R1_FILE_UPLOAD: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/normal-r1-file-upload.config.ts
+      - name: Verify normal App image admission receipts and queue recovery
+        env:
+          XLINK_H5_NORMAL_R1_IMAGE_RECOVERY: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/normal-r1-image-recovery.config.ts
+      - name: Verify normal App detail route replacement and stale session isolation
+        env:
+          XLINK_H5_DETAIL_LIFECYCLE: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/work-order-detail-lifecycle.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -229,6 +247,9 @@ jobs:
             test-results/forms-scalar-subset/
             test-results/generic-map-edit/
             test-results/repeat-appointment-edit/
+            test-results/normal-r1-file-upload/
+            test-results/normal-r1-image-recovery/
+            test-results/work-order-detail-lifecycle/
           if-no-files-found: warn
           retention-days: 7
 
