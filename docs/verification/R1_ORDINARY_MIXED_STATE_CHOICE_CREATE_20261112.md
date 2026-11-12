@@ -1,4 +1,8 @@
-# Ordinary mixed Switch/Rate and flat Code choices
+# Historical ordinary mixed Switch/Rate and flat Code choices
+
+This document records the transitional increment below. Current ordinary first creation uses the [unified field plan](R1_ORDINARY_CREATE_FIELD_PLAN_20261112.md) through the normal reader/provider. The unused `r1-forms-mixed-create.ts` and `r1-forms-switch-rate-create.ts` implementations have been removed; they had no production or test callers. The existing mixed and Switch/Rate regression suites remain because they exercise the real unified entry, not those removed modules. No field capability, grant, writer or storage protocol changed in this cleanup.
+
+## Archived increment
 
 This private increment follows frozen Cascade8 on `c0b2c041e62e97f57d02c2c6088b1f8bd6c2318d`. It opens first creation for metadata-driven mixtures of Switch or Rate with Checkbox or explicitly multiple Select, with existing scalar fields interspersed. Arbitrary names, labels and ordering select no business profile. It is a new bounded per-field plan, not removal of the old strategies' mutual-exclusion guards. Existing pure Switch/Rate, choice, Cascade, scalar, media and appointment contracts remain separate.
 

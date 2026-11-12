@@ -1,4 +1,8 @@
-# Ordinary configured Switch / Rate first-create
+# Historical ordinary configured Switch / Rate first-create
+
+This document preserves the initial bounded increment below. Current ordinary first creation uses the [unified field plan](R1_ORDINARY_CREATE_FIELD_PLAN_20261112.md); the historical exclusions for coexisting file, array and conditional fields are not global limits on that plan. The unused standalone Switch/Rate implementation has been removed. Its real normal reader/provider regression suite remains unchanged, including strict values, scope and receipt checks. This cleanup changes no current permission or wire contract.
+
+## Archived increment
 
 This slice supports metadata-driven, non-special generic Map forms, with arbitrary field names. It reuses the existing binary and rating controls and Dynamic Form Runtime. It does not modify the shared Runtime's boolean compatibility.
 
