@@ -5,7 +5,7 @@ test.beforeEach(({},info)=>{test.skip(info.config.metadata.normalFormDraftRecove
 const ledgers=new WeakMap<Page,unknown>()
 test.afterEach(async({page},info)=>{const ledger=ledgers.get(page);if(ledger)await info.attach('synthetic-route-ledger',{body:JSON.stringify(ledger),contentType:'application/json'})})
 export async function fixture(page:Page,baseURL:string,mode:string){
- const state={failRead:false,saved:null as any,calls:[] as string[],writes:[] as string[],payloads:[] as any[],unexpected:[] as string[],errors:[] as string[]}
+ const state={loginUser:'u',loginRole:'r',failRead:false,saved:null as any,calls:[] as string[],writes:[] as string[],payloads:[] as any[],unexpected:[] as string[],errors:[] as string[]}
  const fields:any[]=[{_id:'checks',name:'renamedChecks',type:'checkbox',multiple:false,preset:1},{_id:'multi',name:'renamedMulti',type:'select',multiple:true,preset:0},{_id:'memo',name:'memo',type:'text',multiple:false,preset:0}].map(f=>({...f,tenantId:'t',extId:'e',colName:'syntheticChoices',nameDisp:f.name,state:1,required:'0',readOnly:0,operationType:'1',showList:['4'],showType:'1',frontEndConfig:'{}',customizeFlag:1,...(f.type==='text'?{}:{valueOption:'SYN_CODES'})}))
  if(mode==='edit-shadow')fields.splice(0,fields.length,{...fields[2],_id:'memo'})
  if(mode==='repeat'){fields[0].type='radio';fields[1].type='text';fields[1].multiple=false;delete fields[1].valueOption}
@@ -20,7 +20,7 @@ export async function fixture(page:Page,baseURL:string,mode:string){
   const req=route.request(),u=new URL(req.url());if(u.origin!==baseURL){state.unexpected.push('external');return route.abort()}
   if(!u.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['xhr','fetch'].includes(req.resourceType()))return route.continue();state.unexpected.push('unexpected local');return route.abort()}
   const path=u.pathname.slice('/xlink/wm/'.length),body=Object.fromEntries(new URLSearchParams(req.postData()??'')),ok=(json:unknown)=>route.fulfill({json});state.calls.push(path)
-  if(path==='index/phoneLogin.do')return ok({success:true,status:1,data:{token:'synthetic-choice-session',user:{_id:'u',tenantId:'t'},currentRole:{_id:'r'},capabilityNames:[]}})
+  if(path==='index/phoneLogin.do')return ok({success:true,status:1,data:{token:'synthetic-choice-session-'+state.loginUser+'-'+state.loginRole,user:{_id:state.loginUser,tenantId:'t'},currentRole:{_id:state.loginRole},capabilityNames:[]}})
   if(['function/changeRole','function/queryTreeByRoleId'].includes(path))return ok({data:{functionList:[{functionList:[{order:1,exts:{tabDisplay:'1'},action:'/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0'}]}]}})
   if(['basic/serviceAppointment/query','basic/serviceAppointment/querySAWorkflowNode'].includes(path))return ok({data:mode==='switch-order'?[{...node,data:sa},{...node2,data:sa2}]:[{...node,data:sa}],total:mode==='switch-order'?2:1,page:1,rows:20})
   if(path==='basic/serviceAppointment/queryById/s2')return ok({success:true,status:1,data:{serviceAppointment:sa2,workflow:{_id:'w2',tenantId:'t',formDataId:'s2',state:0},workflowNode:[node2]}})
@@ -35,9 +35,11 @@ export async function fixture(page:Page,baseURL:string,mode:string){
   if(path==='biz/extForm/upsert/e'){
    state.writes.push(path);state.saved={...JSON.parse(body.dataStr!),_id:'saved',tenantId:'t'};state.payloads.push(structuredClone(state.saved))
    if(mode==='wrong-ack')state.saved.exts.renamedMulti=['c']
+   // The synthetic server accepted the write but its response never arrived.
+   if(mode==='lost-ack')return route.abort('connectionreset')
    return ok({success:true,status:1,data:state.saved})
   }
-  if(path==='workflowNode/updateExts/n'){state.writes.push(path);node.exts=JSON.parse(req.postData()!);return ok({success:true,status:1})}
+  if(path==='workflowNode/updateExts/n'){state.writes.push(path);node.exts=JSON.parse(req.postData()!);if(mode==='failed-readback')state.failRead=true;return ok({success:true,status:1})}
   state.unexpected.push(path);return route.abort()
  })
  ledgers.set(page,state)

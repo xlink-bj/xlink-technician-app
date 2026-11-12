@@ -225,3 +225,18 @@ it('cannot replace baseline with changed original after an offline reread',async
   h.setOriginalRevision(2);await h.load();expect(h.get('r1-normal-save')).toBeUndefined();expect(h.saveOnly).not.toHaveBeenCalled()
  }finally{h.app.unmount()}
 })
+
+it.each(['actor-change','unmount'] as const)('a delayed pre-dispatch local fence cannot authorize a save after %s',async change=>{
+ const gate=deferred<void>(),markUncertain=vi.fn(()=>gate.promise)
+ const session={read:vi.fn(async()=>({state:'empty'} as const)),save:vi.fn(async()=>{}),markUncertain,
+  discard:vi.fn(async()=>{}),complete:vi.fn(async()=>{})}
+ const h=await mounted({open:()=>session});let unmounted=false
+ try{
+  h.setNext(makeSnapshot('node-a',0));await h.load();await h.fill('must not dispatch after departure')
+  await h.tap('r1-normal-save');expect(markUncertain).toHaveBeenCalledOnce();expect(h.saveOnly).not.toHaveBeenCalled()
+  if(change==='actor-change'){h.props.actorScope='other-actor';await settle()}else{h.app.unmount();unmounted=true}
+  gate.resolve();await settle()
+  expect(h.saveOnly).not.toHaveBeenCalled();expect(session.complete).not.toHaveBeenCalled()
+  if(!unmounted){expect(h.get('r1-normal-save')).toBeUndefined();expect(h.get('r1-normal-draft-restore')).toBeUndefined()}
+ }finally{if(!unmounted)h.app.unmount()}
+})

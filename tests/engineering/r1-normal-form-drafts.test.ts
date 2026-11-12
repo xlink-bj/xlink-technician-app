@@ -134,4 +134,29 @@ describe('normal nonmedia draft boundary',()=>{
   const f=fixture(),s=f.open();await s.read();await s.save({memo:'draft'});const next=f.open(),gate=deferred();f.gateRead(gate.promise)
   const read=next.read();f.setActor({...f.actor,sessionRef:'other-session' as SessionSnapshot['sessionRef']});gate.resolve();expect((await read).state).toBe('blocked')
  })
+ it.each(['user','role','session','roleVersion'] as const)('revokes every old draft operation after %s changes, without mutating the original copy',async dimension=>{
+  const f=fixture(),s=f.open();await s.read();await s.save({memo:'original actor only'})
+  const before=JSON.stringify([...f.data]),actor=f.actor
+  const changes={user:{...actor,user:{id:asOpaqueId<'UserId'>('other-user')}},
+   role:{...actor,currentRole:{id:asOpaqueId<'RoleId'>('other-role')}},
+   session:{...actor,sessionRef:asOpaqueId<'SessionRef'>('new-session')},
+   roleVersion:{...actor,roleVersion:'v2'}}
+  f.setActor(changes[dimension])
+  expect((await s.read()).state).toBe('blocked')
+  await expect(s.save({memo:'stale'})).rejects.toThrow()
+  await expect(s.markUncertain({memo:'stale'})).rejects.toThrow()
+  await expect(s.discard()).rejects.toThrow();await expect(s.complete()).rejects.toThrow()
+  expect(JSON.stringify([...f.data])).toBe(before)
+ })
+ it.each([false,true])('fresh same-principal login restores only qualified state (uncertain=%s)',async uncertain=>{
+  const f=fixture(),s=f.open();await s.read();await s.save({memo:'survives session renewal'})
+  if(uncertain)await s.markUncertain({memo:'survives session renewal'})
+  const before=JSON.stringify([...f.data]);f.setActor({...f.actor,sessionRef:asOpaqueId<'SessionRef'>('fresh-login')})
+  const next=f.make().open(f.fresh(),f.actions)!,result=await next.read()
+  if(uncertain){
+   expect(result.state).toBe('uncertain');await expect(next.save({memo:'replay'})).rejects.toThrow()
+   await expect(next.discard()).rejects.toThrow()
+  }else expect(result).toEqual({state:'recoverable',values:{memo:'survives session renewal'}})
+  expect(JSON.stringify([...f.data])).toBe(before)
+ })
 })

@@ -350,6 +350,8 @@ jobs:
         run: pnpm exec playwright test --config config/playwright/ordinary-create-plan.config.ts
       - name: Verify normal first-create draft recovery (10 cases)
         run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
+      - name: Verify draft identity changes and uncertain-result boundaries (9 cases)
+        run: pnpm exec playwright test --config config/playwright/normal-form-draft-boundaries.config.ts
       - name: Verify old first-create discard isolates existing edits (2 cases)
         env:
           XLINK_DRAFT_EXISTING_EDIT: 'true'
@@ -406,6 +408,7 @@ jobs:
             test-results/ordinary-create-plan/
             test-results/forms-unified-create/
             test-results/normal-form-draft-recovery/normal10/
+            test-results/normal-form-draft-boundaries/
             test-results/normal-form-draft-recovery/existing2/
             test-results/normal-form-fresh-original/
             test-results/normal-action-workspace/
