@@ -41,6 +41,35 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     }
   }
 
+  async function expectCompletedWorkspaceAndDetail(page: Page, number: '020' | '021') {
+    // Completion stays in the owned Workspace until the operator chooses Back.
+    // Check that host, then exercise the normal completed Detail/reentry path.
+    async function expectWorkspaceWithinViewport() {
+      await expect(page).toHaveURL(/pages\/work-orders\/action-workspace/)
+      await expect(page.getByTestId('action-workspace-shell')).toHaveCount(1)
+      await expect(page.getByTestId('a-special-complete')).toBeVisible()
+      await expect(page.getByTestId('a-special-save')).toHaveCount(0)
+      const viewportWidth = page.viewportSize()?.width ?? 0
+      for (const element of [page.getByTestId('special-form-workspace-content'),
+        page.getByTestId('a-special-complete'), page.getByTestId('special-form-workspace-back')]) {
+        await expect(element).toBeVisible()
+        const rect = await element.boundingBox()
+        expect(rect, 'Completed Workspace control must be visible').not.toBeNull()
+        expect(rect!.x, 'Completed Workspace must not overflow left').toBeGreaterThanOrEqual(-1)
+        expect(rect!.x + rect!.width, 'Completed Workspace must not overflow right').toBeLessThanOrEqual(viewportWidth + 1)
+      }
+    }
+    await expectWorkspaceWithinViewport()
+    await page.getByTestId('special-form-workspace-back').click()
+    await expect(page).toHaveURL(/pages\/work-orders\/detail/)
+    await expect(page.locator('.summary-number')).toContainText(number)
+    await expectDetailOverviewWithinViewport(page)
+    await expect(page.getByTestId('a-special-complete')).toBeVisible()
+    await expect(page.getByTestId('special-completed-workspace-entry')).toBeEnabled()
+    await enterDevMockDynamicFormWorkspace(page)
+    await expectWorkspaceWithinViewport()
+  }
+
   async function openSpecial(page: Page, number: '020' | '021') {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
@@ -112,7 +141,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await page.getByTestId('a-special-finish-request').click()
       await page.getByTestId('a-special-finish-confirm').click()
       await expect(page.getByTestId('a-special-complete')).toBeVisible()
-      await expectDetailOverviewWithinViewport(page)
+      await expectCompletedWorkspaceAndDetail(page, '020')
       await info.attach(`a-p1-forms-complete-${viewport.width}`, {
         body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
       })
@@ -141,7 +170,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
       await expect(page.getByTestId('a-special-complete')).toBeVisible()
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('a-special-complete')).toBeVisible()
-      await expectDetailOverviewWithinViewport(page)
+      await expectCompletedWorkspaceAndDetail(page, '021')
       await info.attach(`a-p1-repeat-complete-${viewport.width}`, {
         body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
       })
