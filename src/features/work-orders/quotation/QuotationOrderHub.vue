@@ -264,7 +264,7 @@ const money = (amount: number | undefined): string => amount === undefined || !N
 function refresh(): void {
   editError.value = ''
   if (mockJourneyOrder.value) { emit('mock-read-retry'); return }
-  void browse.load(props.workOrderId, 3)
+  void browse.refresh(props.workOrderId, 3)
 }
 function toggleDetails(id: string): void {
   expandedId.value = expandedId.value === id ? null : id

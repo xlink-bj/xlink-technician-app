@@ -69,7 +69,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     fetchedPage = null
   }
 
-  async function load(workOrderId: string, pageSize: 1 | 3 = 3): Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>> {
+  async function loadPage(workOrderId: string, pageSize: 1 | 3, refresh: boolean): Promise<OperationSnapshot<ReadPage<QuotationOrderBrowseItem>>> {
     const sessionAtStart = getSession()
     if (!sessionAtStart) return failure<ReadPage<QuotationOrderBrowseItem>>('session_invalid', '请先登录后查看当前账号可见的正式订单。')
     const authorizationIdentityAtStart = authorizationIdentityKey(sessionAtStart)
@@ -81,7 +81,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     if (pageSize !== 1 && pageSize !== 3) {
       return failure<ReadPage<QuotationOrderBrowseItem>>('server_terminal', '仅允许限定长度的正式订单读取。')
     }
-    if (state.value === 'succeeded'
+    if (!refresh && state.value === 'succeeded'
       && fetchedPage
       && fetchedPageSize === pageSize
       && fetchedAuthorizationIdentityKey === authorizationIdentityAtStart
@@ -171,6 +171,16 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     return pending
   }
 
+  // Normal reads may reuse the exact scope/page cache; an explicit refresh
+  // always revalidates it. Identical pending reads still coalesce in loadPage.
+  function load(workOrderId: string, pageSize: 1 | 3 = 3) {
+    return loadPage(workOrderId, pageSize, false)
+  }
+
+  function refresh(workOrderId: string, pageSize: 1 | 3 = 3) {
+    return loadPage(workOrderId, pageSize, true)
+  }
+
   return {
     state,
     items,
@@ -180,6 +190,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     configure,
     clear,
     load,
+    refresh,
   }
 })
 

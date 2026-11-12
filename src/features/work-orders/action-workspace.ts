@@ -199,6 +199,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const quotationOrderState = ref<QuotationOrderSubmissionSnapshot>({ state: 'idle' })
   const quotationEditState = ref<{ readonly state: 'none' | 'loading' | 'ready' | 'blocked'; readonly message?: string }>({ state: 'none' })
   const quotationExistingOrderId = ref<string | null>(null)
+  // Private provenance outlives a failed load, not the visible ready state.
+  // Draft identity includes user/role/work/node/action; authorization also binds
+  // session and role version. A mismatched session leaves a revoked tombstone
+  // so restoring its draft cannot silently select the new-order path.
+  const quotationEditSources = new Map<string, {
+    readonly orderId: string; readonly authorizationScope: string; revoked: boolean
+  }>()
   let quotationOrderInFlight: { readonly version: number; readonly promise: Promise<QuotationOrderSubmissionSnapshot> } | null = null
   const canSubmitQuotation = computed(() => Boolean(
     !isProductionReadOnlyRuntime()
@@ -357,7 +364,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
    */
   function commandSessionScopeCurrent(): boolean {
     const session = dependencies?.getSession()
+    observeQuotationEditAuthorization(session ?? null)
     return Boolean(session && loadedSessionScope.value && sessionScopeKey(session) === loadedSessionScope.value)
+  }
+
+  function observeQuotationEditAuthorization(session: SessionSnapshot | null): void {
+    const scope = session ? sessionScopeKey(session) : null
+    for (const source of quotationEditSources.values()) {
+      if (source.authorizationScope !== scope) source.revoked = true
+    }
+    const source = identity ? quotationEditSources.get(JSON.stringify(identity)) : undefined
+    if (source?.revoked && quotationExistingOrderId.value === source.orderId) {
+      quotationExistingOrderId.value = null
+      quotationEditState.value = { state: 'blocked', message: '既有订单编辑来源的登录或角色已变化；不能将恢复草稿作为新订单提交。' }
+    }
   }
 
   function actionCommandScopeCurrent(version: number, target: ActionDescriptor): boolean {
@@ -371,6 +391,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function configure(next: ActionWorkspaceDependencies): void {
+    for (const source of quotationEditSources.values()) source.revoked = true
     dependencies = next
   }
 
@@ -624,10 +645,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (!configured) return failure('server_terminal', 'Action Workspace is not configured')
     if (loadState.value === 'loading') return failure('validation', 'Action Workspace is already loading')
     const session = configured.getSession()
+    observeQuotationEditAuthorization(session)
     if (!session) return failure('session_invalid', 'An authenticated session is required')
     const requestedSessionScope = sessionScopeKey(session)
     const scopeUnchanged = (): boolean => {
       const activeSession = configured.getSession()
+      observeQuotationEditAuthorization(activeSession)
       return activeSession !== null && sessionScopeKey(activeSession) === requestedSessionScope
     }
     const blockStaleScope = (): OperationSnapshot<ActionDescriptor> => {
@@ -646,6 +669,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     if (draftWriteInFlight) await draftWriteInFlight
     if (!ownedStillCurrent()) return failure('cancelled', 'Owned appointment load was superseded')
     if (!scopeUnchanged()) return blockStaleScope()
+    // Hide edit readiness while loading; its private scoped provenance remains
+    // available if this exact draft is recovered by a later successful retry.
+    quotationEditState.value = { state: 'none' }
+    quotationExistingOrderId.value = null
     quotationComposition.clear()
     quotationCatalogBrowser.clear()
     quotationEngine.clear()
@@ -704,7 +731,6 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return failure(target.category, error.value.message)
     }
     const { currentTask, node, contentKind, isAppointmentAction, isDynamicAction, isQuotationAction } = target
-
     if (isQuotationAction) {
       // A quotation draft must have an authenticated role provenance. Without
       // one, do not fall back to the unscoped pre-v3 storage key.
@@ -766,6 +792,18 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       if (requestVersion !== loadVersion || !ownedStillCurrent()) return failure('cancelled', 'Action Workspace load was superseded')
       if (!scopeUnchanged()) return blockStaleScope()
       quotationOrderState.value = restoredQuotationOrderState
+      const sourceKey = JSON.stringify(identity)
+      const editSource = quotationEditSources.get(sourceKey)
+      if (editSource && quotationComposition.draft?.groups.length) {
+        if (editSource.revoked || editSource.authorizationScope !== requestedSessionScope) {
+          quotationEditState.value = { state: 'blocked', message: '恢复草稿的既有订单编辑来源已失效；不能改走新建订单。' }
+        } else {
+          quotationExistingOrderId.value = editSource.orderId
+          quotationEditState.value = { state: 'ready', message: '已恢复当前作用域的既有订单编辑来源；提交前仍将重新核对目录、价格和服务器归属。' }
+        }
+      } else if (editSource && quotationComposition.localState === 'fresh') {
+        quotationEditSources.delete(sourceKey)
+      }
       loadedSessionScope.value = requestedSessionScope
       quotationContentState.value = 'ready'
       loadState.value = 'succeeded'
@@ -938,6 +976,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       quotationOrderState.value = { state: 'failed_terminal', message: '当前报价动作尚未具备安全提交条件。' }
       return quotationOrderState.value
     }
+    const editSource = quotationEditSources.get(JSON.stringify(currentIdentity))
+    if (quotationEditState.value.state === 'loading' || quotationEditState.value.state === 'blocked'
+      || (editSource && (editSource.revoked || editSource.authorizationScope !== sessionScopeKey(session)
+        || quotationExistingOrderId.value !== editSource.orderId))) {
+      return { state: 'failed_terminal', message: '既有订单编辑来源尚未核实；禁止将其草稿作为新订单提交。' }
+    }
     quotationOrderState.value = { state: 'submitting', message: '正在核对本地报价草稿…' }
     const flushed = await quotationComposition.flushDraft()
     if (!actionCommandScopeCurrent(commandVersion, currentDescriptor) || identity !== currentIdentity) {
@@ -1059,6 +1103,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return restored
     }
     quotationExistingOrderId.value = orderId
+    quotationEditSources.set(JSON.stringify(currentIdentity), {
+      orderId, authorizationScope: sessionScopeKey(userSession), revoked: false,
+    })
     const engine = await refreshQuotationEngine()
     if (!current()) return failure('cancelled', '价格复核期间角色或工单已切换。')
     if (!engine || engine.state !== 'ready') {
@@ -1212,6 +1259,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
     const configured = dependencies
     const session = configured?.getSession()
+    observeQuotationEditAuthorization(session ?? null)
     const current = descriptor.value
     if (current && loadedSessionScope.value && (!session || sessionScopeKey(session) !== loadedSessionScope.value)) {
       clear()
