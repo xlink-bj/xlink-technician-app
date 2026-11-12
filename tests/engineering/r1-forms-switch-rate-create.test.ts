@@ -92,7 +92,7 @@ it('preserves mixed scalar zero and verified Code single choice on arbitrary reo
  const {a}=await h.start();await a.saveOnly({arbitraryToggle:'1',arbitraryScore:2,zeroProof:0,codePick:'c0'})
  expect(h.saved()).toMatchObject({zeroProof:0,codePick:'c0',exts:{codePick:'c0',arbitraryScore:2}})
 })
-it.each(['typed','special','repeat','v2','records','file','array','large','conditional','readonly','unknown-type','unknown-provider','front-config','rate-count','rate-half','switch-values','raw-alias','bad-slot','duplicate-key','duplicate-id'])('keeps %s outside this narrow capability',async kind=>{
+it.each(['typed','special','repeat','v2','records','file','array','large','conditional','readonly','unknown-type','unknown-provider','front-config','rate-count','rate-half','switch-values','raw-alias','bad-slot','duplicate-key','duplicate-id'])('selects the supported strategy or refuses %s',async kind=>{
  const h=fixture()
  if(kind==='typed')h.ext.type='1'
  if(kind==='special'){h.ext.colName='survey';h.fields.forEach(f=>f.colName='survey')}
@@ -115,6 +115,21 @@ it.each(['typed','special','repeat','v2','records','file','array','large','condi
  if(kind==='duplicate-key')h.fields[2].name=h.fields[1].name
  if(kind==='duplicate-id')h.fields[2]._id=h.fields[1]._id
  const result=await h.start().catch(()=>null)
+ if(kind==='conditional'){
+  expect(result?.a).not.toBeNull();expect(result!.a.validateDraft!({arbitraryToggle:'0',memo:'kept'})).toBe(true);expect(result!.a.validateDraft!({arbitraryToggle:'0',arbitraryScore:4})).toBe(false);expect(wire.execute).not.toHaveBeenCalled();return
+ }
+ if(kind==='array'){
+  // This formerly refused combination now has its own source-bound per-field plan.
+  expect(result?.a).not.toBeNull()
+  const values={arbitraryToggle:'0',arbitraryScore:4,memo:['c2','c0']}
+  expect(result!.a.validateDraft!(values)).toBe(true)
+  expect(result!.a.validateDraft!({...values,arbitraryToggle:false})).toBe(false)
+  expect(result!.a.validateDraft!({...values,memo:['UNKNOWN']})).toBe(false)
+  await result!.a.saveOnly(values)
+  expect(h.saved()).toMatchObject({...values,exts:{arbitraryScore:4,memo:['c2','c0']}})
+  expect(wire.execute.mock.calls.map(([r])=>r.path)).toEqual(['biz/extForm/upsert/e','workflowNode/updateExts/n'])
+  return
+ }
  if(result)expect(result.a?.canCreate?.()??false).toBe(false)
  else expect(h.calls.length).toBeGreaterThan(0)
  expect(wire.execute).not.toHaveBeenCalled()

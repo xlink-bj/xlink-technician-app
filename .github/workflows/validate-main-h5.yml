@@ -330,6 +330,24 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/ordinary-ui-atomicity.config.ts
+      - name: Verify ordinary complete-path Cascade first creation
+        env:
+          XLINK_H5_FORMS_CASCADE_CREATE: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/forms-cascade-create.config.ts
+      - name: Verify ordinary mixed Switch Rate and Code choice first creation
+        env:
+          XLINK_H5_FORMS_MIXED_CREATE: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/forms-mixed-create.config.ts
+      - name: Verify ordinary configured per-field first creation and owned uploads
+        env:
+          XLINK_H5_ORDINARY_CREATE_PLAN: 'true'
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/ordinary-create-plan.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -357,6 +375,10 @@ jobs:
             test-results/ordinary-create-draft/
             test-results/switch-rate-create/
             test-results/ordinary-ui-atomicity/
+            test-results/forms-cascade-create/
+            test-results/forms-mixed-create/
+            test-results/ordinary-create-plan/
+            test-results/forms-unified-create/
           if-no-files-found: warn
           retention-days: 7
 

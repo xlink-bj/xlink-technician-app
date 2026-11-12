@@ -142,7 +142,7 @@ it.each(['typed','special','v2','large','array','file','unknown'])('keeps %s out
  if(mode==='unknown')h.fields[0].type='UNKNOWN'
  if(mode==='large'){for(let i=6;i<51;i++)h.fields.push({...h.fields[0],_id:'field-'+i,name:'value'+i});h.node.nodeDef.formFieldIdsFill=h.fields.map(f=>f._id);h.grant.fieldIds=h.fields.map(f=>f._id);h.grantUpdate()}
  if(mode==='large'){await expect(h.start()).rejects.toThrow()}
- else{const {a}=await h.start();expect(a?.updateCreateDraft).toBeUndefined()}
+ else{const {a}=await h.start();if(mode==='array'){expect(typeof a?.updateCreateDraft).toBe('function');expect(a!.updateCreateDraft!({},'mode','off')).toEqual({mode:'off'})}else expect(a?.updateCreateDraft).toBeUndefined()}
  expect(h.request).not.toHaveBeenCalled()
 })
 it('normal panel reload renews the lease while retaining the explicit new draft',async()=>{
@@ -167,9 +167,9 @@ it('a newer page epoch rejects a late read and old control events',async()=>{
  try{void h.read();await arrived;h.props.actorScope='different';await settle();release();await settle();old('on');await settle();expect(h.get('r1-normal-create')).toBeUndefined();expect(h.request).not.toHaveBeenCalled()}finally{release();h.app.unmount()}
 })
 
-it('does not install the scalar callback for a mobile-excluded optional row; normal panel input still works',async()=>{
+it('unified callback safely handles a known mobile-excluded optional row; normal panel input still works',async()=>{
  const f=fixture();f.fields[5].showList=['5'];const {a}=await f.start()
- expect(a.updateCreateDraft).toBeUndefined();expect(a.validateDraft!({mode:'off'})).toBe(true)
+ expect(typeof a.updateCreateDraft).toBe('function');expect(a.updateCreateDraft!({},'mode','off')).toEqual({mode:'off'});expect(a.validateDraft!({mode:'off'})).toBe(true)
  const h=await mounted(f=>{f.fields[5].showList=['5']})
  try{
   await h.set('mode','off');expect(h.input('mode')!.props.value).toBe('off')
@@ -187,7 +187,7 @@ it.each(['cycle','unknown-controller','nested-controller','surface'])('does not 
  const {a}=await h.start();expect(a?.updateCreateDraft).toBeUndefined();expect(h.request).not.toHaveBeenCalled()
 })
 
-it.each(['show-other','show-empty','self','two-node','missing','nested','comma','fieldId','sessionRef'])('B2 complete selection domain: %s stays on the legitimate old path',async kind=>{
+it.each(['show-other','show-empty','self','two-node','missing','nested','comma','fieldId','sessionRef'])('complete ordinary plan: %s has explicit applicability or refuses unsupported metadata',async kind=>{
  const h=fixture()
  if(kind==='show-other')h.fields[5].showList=['5']
  if(kind==='show-empty')h.fields[5].showList=[]
@@ -195,9 +195,9 @@ it.each(['show-other','show-empty','self','two-node','missing','nested','comma',
  if(kind==='two-node'){Object.assign(h.fields[5],{showType:'3',showField:'visitDate',showValue:'on',showFieldPreset:0});Object.assign(h.fields[0],{showType:'3',showField:'memo',showValue:'on',showFieldPreset:0})}
  if(['missing','nested','comma'].includes(kind))h.fields[5].showType='3',h.fields[5].showField=kind==='missing'?'unknown':kind==='nested'?'meta.flag':'a,b',h.fields[5].showValue='on',h.fields[5].showFieldPreset=0
  if(kind==='fieldId'||kind==='sessionRef')h.fields[5].name=kind
- const {s,a}=await h.start();expect(a).not.toBeNull();expect(a.validateDraft!({mode:'off'})).toBe(true)
+ const {s,a}=await h.start();if(!['show-other','show-empty'].includes(kind)){expect(a).toBeNull();expect(h.request).not.toHaveBeenCalled();return};expect(a).not.toBeNull();expect(a.validateDraft!({mode:'off'})).toBe(true)
  expect(repeatForm.projectR1RepeatFields(s,{mode:'off'}).find(f=>f.valueKey==='mode')!.supported).toBe(true)
- expect(a.updateCreateDraft).toBeUndefined()
+ if(kind==='show-other'||kind==='show-empty'){expect(typeof a.updateCreateDraft).toBe('function');expect(a.updateCreateDraft!({},'mode','off')).toEqual({mode:'off'})}else expect(a.updateCreateDraft).toBeUndefined()
  expect(repeatForm.updateR1FormDraftValue(s,{},'mode','off')).toEqual({mode:'off'})
  expect(h.request).not.toHaveBeenCalled()
 })

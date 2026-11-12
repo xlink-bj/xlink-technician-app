@@ -37,7 +37,7 @@ function createBoundFormFileSession(input: {
   readonly picker: MediaFilePickerPort
   readonly getSnapshot: () => R1NodeFormsSnapshot
   readonly isAuthorized: () => boolean
-}, mode:'generic'|'survey'|{sourceNodeType:string;allowedSources?:readonly string[];eligible:(snapshot:R1NodeFormsSnapshot,fieldId:string,values:Readonly<Record<string,unknown>>)=>boolean}): R1NormalFormFileSession {
+}, mode:'generic'|'survey'|{sourceNodeType:string;allowedSources?:readonly string[];eligible:(snapshot:R1NodeFormsSnapshot,fieldId:string,values:Readonly<Record<string,unknown>>)=>boolean;assertNonFileValues?:(snapshot:R1NodeFormsSnapshot,values:Readonly<Record<string,unknown>>)=>void}): R1NormalFormFileSession {
   const scope = Object.freeze({ ...input.scope }), revision = ref(0)
   const owned = new Map<MediaUploadTaskId, OwnedTask>()
   let epoch = 0, disposed = false, inFlight = false, finalized = false, uncertain = false, asserted = false, text = ''
@@ -147,9 +147,11 @@ function createBoundFormFileSession(input: {
   function verifyValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>, expected: number) {
     if ([...owned.values()].some(entry => !receipt(entry))) return deny('仍有未完成或结果不明的附件。')
     const fields = snapshot.definition.fields ?? []
+    const fieldPlan=typeof mode==='object'?mode.assertNonFileValues:undefined
+    fieldPlan?.(snapshot,values)
     for (const [key, value] of Object.entries(values)) {
       const metadata = fields.find(candidate => candidate.valueKey === key)
-      if (metadata?.type !== 'file') { if (Array.isArray(value)) return deny(); continue }
+      if (metadata?.type !== 'file') { if (Array.isArray(value)&&!fieldPlan) return deny(); continue }
       const selected = field(metadata.fieldId, values, expected), files = currentValues(metadata.fieldId)
       if (!sameValues(value, files) || files.length > selected.max) return deny('附件不是本会话上传的精确回执。')
     }

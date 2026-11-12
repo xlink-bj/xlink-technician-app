@@ -5,7 +5,7 @@ import { resolve } from 'node:path'
 
 // Test-only, fixed loopback profiles. No remote target, file path, credentials,
 // certificates or user-supplied output path can be configured through this API.
-const profiles = { 'normal-r1-file-upload': 5332, 'normal-r1-image-recovery': 5334 }
+const profiles = { 'normal-r1-file-upload': 5332, 'normal-r1-image-recovery': 5334, 'forms-unified-create': 5338 }
 const profile = process.argv[2]
 if (process.argv.length !== 3 || !Object.hasOwn(profiles, profile)) throw Error('Select a known synthetic image receiver profile')
 const port = profiles[profile], origin = 'http://127.0.0.1:5189'
@@ -57,7 +57,7 @@ const server = http.createServer(async (req, res) => {
     record({ method: 'POST', contentType: req.headers['content-type'], key, filename: marker?.[1],
       multipartBytes: bytes.length, multipartSha256: sha(bytes), imageBytes: image?.length,
       imageSha256: image ? sha(image) : null })
-    // Accept only the generated, pixel-decoded 4x4 PNG used by these two specs.
+    // Accept only the generated, pixel-decoded 4x4 PNG used by these normal-App specs.
     // A local caller cannot turn the fixture into storage for a personal file.
     if (key !== keyExpected || image?.length !== 78 || sha(image) !== imageExpected) {
       json(res, 400, { error: 'Synthetic image identity missing' }); return

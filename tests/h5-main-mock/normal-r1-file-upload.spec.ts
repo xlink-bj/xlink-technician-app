@@ -65,7 +65,7 @@ test('normal R1 forms picker sends actual multipart then saves and exactly rerea
       expect(data).not.toHaveProperty('_id'); expect(saved).toBeNull()
       writes.push({ path, data })
       saved = { ...data, _id: 'synthetic-normal-photo-record', tenantId: tenant }
-      return ok({ success: true, status: 1, data: { _id: saved._id } })
+      return ok({ success: true, status: 1, data: structuredClone(saved) })
     }
     if (path === 'workflowNode/updateExts/' + node._id && req.headers()['content-type']?.startsWith('application/json')) {
       const data = req.postDataJSON() as typeof node.exts

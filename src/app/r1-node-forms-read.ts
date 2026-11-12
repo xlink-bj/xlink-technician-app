@@ -486,17 +486,26 @@ export function createNormalNodeFormsReader(input: {
         && hydrated.some(field=>field.type==='file'&&!field.readOnly
           && !node.formFieldIdsReadOnly?.includes(field.fieldId)&&fillableFieldIds?.includes(field.fieldId))
         ?routeFacts:undefined
-      // First-create choice capability needs exact raw metadata, not a purpose heuristic.
+      // Ordinary first-create source: complete raw metadata per field. Default
+      // images retain their already-supported omitted boolean/operation defaults
+      // and numeric required representation; no other field inherits them.
+      const ordinaryFileConfig=(f:Record<string,unknown>)=>{
+        if(f.type!=='file'||!isR1DefaultImageFieldConfig(f))return false
+        if(f.frontEndConfig==null||f.frontEndConfig==='')return true
+        try{const v=typeof f.frontEndConfig==='string'?decodeR1ScopedJson(f.frontEndConfig):f.frontEndConfig
+          return Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.entries(v).every(([k,x])=>k==='max'&&typeof x==='number'&&Number.isSafeInteger(x)&&x>=0&&x<=10))}catch{return false}
+      }
       const formsCreateRoute=routeFacts&&fields.length<=50&&!['survey','inspectionAppointment','serviceAppointment'].includes(routeFacts.colName)
         &&fields.every(f=>(!hydrated.some(mapped=>mapped.fieldId===f._id&&['switch','rate'].includes(mapped.type))
           ||['switch','rate'].includes(String(f.type))&&!['count','allowHalf','half','step','activeValue','inactiveValue','max','min','options'].some(k=>Object.hasOwn(f,k)))
-          &&[0,1].includes(f.preset as number)&&['0','1'].includes(f.required as string)&&typeof f.multiple==='boolean'
-          &&f.operationType==='1'&&(f.calculateConfig==null||f.calculateConfig==='')&&(f.router==null||f.router==='')
+          &&[0,1].includes(f.preset as number)&&(ordinaryFileConfig(f)?['0','1',0,1].includes(f.required as never):['0','1'].includes(f.required as string))
+          &&(typeof f.multiple==='boolean'||ordinaryFileConfig(f)&&!Object.hasOwn(f,'multiple'))
+          &&(f.operationType==='1'||ordinaryFileConfig(f)&&!Object.hasOwn(f,'operationType'))&&(f.calculateConfig==null||f.calculateConfig==='')&&(f.router==null||f.router==='')
           &&(f.roleIds==null||Array.isArray(f.roleIds)&&f.roleIds.length===0)&&(!Object.hasOwn(f,'readOnly')||f.readOnly===0||f.readOnly===1)
           &&(!Object.hasOwn(f,'readonly')||[0,1].includes(f.readonly as number)&&(!Object.hasOwn(f,'readOnly')||f.readOnly===f.readonly))
           &&!['componentType','surveyTool','url','params'].some(k=>Object.hasOwn(f,k))
           &&(!Object.hasOwn(f,'customizeFlag')||f.customizeFlag===0||f.customizeFlag===1)
-          &&(f.frontEndConfig==null||f.frontEndConfig===''||(()=>{try{const v=decodeR1ScopedJson(f.frontEndConfig);return Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===0)}catch{return false}})()))
+          &&(ordinaryFileConfig(f)||f.frontEndConfig==null||f.frontEndConfig===''||(()=>{try{const v=decodeR1ScopedJson(f.frontEndConfig);return Boolean(v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===0)}catch{return false}})()))
         ?routeFacts:undefined
       const writeMedia=input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true'&&input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
       const configuredGrant=parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)?.version===4

@@ -203,7 +203,7 @@ export function createR1FormsActions(input: {
           const again=normalize(intermediate.snapshot,original??undefined)
           return JSON.stringify(Object.keys(again.fields).sort())!==JSON.stringify(Object.keys(normalized.fields).sort())
             || Object.entries(normalized.fields).some(([k,v])=>Array.isArray(v)
-              ?!sameR1NormalFileValues(again.fields[k],v):again.fields[k]!==v)
+              ?(fileKeys.includes(k)?!sameR1NormalFileValues(again.fields[k],v):!sameR1ChoiceValue(again.fields[k],v)):again.fields[k]!==v)
             || JSON.stringify(again.clearedFieldKeys)!==JSON.stringify(normalized.clearedFieldKeys)
         })():JSON.stringify(normalize(intermediate.snapshot,original??undefined))!==JSON.stringify(normalized))) return deny()
       if(fileCreate){await input.assertFileValues!(intermediate.snapshot,normalized.fields);check()}

@@ -55,7 +55,7 @@ afterEach(()=>vi.unstubAllGlobals())
 describe('controlled create renewal cannot mask observed external revocation',()=>{
  it.each((['choice','scalar'] as const).flatMap(mode=>(['before','after'] as const).map(stage=>({mode,stage}))))('control $mode $stage upsert keeps legitimate owned renewal usable',async({mode,stage})=>{
   const h=fixture();if(mode==='scalar')for(const f of h.fields){f.type='text';f.multiple=false;delete f.valueOption}
-  const {a}=await h.start();expect(typeof a.updateCreateDraft).toBe(mode==='scalar'?'function':'undefined');let ready!:()=>void,release!:()=>void,count=0
+  const {a}=await h.start();expect(typeof a.updateCreateDraft).toBe('function');let ready!:()=>void,release!:()=>void,count=0
   const arrived=new Promise<void>(r=>ready=r),gate=new Promise<void>(r=>release=r)
   h.hook(async path=>{if(path==='basic/serviceAppointment/queryById/s'&&++count===(stage==='before'?1:3)){ready();await gate}})
   const pending=a.saveOnly(mode==='scalar'?{renamedChecks:'plain',memo:'on'}:{renamedChecks:['c0'],renamedMulti:['c1']});await arrived
@@ -63,7 +63,7 @@ describe('controlled create renewal cannot mask observed external revocation',()
  })
  it.each((['choice','scalar'] as const).flatMap(mode=>(['before','after'] as const).flatMap(stage=>(['switch','grant','actor'] as const).map(kind=>({mode,stage,kind})))))('observed $kind revocation in $mode while renewing $stage upsert remains revoked after restoration',async({mode,stage,kind})=>{
   const h=fixture();if(mode==='scalar')for(const f of h.fields){f.type='text';f.multiple=false;delete f.valueOption}
-  const {a}=await h.start();expect(typeof a.updateCreateDraft).toBe(mode==='scalar'?'function':'undefined');let ready!:()=>void,release!:()=>void,count=0
+  const {a}=await h.start();expect(typeof a.updateCreateDraft).toBe('function');let ready!:()=>void,release!:()=>void,count=0
   const arrived=new Promise<void>(r=>ready=r),gate=new Promise<void>(r=>release=r)
   h.hook(async path=>{if(path==='basic/serviceAppointment/queryById/s'&&++count===(stage==='before'?1:3)){ready();await gate}})
   const pending=a.saveOnly(mode==='scalar'?{renamedChecks:'plain',memo:'on'}:{renamedChecks:['c0'],renamedMulti:['c1']}),outcome=expect(pending).rejects.toThrow();await arrived
