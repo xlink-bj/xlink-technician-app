@@ -11,7 +11,7 @@ import type {
 import { createOperationError, type OperationSnapshot } from '@shared/types'
 
 import { quotationCatalogItemFor, quotationCatalogKindLabels } from './catalog'
-import { decodeQuotationDraftRecord, quotationDraftRecordFor } from './draft-codec'
+import { decodeQuotationDraftRecord, quotationDraftRecordFor, type QuotationDraftOrigin } from './draft-codec'
 import {
   appendQuotationGroup,
   appendQuotationSelection,
@@ -71,6 +71,7 @@ function selections(draft: QuotationDraft) {
 export const useQuotationCompositionStore = defineStore('quotationComposition', () => {
   const draft = ref<QuotationDraft | null>(null)
   const localState = ref<QuotationDraftLocalState>('idle')
+  const origin = ref<QuotationDraftOrigin>('unknown')
   const localStateMessage = ref('')
   const repairPartOptions = ref<readonly CodeOptionRead[]>([])
   const quantityTextBySelection = ref<Readonly<Record<string, string>>>({})
@@ -102,6 +103,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     repository = null
     identity = null
     draft.value = null
+    origin.value = 'unknown'
     localState.value = 'idle'
     localStateMessage.value = ''
     repairPartOptions.value = []
@@ -127,6 +129,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     now = input.now ?? (() => new Date().toISOString())
     debounceMs = input.debounceMs ?? 360
     draft.value = null
+    origin.value = 'unknown'
     localState.value = 'loading'
     localStateMessage.value = ''
     repairPartOptions.value = input.repairPartOptions ?? []
@@ -159,6 +162,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
           return localState.value
         }
       }
+      origin.value = 'new'
       draft.value = createEmptyQuotationDraft(String(input.identity.workOrderId), String(input.identity.workflowNodeId))
       quantityTextBySelection.value = {}
       localState.value = 'fresh'
@@ -176,6 +180,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
       localStateMessage.value = decoded.reason
       return localState.value
     }
+    origin.value = decoded.origin
     draft.value = decoded.draft
     quantityTextBySelection.value = inputValuesFor(decoded.draft)
     localState.value = 'restored'
@@ -467,7 +472,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     if (activeWrite?.generation === currentGeneration) return activeWrite.promise
 
     const writeVersion = currentDraft.draftVersion
-    const record = quotationDraftRecordFor(currentIdentity, currentDraft, now())
+    const record = quotationDraftRecordFor(currentIdentity, currentDraft, now(), origin.value)
     localState.value = 'saving'
     const write = {
       generation: currentGeneration,
@@ -510,6 +515,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     if (String(source.workOrderId) !== String(identity.workOrderId) || source.groups.length === 0) {
       return failed('validation', '服务器订单与当前工单不匹配，未恢复到本地草稿。')
     }
+    origin.value = 'existing'
     draft.value = {
       ...source,
       workOrderId: String(identity.workOrderId),
@@ -528,6 +534,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     }
     const removed = await repository.remove(identity)
     if (removed.state !== 'succeeded') return removed
+    origin.value = 'new'
     draft.value = createEmptyQuotationDraft(String(identity.workOrderId), String(identity.workflowNodeId))
     quantityTextBySelection.value = {}
     quantityErrorBySelection.value = {}
@@ -537,6 +544,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   }
 
   return {
+    origin,
     draft,
     groups,
     selectionCount,

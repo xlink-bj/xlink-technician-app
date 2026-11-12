@@ -81,6 +81,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     expect(stored.state).toBe('succeeded')
     expect(stored.data?.values).toEqual({
       schemaVersion: 4,
+      origin: 'new',
       quotationDraft: {
         workOrderId: String(identity.workOrderId),
         workflowNodeId: String(identity.workflowNodeId),
@@ -255,6 +256,7 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     const saved = await repository.read<Readonly<Record<string, unknown>>>(currentIdentity)
     expect(saved.data?.values).toEqual({
       schemaVersion: 4,
+      origin: 'unknown',
       quotationDraft: {
         ...v2Draft,
         draftVersion: 10,

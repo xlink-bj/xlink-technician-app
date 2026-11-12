@@ -14,13 +14,17 @@ import {
 
 const QUOTATION_DRAFT_SCHEMA_VERSION = 4
 
+/** Local routing intent only, never order identity or write authority. Missing/invalid intent stays unknown. */
+export type QuotationDraftOrigin = 'new' | 'existing' | 'unknown'
+
 export interface QuotationDraftRecordValues extends Readonly<Record<string, unknown>> {
   readonly schemaVersion: 4
   readonly quotationDraft: QuotationDraft
+  readonly origin?: QuotationDraftOrigin
 }
 
 export type QuotationDraftDecodeResult =
-  | { readonly state: 'valid'; readonly draft: QuotationDraft }
+  | { readonly state: 'valid'; readonly draft: QuotationDraft; readonly origin: QuotationDraftOrigin }
   | { readonly state: 'legacy_requires_action'; readonly reason: string }
   | { readonly state: 'invalid'; readonly reason: string }
 
@@ -179,11 +183,12 @@ export function quotationDraftRecordFor(
   identity: ActionDraftIdentity,
   draft: QuotationDraft,
   updatedAt: string,
+  origin: QuotationDraftOrigin = 'unknown',
 ): ActionDraftRecord<QuotationDraftRecordValues> {
   return {
     version: 1,
     identity,
-    values: { schemaVersion: QUOTATION_DRAFT_SCHEMA_VERSION, quotationDraft: draft },
+    values: { schemaVersion: QUOTATION_DRAFT_SCHEMA_VERSION, quotationDraft: draft, origin },
     updatedAt,
     status: 'unfinished',
   }
@@ -207,7 +212,7 @@ export function decodeQuotationDraftRecord(
     !Number.isFinite(Date.parse(stored.updatedAt)) ||
     stored.status !== 'unfinished' ||
     !values ||
-    !exactKeys(values, ['schemaVersion', 'quotationDraft'])
+    !exactKeys(values, ['schemaVersion', 'quotationDraft', ...(Object.hasOwn(values, 'origin') ? ['origin'] : [])])
   ) return { state: 'invalid', reason: '本地报价草稿格式无效，未覆盖原记录。' }
 
   const draftValue = record(values.quotationDraft)
@@ -261,6 +266,7 @@ export function decodeQuotationDraftRecord(
 
   return {
     state: 'valid',
+    origin: values.origin === 'new' || values.origin === 'existing' ? values.origin : 'unknown',
     draft: {
       workOrderId: draftValue.workOrderId,
       workflowNodeId: draftValue.workflowNodeId,

@@ -499,7 +499,9 @@ const workspaceNavigationTitle = computed(() => {
   if (quotationHubVisible.value) return quotationChoiceVisible.value ? '选择下单方式' : '订单管理'
   if (successfulQuotationOrder.value) return '订单已提交'
   if (routeAction.value === 'place_order' || workspace.descriptor?.contentKind === 'quotation') {
-    return routeQuotationOrderId.value || workspace.quotationEditState.state === 'ready' ? '修改订单' : '新增订单'
+    if (workspace.quotationEditState.state === 'ready') return '修改订单'
+    if (quotationComposition.draft && (quotationComposition.origin !== 'new' || workspace.quotationEditState.state === 'blocked')) return '报价草稿'
+    return routeQuotationOrderId.value ? '修改订单' : '新增订单'
   }
   if (workspace.descriptor?.formPurpose === 'survey') return '现场勘查'
   // A denied legacy route has no verified descriptor, so keep the requested

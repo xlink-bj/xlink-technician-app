@@ -219,6 +219,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       && descriptor.value.execution === 'enabled'
       && quotationEngine.result?.state === 'ready'
       && quotationComposition.draft
+      && (quotationComposition.origin === 'new' || quotationEditState.value.state === 'ready')
       && quotationEngine.result.draftVersion === quotationComposition.draft.draftVersion
       && quotationEditState.value.state !== 'loading'
       && quotationEditState.value.state !== 'blocked'
@@ -860,6 +861,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
           quotationExistingOrderId.value = editSource.orderId
           quotationEditState.value = { state: 'ready', message: '已恢复当前作用域的既有订单编辑来源；提交前仍将重新核对目录、价格和服务器归属。' }
         }
+      } else if (quotationComposition.draft && quotationComposition.origin !== 'new') {
+        quotationEditState.value = { state: 'blocked', message: '已恢复报价内容，但原订单来源未核实；不能作为新订单提交。请保留草稿并重新核对订单。' }
       } else if (editSource && quotationComposition.localState === 'fresh') {
         quotationEditSources.delete(sourceKey)
       }
@@ -1036,7 +1039,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return quotationOrderState.value
     }
     const editSource = quotationEditSources.get(JSON.stringify(currentIdentity))
-    if (quotationEditState.value.state === 'loading' || quotationEditState.value.state === 'blocked'
+    if ((quotationComposition.origin !== 'new' && !editSource)
+      || quotationEditState.value.state === 'loading' || quotationEditState.value.state === 'blocked'
       || (editSource && (editSource.revoked || editSource.authorizationScope !== sessionScopeKey(session)
         || quotationExistingOrderId.value !== editSource.orderId))) {
       return { state: 'failed_terminal', message: '既有订单编辑来源尚未核实；禁止将其草稿作为新订单提交。' }
