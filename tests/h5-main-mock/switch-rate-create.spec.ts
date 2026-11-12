@@ -45,6 +45,11 @@ for(const mode of ['save-reopen','renamed','required-score','wrong-ack','permiss
    await page.locator('.uni-page-head-btn').first().click()
    await expect(page.locator('.work-order-card')).toBeVisible();await page.locator('.work-order-card').click()
    await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click()
+   // Reentry retains local work; explicitly discard for this reset-path scenario.
+   await expect(page.getByTestId('r1-normal-draft-restore')).toBeVisible()
+   expect(state.writes).toEqual([])
+   await page.getByTestId('r1-normal-draft-discard').click();await page.getByTestId('r1-normal-draft-discard-confirm').click()
+   await expect(page.getByTestId('r1-normal-draft-restore')).toHaveCount(0)
    await expect(field('arbitraryScore')).toContainText('未评分')
    await expect(field('arbitraryToggle').locator('[aria-pressed="true"]')).toHaveCount(0)
    expect(state.writes).toEqual([])
