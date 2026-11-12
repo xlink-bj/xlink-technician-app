@@ -57,6 +57,16 @@ export function surveyConditionalPartAfterChange(snapshot: R1NodeFormsSnapshot,
   return surveyHeightVisible(snapshot, next) ? next : { ...next, height: '' }
 }
 
+/** The existing controller/codec permits this exact hidden clear sentinel.
+ * This is local-draft validation only; it grants no command or new schema. */
+export function isSurveyConditionalHiddenClear(snapshot: R1NodeFormsSnapshot, fieldId: string,
+  values: Readonly<Record<string, unknown>>): boolean {
+  if (!supportsSurveyConditionalCreate(snapshot)) return false
+  const height = snapshot.definition.fields!.find(f => f.valueKey === 'height')!
+  return height.fieldId === fieldId && Object.hasOwn(values, height.valueKey)
+    && values[height.valueKey] === '' && !surveyHeightVisible(snapshot, values)
+}
+
 /** Fixed Java turns the empty Double input into null and Mongo omits it.
  * A stale EXTS duplicate must never shadow that authoritative root result. */
 export function sameClearedSurveyHeight(original: Readonly<Record<string, unknown>> | null | undefined): boolean {

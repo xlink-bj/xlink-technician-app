@@ -111,6 +111,28 @@ for (const mode of ['save', 'provider-drift', 'wrong-readback'] as const) {
       await field('part').getByText('合成其他 / 合成叶项', { exact: true }).click()
       await expect(field('height')).toHaveCount(0)
       await input('memo').fill('synthetic event calculation')
+      if (mode === 'save') {
+        await expect(page.getByTestId('r1-normal-draft-status')).toContainText('保存在本机')
+        await read()
+        await expect(input('memo')).toHaveValue('synthetic event calculation')
+        await expect(field('height')).toHaveCount(0)
+        await expect(save).toHaveAttribute('aria-disabled','false')
+        // Fresh document + real Login + explicit recovery, no model/storage injection.
+        await page.reload()
+        await page.goto('/#/pages/index/index')
+        await page.locator('.launch-cta').click()
+        await page.locator('.method-card').filter({hasText:'快捷登录'}).click()
+        await expect(page.locator('.home-page')).toBeVisible()
+        await page.locator('.work-orders-entry').click()
+        await page.locator('.work-order-card').click()
+        await read()
+        await expect(page.getByTestId('r1-normal-draft-restore')).toBeVisible()
+        await page.getByTestId('r1-normal-draft-restore').click()
+        await expect(input('memo')).toHaveValue('synthetic event calculation')
+        await expect(input('planeArea')).toHaveValue('7.04')
+        await expect(field('height')).toHaveCount(0)
+        expect(writes).toHaveLength(0)
+      }
       await expect(save).toHaveAttribute('aria-disabled', 'false')
       if (mode === 'provider-drift') drift = true
       await save.click()

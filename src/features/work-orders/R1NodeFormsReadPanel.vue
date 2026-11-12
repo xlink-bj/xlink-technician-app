@@ -157,7 +157,7 @@ async function load() {
       const read=await session.read()
       if(ticket!==version||props.actorScope!==actorScope||!props.reader.isCurrent(value)||draftSession!==session)return
       if(read.state==='recoverable' && Object.keys(values.value).length){
-        try{r1NormalDraftValues(value,fresh!,values.value,true);draftRead.value={state:'empty'};draftMessage.value='草稿已保存在本机，尚未提交。'}
+        try{r1NormalDraftValues(value,fresh!,values.value);draftRead.value={state:'empty'};draftMessage.value='草稿已保存在本机，尚未提交。'}
         catch{draftRead.value={state:'blocked',message:'字段配置或权限已变化，当前内容已保留，不能继续提交。'};draftMessage.value=draftRead.value.message}
       }else{
         if(read.state==='empty'&&value.records.length)draftSession=null

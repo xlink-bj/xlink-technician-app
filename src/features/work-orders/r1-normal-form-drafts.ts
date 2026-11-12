@@ -33,6 +33,7 @@ export function r1NormalDraftValues(snapshot: R1NodeFormsSnapshot, actions: R1Re
   if (!input || typeof input !== 'object' || Array.isArray(input) || Object.keys(input).length > 50) throw Error('草稿字段无法核实。')
   const projected = actions.projectFields?.(input) ?? projectR1RepeatFields(snapshot,input)
   if (!projected) throw Error('当前表单尚不支持安全恢复。')
+  const omitted = restoring ? [] : actions.draftOmittedFieldIds?.(snapshot,input) ?? []
   const out: Record<string, R1LocalFieldValue> = Object.create(null)
   for (const [key,value] of Object.entries(input)) {
     if (unsafe.has(key)) throw Error('草稿字段无法核实。')
@@ -40,7 +41,12 @@ export function r1NormalDraftValues(snapshot: R1NodeFormsSnapshot, actions: R1Re
     if (sources?.length !== 1) throw Error('草稿字段身份不唯一。')
     const source = sources[0]!
     if (source.type === 'file' && !restoring) continue
-    const fields = projected.filter(f => f.valueKey === key && f.supported && f.visible && !f.readOnly)
+    // Only the current controller can identify a legal wire-clear sentinel.
+    // The generic recovery layer still checks identity, permission and stability.
+    const hiddenClear = !restoring && value === '' && omitted.includes(source.fieldId)
+      && projected.some(field => field.fieldId === source.fieldId && field.valueKey === key && !field.visible)
+    const fields = projected.filter(f => f.valueKey === key && !f.readOnly
+      && ((f.supported && f.visible) || (hiddenClear && !f.visible)))
     if (fields.length !== 1 || source.readOnly || snapshot.node.formFieldIdsReadOnly?.includes(source.fieldId)
       || !snapshot.fillableFieldIds?.includes(source.fieldId)
       || (!scalarTypes.has(source.type) && !choiceTypes.has(source.type))) throw Error('草稿字段权限或配置已变化。')
@@ -51,8 +57,16 @@ export function r1NormalDraftValues(snapshot: R1NodeFormsSnapshot, actions: R1Re
       const checked = normalizeFieldValue(source.type, value, fields[0]!.options, fields[0]!.multiple)
       if (!checked.ok) throw Error('草稿字段类型或选项已变化。')
     }
+    // Keep the live controller's wire sentinel out of durable recovery data.
+    if (hiddenClear) continue
     out[key] = Array.isArray(value) ? [...value] : value as R1LocalFieldValue
   }
+  const reprojection = actions.projectFields?.(out) ?? projectR1RepeatFields(snapshot,out)
+  const state = (f: typeof projected[number]) => [f.visible,f.readOnly,f.required,f.supported,f.type,f.multiple,f.options]
+  if (projected.some(field => {
+    const next = reprojection.filter(f => f.fieldId === field.fieldId && f.valueKey === field.valueKey)
+    return next.length !== 1 || JSON.stringify(state(field)) !== JSON.stringify(state(next[0]!))
+  })) throw Error('草稿投影已变化，不能安全保存。')
   // Revalidate through the existing current capability's local transition. It
   // can reject a revoked plan/ambiguous condition; it never issues a command.
   if (actions.updateCreateDraft) for (const [key,value] of Object.entries(out)) {

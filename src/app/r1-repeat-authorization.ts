@@ -1,5 +1,5 @@
 import {createSurveyMediaPageActions} from './r1-survey-media-actions'
-import { supportsSurveyConditionalCreate } from '@features/work-orders/r1-survey-conditional-create'
+import { isSurveyConditionalHiddenClear, supportsSurveyConditionalCreate } from '@features/work-orders/r1-survey-conditional-create'
 import { createRepeatAppointmentPageActions } from './r1-repeat-appointment-actions'
 import type { AuthSessionPort,MediaFilePickerPort,MediaUploadQueuePort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
@@ -113,7 +113,15 @@ export function createNormalRepeatActionProvider(input: {
           return latest
         },
       })
-      return { locked: () => actions.locked(s), saveOnly: values => actions.saveOnly(s, values), complete: () => actions.complete(s) }
+      let draftProjectionRevoked=false
+      return { draftOmittedFieldIds(candidate,values) {
+        const current=input.auth.getCurrentSession()
+        if(draftProjectionRevoked || candidate!==leaseSnapshot || !ownsSnapshot(s) || current?.sessionRef!==a.sessionRef
+          || current?.roleVersion!==a.roleVersion || current?.user.id!==s.userId || current.currentRole?.id!==s.roleId)
+          {draftProjectionRevoked=true;throw Error('当前草稿来源已失效')}
+        return conditionalCreate ? (candidate.definition.fields??[])
+          .filter(field=>isSurveyConditionalHiddenClear(candidate,field.fieldId,values)).map(field=>field.fieldId) : []
+      }, locked: () => actions.locked(s), saveOnly: values => actions.saveOnly(s, values), complete: () => actions.complete(s) }
     },
   }
 }

@@ -1,3 +1,4 @@
+import { r1NormalDraftValues } from '@features/work-orders/r1-normal-form-drafts'
 import { createNormalNodeFormsReader } from '@app/r1-node-forms-read'
 import { surveyHeightConditionIssue } from '@adapters/api/read-models/survey-height-condition'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -104,6 +105,52 @@ function normalHarness() {
 }
 
 describe('synthetic conditional Survey first create', () => {
+  it('persists and restores the actual controller hidden-clear value without disabling its valid draft',async()=>{
+    const f=normalHarness(),s=(await f.reader.load('work','node'))!,a=f.provider.forSnapshot(s)!
+    const old={...values(),height:'9.5'},hidden=updateR1FormDraftValue(s,old,'part',['1','11'])
+    expect(hidden.height).toBe('');expect(projectR1RepeatFields(s,hidden).find(x=>x.valueKey==='height')?.visible).toBe(false)
+    const stored=r1NormalDraftValues(s,a,hidden)
+    expect(stored).toEqual(Object.fromEntries(Object.entries(hidden).filter(([key])=>key!=='height')))
+    expect(r1NormalDraftValues(s,a,stored,true)).toEqual(stored)
+    expect(()=>r1NormalDraftValues(s,a,hidden,true)).toThrow()
+    expect(normalizeR1RepeatValues(s,stored).height).toBe('')
+    const reopened=updateR1FormDraftValue(s,stored,'part',['3','31','311'])
+    expect(Object.hasOwn(reopened,'height')).toBe(false);expect(()=>normalizeR1RepeatValues(s,reopened)).toThrow()
+    expect(f.commands.execute).not.toHaveBeenCalled()
+  })
+  it('does not turn hidden empty compatibility into permission for nonempty/null/undefined/unknown/readonly values',async()=>{
+    const f=normalHarness(),s=(await f.reader.load('work','node'))!,a=f.provider.forSnapshot(s)!
+    const hidden=updateR1FormDraftValue(s,{...values(),height:'9.5'},'part',['1','11'])
+    for(const value of ['9.5',null,undefined,[],false,0])expect(()=>r1NormalDraftValues(s,a,{...hidden,height:value})).toThrow()
+    expect(()=>r1NormalDraftValues(s,a,{...hidden,unknown:''})).toThrow()
+    const readonly={...s,node:{...s.node,formFieldIdsReadOnly:['height']}}
+    expect(()=>r1NormalDraftValues(readonly,a,hidden)).toThrow()
+    const drift={...s,definition:{...s.definition,fields:s.definition.fields!.map(x=>x.valueKey==='height'?{...x,preset:false}:x)}}
+    expect(()=>r1NormalDraftValues(drift,a,hidden)).toThrow()
+    expect(f.commands.execute).not.toHaveBeenCalled()
+  })
+
+  it('does not omit a visible empty value even when the controller supplies its omission ID',async()=>{
+    const f=normalHarness(),s=(await f.reader.load('work','node'))!,a=f.provider.forSnapshot(s)!
+    const hidden=updateR1FormDraftValue(s,{...values(),height:'9.5'},'part',['1','11'])
+    const hinted={...a,projectFields:(values:Readonly<Record<string,unknown>>)=>projectR1RepeatFields(s,values)
+      .map(field=>field.valueKey==='height'?{...field,visible:true,supported:true}:field)}
+    expect(a.draftOmittedFieldIds!(s,hidden)).toEqual(['height'])
+    expect(r1NormalDraftValues(s,hinted,hidden)).toHaveProperty('height','')
+    expect(f.commands.execute).not.toHaveBeenCalled()
+  })
+
+  it('requires the current provider omission capability and rejects copied or revoked sources',async()=>{
+    const f=normalHarness(),s=(await f.reader.load('work','node'))!,a=f.provider.forSnapshot(s)!
+    const hidden=updateR1FormDraftValue(s,{...values(),height:'9.5'},'part',['1','11'])
+    expect(a.draftOmittedFieldIds!(s,hidden)).toEqual(['height'])
+    expect(()=>r1NormalDraftValues(s,{...a,draftOmittedFieldIds:undefined},hidden)).toThrow()
+    expect(()=>r1NormalDraftValues({...s},a,hidden)).toThrow()
+    await f.reader.load('work','node')
+    expect(()=>r1NormalDraftValues(s,a,hidden)).toThrow()
+    expect(f.commands.execute).not.toHaveBeenCalled()
+  })
+
   it('clears the hidden height when part changes and never recalculates area on selection', () => {
     const s = snapshot(), old = { ...values(), height: '9.5' }
     const next = updateR1FormDraftValue(s, old, 'part', ['1','11'])

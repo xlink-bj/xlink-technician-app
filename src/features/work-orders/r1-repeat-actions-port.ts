@@ -4,6 +4,8 @@ import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
 import type { R1NormalFormFileSessionView } from './r1-normal-form-media-port'
 
 export interface R1RepeatPageActions {
+  /** Current controller-owned clear sentinels that must not enter durable recovery. */
+  draftOmittedFieldIds?(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>): readonly string[]
   readonly fileMedia?: R1NormalFormFileSessionView
   /** Selected ordinary scalar first-create transition; throw never means fallback. */
   updateCreateDraft?(values:Readonly<Record<string,R1LocalFieldValue>>,key:string,value:R1LocalFieldValue,recordId?:string):Record<string,R1LocalFieldValue>
