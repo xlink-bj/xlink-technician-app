@@ -1,3 +1,4 @@
+import { surveyLeakageCauseReadKey } from '@features/work-orders/survey-leakage-cause-read'
 import { resolveAStageDynamicFormMockWorkspace } from './a-stage-dynamic-form-mock-ui'
 import { createR1NormalFormDraftProvider } from './r1-normal-form-drafts'
 import { r1NormalFormDraftsKey } from '@features/work-orders/r1-normal-form-drafts'
@@ -133,6 +134,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     env: import.meta.env, origin: typeof window === 'undefined' ? '' : window.location.origin,
     media:{picker:mediaFilePicker,queue:mediaUploadQueue} }))
   const surveyLeakageCauseProvider = dependencies.surveyLeakageCauseProvider ?? createDefaultSurveyLeakageCauseProvider(authSession)
+  app.provide(surveyLeakageCauseReadKey, { provider: surveyLeakageCauseProvider, tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? '') })
   sessionStore.configureAuth(authSession)
   const workOrderListStore = useWorkOrderListStore(pinia)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)

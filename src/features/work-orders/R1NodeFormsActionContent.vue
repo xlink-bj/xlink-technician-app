@@ -6,7 +6,11 @@
     <text v-if="count !== null" data-testid="normal-form-workspace-count">已加载 {{ count }} 条</text>
     <R1NodeFormsReadPanel v-if="reader?.enabled()" :key="panelKey" ref="panel"
       :reader="reader" :work-order-id="workOrderId" :runtime-node-id="String(node.id)"
-      :actor-scope="actorScope" @changed="emit('changed')" @snapshot-change="readState=$event" />
+      :actor-scope="actorScope" :read-field-override="isCauseReadField" @changed="emit('changed')" @snapshot-change="readState=$event">
+      <template #read-field="{snapshot,record}">
+        <SurveyLeakageCauseExperience :read-view="causeRead?.forRecord(snapshot,record) ?? null" />
+      </template>
+    </R1NodeFormsReadPanel>
   </view>
   <template #actions>
     <text v-if="exitMessage" role="alert">{{ exitMessage }}</text>
@@ -15,9 +19,12 @@
   </ActionWorkspaceShell>
 </template>
 <script setup lang="ts">
-import { computed, inject, shallowRef, ref } from 'vue'
-import type { WorkflowNodeRead } from '@shared/ports'
+import { computed, inject, shallowRef, ref, onBeforeUnmount } from 'vue'
+import type { FormDataRead, WorkflowNodeRead } from '@shared/ports'
 import { r1NodeFormsReaderKey, type R1NodeFormsSnapshot } from './r1-node-forms-read'
+import { createNormalSurveyCauseRead, surveyLeakageCauseReadKey } from './survey-leakage-cause-read'
+import SurveyLeakageCauseExperience from './components/SurveyLeakageCauseExperience.vue'
+import type { R1RecordReadField } from './r1-record-read-fields'
 import R1NodeFormsReadPanel from './R1NodeFormsReadPanel.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -27,6 +34,16 @@ const emit=defineEmits<{(event:'changed'|'back'):void}>()
 const reader=inject(r1NodeFormsReaderKey,null)
 const panel=ref<{flushLocalDraft():Promise<boolean>}|null>(null)
 const readState=shallowRef<{actorScope:string;snapshot:R1NodeFormsSnapshot}|null>(null)
+const causeDependencies = inject(surveyLeakageCauseReadKey, null)
+const causeRead = reader && causeDependencies ? createNormalSurveyCauseRead({ reader, ...causeDependencies, source: () => {
+ const s = readState.value
+ return props.visible && s && props.actorScope && s.actorScope === props.actorScope
+   ? { snapshot: s.snapshot, actorScope: props.actorScope, workOrderId: props.workOrderId, nodeId: String(props.node.id) } : null
+} }) : null
+function isCauseReadField(snapshot:R1NodeFormsSnapshot, record:FormDataRead, field:R1RecordReadField):boolean {
+ return causeRead?.forRecord(snapshot,record)?.fieldId === field.fieldId
+}
+onBeforeUnmount(() => causeRead?.dispose())
 const panelKey=computed(()=>JSON.stringify([props.workOrderId,props.node.id,props.node.sourceNodeType,props.node.runId,props.node.formDefinitionId,props.node.lifecycle,props.node.handlers,props.node.visibility,props.node.formFieldIdsReadOnly]))
 const count=computed(()=>{
  const s=readState.value

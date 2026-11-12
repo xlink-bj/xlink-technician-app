@@ -21,10 +21,14 @@
       <view v-for="(record,index) in visibleSnapshot.records" :key="String(record.id)" class="form-read__record" data-testid="r1-normal-form-record">
         <text class="form-read__title">{{ visibleSnapshot.node.displayName || '现场记录' }} · {{ index + 1 }}</text>
         <view v-for="field in projectR1RecordReadFields(visibleSnapshot.definition, record)" :key="field.fieldId" class="form-read__field">
-          <text class="form-read__label">{{ field.label }}</text>
-          <text v-if="!readFiles(record,field)" class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
-          <R1NormalFileField v-if="readFiles(record,field)" :field="field"
-            :model-value="record.values?.[field.valueKey]" />
+          <slot v-if="$slots['read-field'] && readFieldOverride?.(visibleSnapshot, record, field)"
+            name="read-field" :snapshot="visibleSnapshot" :record="record" :field="field" />
+          <template v-else>
+            <text class="form-read__label">{{ field.label }}</text>
+            <text v-if="!readFiles(record,field)" class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
+            <R1NormalFileField v-if="readFiles(record,field)" :field="field"
+              :model-value="record.values?.[field.valueKey]" />
+          </template>
         </view>
         <AppButton v-if="actions?.canEdit?.(String(record.id)) && !actions.locked()" variant="secondary" size="compact"
           :disabled="busy || loading" :data-testid="`r1-normal-edit-${record.id}`" @tap="edit(String(record.id))">编辑记录</AppButton>
@@ -106,7 +110,8 @@ import { r1RepeatActionsKey } from './r1-repeat-actions-port'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-read'
 
 const props = defineProps<{ readonly reader: R1NodeFormsReader; readonly workOrderId: string;
-  readonly runtimeNodeId: string; readonly actorScope?: string | null }>()
+  readonly runtimeNodeId: string; readonly actorScope?: string | null;
+  readonly readFieldOverride?: (snapshot: R1NodeFormsSnapshot, record: FormDataRead, field: R1RecordReadField) => boolean }>()
 let readerView = claimNormalReader(props.reader)
 let viewReader = readerView.reader
 // Preserve the reader's exact identity while keeping the empty→loaded change reactive.
