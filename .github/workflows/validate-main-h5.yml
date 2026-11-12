@@ -348,6 +348,12 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/ordinary-create-plan.config.ts
+      - name: Verify normal first-create draft recovery (10 cases)
+        run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
+      - name: Verify old first-create discard isolates existing edits (2 cases)
+        env:
+          XLINK_DRAFT_EXISTING_EDIT: 'true'
+        run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -379,6 +385,8 @@ jobs:
             test-results/forms-mixed-create/
             test-results/ordinary-create-plan/
             test-results/forms-unified-create/
+            test-results/normal-form-draft-recovery/normal10/
+            test-results/normal-form-draft-recovery/existing2/
           if-no-files-found: warn
           retention-days: 7
 

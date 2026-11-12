@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 
 // Actual uni-app H5 pages. Every business response is a bounded, source-shaped
@@ -22,11 +23,8 @@ async function openListedWorkOrder(page: Page, number: string, customer: string)
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('qa-console')).toBeVisible()
   await page.locator('.work-orders-entry').click()
-  await page.locator('.search-input input').fill(number)
-  await page.locator('.search-button').click()
-  await page.locator('.work-order-card').filter({ hasText: customer }).click()
-  // MOCK-018 is the search token; the business-facing WorkOrder number is 26018.
-  await expect(page.locator('.summary-number')).toContainText(number === 'MOCK-018' ? '26018' : number)
+  await (await searchMockWorkOrder(page, { orderNum: number, customer })).click()
+  await expect(page.locator('.summary-number')).toContainText(number)
 }
 
 for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }]) {
@@ -125,7 +123,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
   test(`No verified Order stays inconclusive; forged signing identity is blocked, ${viewport.width}px`, async ({ page }) => {
     await page.setViewportSize(viewport)
     const assertLocal = await localOnly(page)
-    await openListedWorkOrder(page, 'MOCK-018', '吴先生')
+    await openListedWorkOrder(page, '26018', '吴先生')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-hub-read-error')).toBeVisible()
     await expect(page.getByTestId('quotation-hub-records')).toHaveCount(0)
@@ -148,7 +146,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 test('P1: an existing local draft is resumed, never labelled as new, across failed and empty Order reads at 375px', async ({ page }, info) => {
   await page.setViewportSize({ width: 375, height: 667 })
   const assertLocal = await localOnly(page)
-  await openListedWorkOrder(page, 'MOCK-018', '吴先生')
+  await openListedWorkOrder(page, '26018', '吴先生')
   await page.locator('.primary-task-action').click()
   await expect(page.getByTestId('quotation-hub-read-error')).toBeVisible()
   await page.getByTestId('quotation-hub-create-unverified').click()

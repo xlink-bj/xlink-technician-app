@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 
 const widths = [320, 375, 390] as const
@@ -29,10 +30,7 @@ for (const width of widths) {
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await expect(page.locator('.work-order-card').first()).toBeVisible()
-    await page.locator('.search-input input').fill('MOCK-018')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
-    // Fixture identity is searchable by MOCK-018, but commercial UI shows its business number.
+    await (await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })).click()
     await expect(page.locator('.summary-number')).toContainText('#26018')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()

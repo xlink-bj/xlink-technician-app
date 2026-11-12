@@ -1,3 +1,4 @@
+import * as normalDraftPort from '@features/work-orders/r1-normal-form-drafts'
 import * as normalFileValues from '@features/work-orders/r1-normal-file-values'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -35,7 +36,7 @@ function component(file:string, panel?:Vue.Component) {
  const filename=path.resolve('src/features/work-orders/'+file+'.vue'),{descriptor}=parse(fs.readFileSync(filename,'utf8'),{filename})
  const source=compileScript(descriptor,{id:'normal-forms-count-'+file,inlineTemplate:true}).content.replaceAll('import.meta.env','({DEV:false})')
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
- const modules:Record<string,unknown>={vue:Vue,'./r1-normal-file-values':normalFileValues,'./R1NormalFileField.vue':{__esModule:true,default:Vue.defineComponent({render:()=>Vue.h('file-field')})},'./r1-repeat-form':repeatForm,'./r1-record-read-fields':recordReadFields,'./r1-repeat-actions-port':actionPort,'./r1-node-forms-read':readerPort,
+ const modules:Record<string,unknown>={vue:Vue,'./r1-normal-form-drafts':normalDraftPort,'./r1-normal-file-values':normalFileValues,'./R1NormalFileField.vue':{__esModule:true,default:Vue.defineComponent({render:()=>Vue.h('file-field')})},'./r1-repeat-form':repeatForm,'./r1-record-read-fields':recordReadFields,'./r1-repeat-actions-port':actionPort,'./r1-node-forms-read':readerPort,
  './r1-local-form-drafts':{useR1LocalFormDraftStore:()=>draftStore},'./R1NodeFormsReadPanel.vue':{__esModule:true,default:panel},'@shared/ui/AppButton.vue':{__esModule:true,default:Button},'@shared/ui/AppField.vue':{__esModule:true,default:Field},'./R1FormFieldControl.vue':{__esModule:true,default:Control},'@shared/ui/AppInput.vue':{__esModule:true,default:Field},'./R1LocalFormFieldEditor.vue':{__esModule:true,default:Field}}
  const module={exports:{} as {default:Vue.Component}};new Function('require','module','exports',js)((key:string)=>{if(!(key in modules))throw Error('Unstubbed '+key);return modules[key]},module,module.exports);return module.exports.default
 }
@@ -48,7 +49,7 @@ function all(root:Host,predicate:(n:Host)=>boolean):Host[]{return[...(predicate(
 function text(root:Host):string{return root.text+root.children.map(text).join('')}
 async function settle(){for(let i=0;i<6;i++){await Promise.resolve();await Vue.nextTick()}}
 function deferred<T>(){let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>resolve=r);return{promise,resolve}}
-async function mounted(){
+async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider){
  let current:R1NodeFormsSnapshot|null=null,next=makeSnapshot('node-a',1)
  const props=Vue.reactive({workOrderId:'work-a',runtimeNodeId:'node-a',actorScope:'actor-a' as string|null})
  const reader={enabled:()=>true,clear:vi.fn(()=>{current=null}),isCurrent:(s:R1NodeFormsSnapshot)=>s===current,
@@ -58,7 +59,7 @@ async function mounted(){
  const provider={forSnapshot:(s:R1NodeFormsSnapshot)=>s===current?{locked:()=>s!==current,canCreate:()=>permitCreate,canEdit:(id:string)=>permitEdit&&id==='server-0',canComplete:()=>true,canSaveAndComplete:()=>true,
   initialValues:()=>({note:'已保存'}),validateDraft:(v:Record<string,unknown>)=>Boolean(v.note),saveOnly,complete,saveAndComplete}:null}
  const Panel=component('R1NodeFormsReadPanel'),root=node('root'),app=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Panel,{...props,reader,onChanged:changed})}))
- app.provide(actionPort.r1RepeatActionsKey,provider);app.mount(root);await settle()
+ app.provide(actionPort.r1RepeatActionsKey,provider);if(draftProvider)app.provide(normalDraftPort.r1NormalFormDraftsKey,draftProvider);app.mount(root);await settle()
  const get=(id:string)=>find(root,n=>n.props['data-testid']===id),read=()=>find(root,n=>n.type==='button')!
  const tap=async(id:string)=>{get(id)!.props.onTap();await settle()},load=async()=>{read().props.onTap();await settle()},input=()=>find(root,n=>n.props['data-key']==='note')!
  const fill=async(value:string)=>{input().props.onInput(value);await settle()}
@@ -156,4 +157,53 @@ it('mounts decoded Survey attachment metadata as inert text in the actual normal
     expect(h.saveOnly).not.toHaveBeenCalled(); expect(h.saveAndComplete).not.toHaveBeenCalled(); expect(network).not.toHaveBeenCalled()
     h.props.actorScope = null; await settle(); expect(text(h.root)).not.toContain('附件 1（JPG）')
   } finally { h.app.unmount(); vi.unstubAllGlobals() }
+})
+
+function localDraftForDiscard(initial:'blocked'|'recoverable',delay?:Promise<void>){
+ let removed=false
+ const save=vi.fn(async()=>{}),discard=vi.fn(async()=>{if(delay)await delay;removed=true})
+ const provider:normalDraftPort.R1NormalDraftProvider={open:()=>({
+  read:async()=>removed?{state:'empty'}:initial==='blocked'?{state:'blocked',message:'Old first-create draft blocked by existing record'}:{state:'recoverable',values:{note:'First-create draft'}},
+  save,discard,markUncertain:vi.fn(async()=>{}),complete:vi.fn(async()=>{}),
+ })}
+ return{provider,discard,save}
+}
+it('discarding an old first-create draft preserves the current existing-record value and edit identity',async()=>{
+ const draft=localDraftForDiscard('blocked'),h=await mounted(draft.provider)
+ try{
+  await h.load();await h.tap('r1-normal-edit-server-0');await h.fill('Current edited record')
+  await h.tap('r1-normal-draft-discard');await h.tap('r1-normal-draft-discard-confirm')
+  expect(draft.discard).toHaveBeenCalledOnce();expect(h.saveOnly).not.toHaveBeenCalled();expect(draft.save).not.toHaveBeenCalled()
+  expect(h.input().props.value).toBe('Current edited record');expect(h.get('r1-normal-save')!.props.disabled).toBe(false)
+  await h.tap('r1-normal-save');expect(h.saveOnly).toHaveBeenCalledWith({note:'Current edited record'},'server-0')
+ }finally{h.app.unmount()}
+})
+it('a delayed old-draft discard cannot erase a newly selected existing-record edit target',async()=>{
+ const pending=deferred<void>(),draft=localDraftForDiscard('blocked',pending.promise),h=await mounted(draft.provider)
+ try{
+  await h.load();await h.tap('r1-normal-draft-discard');h.get('r1-normal-draft-discard-confirm')!.props.onTap();await settle()
+  await h.tap('r1-normal-edit-server-0');pending.resolve();await settle()
+  expect(h.input().props.value).toBe('已保存');expect(h.saveOnly).not.toHaveBeenCalled()
+  await h.fill('Current edited record');await h.tap('r1-normal-save');expect(h.saveOnly).toHaveBeenCalledWith({note:'Current edited record'},'server-0')
+ }finally{h.app.unmount()}
+})
+it('discard still clears the matching zero-record first-create draft without issuing a command',async()=>{
+ const draft=localDraftForDiscard('recoverable'),h=await mounted(draft.provider)
+ try{
+  h.setNext(makeSnapshot('node-a',0));await h.load()
+  await h.tap('r1-normal-draft-discard');await h.tap('r1-normal-draft-discard-confirm')
+  expect(draft.discard).toHaveBeenCalledOnce();expect(h.input().props.value).toBeUndefined();expect(h.get('r1-normal-draft-restore')).toBeUndefined();expect(h.saveOnly).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled()
+  await h.fill('New first-create intent');expect(draft.save).toHaveBeenCalledWith({note:'New first-create intent'})
+ }finally{h.app.unmount()}
+})
+
+it('blocks same-scope reread during delayed discard and returns the existing editor to a usable state',async()=>{
+ const pending=deferred<void>(),draft=localDraftForDiscard('blocked',pending.promise),h=await mounted(draft.provider)
+ try{
+  await h.load();await h.tap('r1-normal-draft-discard');h.get('r1-normal-draft-discard-confirm')!.props.onTap();await settle()
+  expect(h.read().props.disabled).toBe(true);await h.load();expect(h.reader.load).toHaveBeenCalledOnce()
+  await h.tap('r1-normal-edit-server-0');pending.resolve();await settle()
+  expect(h.input().props.value).toBe('已保存');expect(h.input().props.disabled).toBe(false);expect(h.get('r1-normal-save')!.props.disabled).toBe(false)
+  await h.fill('Usable current editor');await h.tap('r1-normal-save');expect(h.saveOnly).toHaveBeenCalledWith({note:'Usable current editor'},'server-0')
+ }finally{h.app.unmount()}
 })

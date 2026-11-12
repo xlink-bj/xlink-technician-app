@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
 /**
@@ -21,9 +22,7 @@ for (const width of [375, 390, 430]) {
     await expect(page.getByTestId('qa-console')).toBeVisible()
     await page.locator('.work-orders-entry').click()
     await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
-    await page.locator('.search-input input').fill('04009')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
+    await (await searchMockWorkOrder(page, { orderNum: '04009', customer: '陈女士' })).click()
     await expect(page.locator('.summary-number')).toContainText('04009')
 
     // Navigating within uni-app retains the live role-scoped list/detail.

@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
 type NetworkEvidence = {
@@ -374,11 +375,7 @@ test('same Mock-018 quotation is reachable from normal work order list and detai
   await page.locator('.work-orders-entry').click()
   await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
   await expect(page.locator('.work-orders-page')).toBeVisible()
-  await page.locator('.search-input input').fill('MOCK-018')
-  await page.locator('.search-button').click()
-  // The list intentionally renders an abbreviated numeric card number;
-  // verify full MOCK-018 identity in Detail, not in its summary card.
-  const row = page.locator('.work-order-card').filter({ hasText: '吴先生' })
+  const row = await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })
   await expect(row, 'quotation fixture must exist in the normal role-scoped list').toBeVisible()
   await expect(row).toContainText('吴先生')
   await info.attach('normal-work-order-list-390', {

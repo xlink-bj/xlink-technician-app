@@ -1,3 +1,4 @@
+import * as normalDraftPort from '@features/work-orders/r1-normal-form-drafts'
 import { bindR1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-read-evidence'
 import * as normalFileValues from '@features/work-orders/r1-normal-file-values'
 import * as sharedTypes from '@shared/types'
@@ -34,7 +35,7 @@ function panel() {
   const { descriptor } = parse(fs.readFileSync(filename, 'utf8'), { filename })
   const source = compileScript(descriptor, { id: 'normal-file-cancel-unit', inlineTemplate: true }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
-  const modules: Record<string, unknown> = { vue: Vue, './r1-repeat-form': repeatForm, './r1-normal-file-values': normalFileValues, '@shared/types': sharedTypes, './R1NormalFileField.vue': { __esModule: true, default: Vue.defineComponent({ render: () => Vue.h('file-field') }) }, './r1-record-read-fields': recordReadFields, './r1-repeat-actions-port': actionPort,
+  const modules: Record<string, unknown> = { vue: Vue, './r1-normal-form-drafts': normalDraftPort, './r1-repeat-form': repeatForm, './r1-normal-file-values': normalFileValues, '@shared/types': sharedTypes, './R1NormalFileField.vue': { __esModule: true, default: Vue.defineComponent({ render: () => Vue.h('file-field') }) }, './r1-record-read-fields': recordReadFields, './r1-repeat-actions-port': actionPort,
     '@shared/ui/AppButton.vue': { __esModule: true, default: Button }, '@shared/ui/AppField.vue': { __esModule: true, default: Field }, './R1FormFieldControl.vue': { __esModule: true, default: Control } }
   const module = { exports: {} as { default: Vue.Component } }
   new Function('require', 'module', 'exports', js)((key: string) => { if (!(key in modules)) throw Error(`Unstubbed component import: ${key}`); return modules[key] }, module, module.exports)

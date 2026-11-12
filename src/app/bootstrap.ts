@@ -1,3 +1,5 @@
+import { createR1NormalFormDraftProvider } from './r1-normal-form-drafts'
+import { r1NormalFormDraftsKey } from '@features/work-orders/r1-normal-form-drafts'
 import { createHistoricalFormsReader } from './r1-historical-forms-read'
 import { historicalFormsReaderKey } from '@features/work-orders/r1-historical-forms-read'
 import { createNormalQuotationPartsReader } from './r1-quotation-parts-read'
@@ -114,6 +116,8 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const navigation = dependencies.navigation ?? createDefaultNavigationPort()
   const storage = dependencies.storage ?? createDefaultStoragePort()
   const draftRepository = dependencies.draftRepository ?? createActionDraftRepository(storage)
+  app.provide(r1NormalFormDraftsKey, createR1NormalFormDraftProvider({ auth: authSession, reader: normalNodeFormsReader,
+    tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), repository: draftRepository }))
   const r1LocalFormDraftStore = useR1LocalFormDraftStore(pinia)
   r1LocalFormDraftStore.configure(storage, apiRead, {
     trustedDefaultMockReader: !dependencies.apiRead,

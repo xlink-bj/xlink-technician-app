@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
 /**
@@ -41,9 +42,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
-    await page.locator('.search-input input').fill('26018')
-    await page.locator('.search-button').click()
-    const otherWorkOrder = page.locator('.work-order-card').filter({ hasText: '吴先生' })
+    const otherWorkOrder = await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })
     await expect(otherWorkOrder).toBeVisible()
     await otherWorkOrder.click()
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
@@ -140,9 +139,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
 
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.locator('.work-orders-entry').click()
-    await page.locator('.search-input input').fill('04009')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
+    await (await searchMockWorkOrder(page, { orderNum: '04009', customer: '陈女士' })).click()
     await expect(page.locator('.summary-number')).toContainText('04009')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toBeVisible()
@@ -161,9 +158,7 @@ for (const viewport of [{ width: 375, height: 667 }, { width: 390, height: 844 }
     // browser, 019's staged Appointment/Survey data must not leak into 018.
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.locator('.work-orders-entry').click()
-    await page.locator('.search-input input').fill('26018')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
+    await (await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })).click()
     await expect(page.locator('.summary-number')).toContainText('#26018')
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()

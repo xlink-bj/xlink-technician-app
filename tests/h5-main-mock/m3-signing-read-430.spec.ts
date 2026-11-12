@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
 test('M3-P0-C: verified Order → C01 read-only → exact Order hub return, 430×932', async ({ page }, info) => {
@@ -15,9 +16,7 @@ test('M3-P0-C: verified Order → C01 read-only → exact Order hub return, 430�
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('qa-console')).toBeVisible()
   await page.locator('.work-orders-entry').click()
-  await page.locator('.search-input input').fill('04009')
-  await page.locator('.search-button').click()
-  await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
+  await (await searchMockWorkOrder(page, { orderNum: '04009', customer: '陈女士' })).click()
   await expect(page.locator('.summary-number')).toContainText('04009')
   await page.locator('.primary-task-action').click()
   await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toBeVisible()

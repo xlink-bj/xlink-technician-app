@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page, type TestInfo } from '@playwright/test'
 
 /** Keep human-readable PNGs in the downloaded artifact, not only HTML's hashed assets. */
@@ -38,9 +39,7 @@ for (const width of [375, 390]) {
     await captureEvidence(page, info, `commercial-home-${width}`)
 
     await page.locator('.work-orders-entry').click()
-    await page.locator('.search-input input').fill('04009')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
+    await (await searchMockWorkOrder(page, { orderNum: '04009', customer: '陈女士' })).click()
     // The signing read store checks the currently verified work-order list/detail.
     // Wait for the real detail to load before navigating to its scoped Order.
     await expect(page.locator('.summary-number')).toContainText('04009')

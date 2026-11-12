@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
@@ -130,9 +131,7 @@ test('430×932 Appointment → Survey → Quotation, then scoped Order/C01 read-
   // A separate source-backed synthetic Order belongs to WorkOrder 04009.
   await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
   await page.locator('.work-orders-entry').click()
-  await page.locator('.search-input input').fill('04009')
-  await page.locator('.search-button').click()
-  await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
+  await (await searchMockWorkOrder(page, { orderNum: '04009', customer: '陈女士' })).click()
   await expect(page.locator('.summary-number')).toContainText('04009')
   await page.locator('.primary-task-action').click()
   await expect(page.getByTestId('quotation-hub-order-mock-official-order-001')).toBeVisible()

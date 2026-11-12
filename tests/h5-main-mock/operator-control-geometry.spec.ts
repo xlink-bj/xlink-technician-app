@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test, type Locator, type Page } from '@playwright/test'
@@ -43,10 +44,8 @@ test('cross-page controls and category labels obey one visual grid at 375px', as
   await screenshot('home-375')
 
   await page.locator('.work-orders-entry').click()
-  await page.locator('.search-input input').fill('26018')
   await assertTapTarget('work-order list search', page.locator('.search-button'))
-  await page.locator('.search-button').click()
-  await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
+  await (await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })).click()
   await expect(page.locator('.summary-number')).toContainText('26018')
   await assertTapTarget('detail primary task', page.getByTestId('task-focus-action'), 50)
   await screenshot('work-order-detail-375')
