@@ -13,10 +13,10 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
-  <R1NodeFormsActionContent v-else-if="normalContentForPage && workspace.normalFormNode" ref="normalContent"
+  <R1FormActionContentHost v-else-if="normalContentForPage" ref="normalContent"
     :visible="normalPageVisible" :customer-name="workspace.detail?.customerName" :display-number="workspace.detail?.displayNumber"
     :exit-message="normalExitMessage" :work-order-id="String(workspace.descriptor!.workOrderId)" :node="workspace.normalFormNode"
-    :actor-scope="workOrderReadScopeKey(session.session)" @changed="refreshNormalContext" @back="exit" />
+    :actor-scope="workOrderReadScopeKey(session.session)" :dev-mock-dynamic-form-content="workspace.devMockDynamicFormContent" :create-dev-mock-dynamic-form-controller="createDevMockDynamicFormControllerForUi" @changed="refreshNormalContext" @back="exit" />
 
   <QuotationOrderHub
     v-else-if="quotationHubVisible"
@@ -280,7 +280,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { AppActionDraftStatus } from '@shared/ui/types'
-import { useNormalFormActionPage } from '@features/work-orders/normal-form-action-page'
+import { useNormalFormActionPage, formHostHasDetailBack } from '@features/work-orders/normal-form-action-page'
 import { onLoad, onShow, onHide, onUnload, onBackPress } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview, isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
@@ -313,7 +313,8 @@ import { isMultilineField } from '@features/work-orders/form-presentation'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
-import R1NodeFormsActionContent from '@features/work-orders/R1NodeFormsActionContent.vue'
+import { createAStageDynamicFormMockControllerForActor as createDevMockDynamicFormControllerForUi } from '@app/a-stage-dynamic-form-mock-ui'
+import R1FormActionContentHost from '@features/work-orders/R1FormActionContentHost.vue'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyLeakageCauseExperience from '@features/work-orders/components/SurveyLeakageCauseExperience.vue'
@@ -585,7 +586,7 @@ watch(() => workspace.descriptor, (action) => {
 }, { flush: 'sync' })
 
 onLoad((options) => {
-  normalPage.begin(options?.from==='detail')
+  normalPage.begin(formHostHasDetailBack(options,typeof getCurrentPages==='function'?getCurrentPages():[]))
   routeId.value = parseActionWorkspaceId(options?.id)
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
   routeAction.value = typeof options?.action === 'string' ? options.action : undefined

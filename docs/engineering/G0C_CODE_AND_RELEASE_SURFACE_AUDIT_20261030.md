@@ -50,7 +50,7 @@ However, UI/permission guards alone do not prove the pages and developer fixture
 Static graph finds **11 local imports from `src/features/**` into `src/app/**`**, across six feature files (exact edges in JSON):
 
 - `R1NodeFormsOverview.vue`, `r1-local-form-drafts.ts` → `app/business-mock`
-- `R1SpecialMockTransactionPanel.vue`, `AStageMockQuoteOrderPanel.vue` → `app/composition` and mock controllers
+- `R1DevMockDynamicFormTransactionPanel.vue`, `AStageMockQuoteOrderPanel.vue` → `app/composition` and mock controllers
 - `MockJourneyContextPanel.vue`, `MockCommercialFlowLinks.vue` → Mock/review orchestration
 
 These are mostly intentional development and business-parity seams; they are **architectural coupling, not evidence of incorrect behavior**. The existing `check:boundaries` catches raw platform APIs, legacy imports and some inward adapter dependencies, but does not forbid feature → app.

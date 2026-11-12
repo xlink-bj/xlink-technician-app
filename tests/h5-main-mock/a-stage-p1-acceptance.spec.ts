@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 
@@ -50,6 +51,7 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await expect(page).toHaveURL(/pages\/work-orders\/detail/)
     await expect(page.locator('.summary-number')).toContainText(number)
     await expectDetailOverviewWithinViewport(page)
+    await enterDevMockDynamicFormWorkspace(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     // The Mock fixture uses the same commercial task surface as Real data.
     // Source identity belongs to the separate QA console, not this panel.

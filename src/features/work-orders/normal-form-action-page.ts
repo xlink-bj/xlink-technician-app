@@ -13,7 +13,7 @@ export function useNormalFormActionPage(input: {
   const content=ref<{flushLocalDraft():Promise<boolean>}|null>(null)
   const visible=ref(true),message=ref(''),fromDetail=ref(false)
   let wasHidden=false,wasContent=false
-  const isContent=computed(()=>Boolean(input.workspace.normalFormNode && input.matchesRoute()
+  const isContent=computed(()=>Boolean((input.workspace.normalFormNode || input.workspace.devMockDynamicFormContent) && input.matchesRoute()
     && input.workspace.ownsPage(input.getAction(),input.pageLease)))
   watch(isContent,value=>{if(value)wasContent=true},{immediate:true,flush:'sync'})
   function begin(detail:boolean){wasContent=false;fromDetail.value=detail;message.value=''}
@@ -47,4 +47,11 @@ export function useNormalFormActionPage(input: {
     return false
   }
   return {content,visible,message,fromDetail,isContent,begin,hide,show,changed,exit,backPress}
+}
+
+/** A query's from=detail survives cold reload; only a real same-order predecessor is Back evidence. */
+export function formHostHasDetailBack(options:Record<string,unknown>|undefined,pages:readonly {route?:string;options?:Record<string,unknown>}[]):boolean{
+  const previous=pages[pages.length-2]
+  return options?.from==='detail'&&typeof options.id==='string'&&options.id.length>0
+    &&previous?.route==='pages/work-orders/detail'&&previous.options?.id===options.id
 }

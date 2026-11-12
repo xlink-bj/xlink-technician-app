@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { expect, test } from '@playwright/test'
 
 // Explicit synthetic fixture, never a claim about captured Survey providers.
@@ -20,6 +21,7 @@ for (const kind of ['forms', 'repeat'] as const) {
     })
     await page.goto('/#/pages/index/index?devReview=1')
     await page.goto(`/#/pages/work-orders/detail?id=mock-work-order-${kind === 'forms' ? '020-local-forms' : '021-local-repeat'}`)
+    await enterDevMockDynamicFormWorkspace(page)
     const summary = page.getByTestId('a-special-field-inspectionSummary').locator('textarea')
     const result = page.getByTestId('a-special-field-inspectionResult')
     await summary.fill('唯一可见附件行')

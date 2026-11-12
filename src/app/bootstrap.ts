@@ -1,3 +1,4 @@
+import { resolveAStageDynamicFormMockWorkspace } from './a-stage-dynamic-form-mock-ui'
 import { createR1NormalFormDraftProvider } from './r1-normal-form-drafts'
 import { r1NormalFormDraftsKey } from '@features/work-orders/r1-normal-form-drafts'
 import { createHistoricalFormsReader } from './r1-historical-forms-read'
@@ -170,6 +171,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
     normalFormContentEnabled: () => normalNodeFormsReader.enabled(),
+    devMockDynamicFormResolver: resolveAStageDynamicFormMockWorkspace,
     apiRead,
     localQuotationRepairPartsRead: normalQuotationPartsRead,
     quotationCatalogRead,

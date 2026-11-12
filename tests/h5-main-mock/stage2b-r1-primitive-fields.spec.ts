@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
@@ -23,7 +24,7 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
-    await (await searchMockWorkOrder(page, '020')).click()
+    await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
     await field('inspectionSummary').locator('textarea').fill('Stage2B 现场类型验证')

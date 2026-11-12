@@ -107,12 +107,12 @@
       "to": "src/app/business-mock.ts"
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "to": "src/app/composition.ts"
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
-      "to": "src/app/a-stage-special-mock-ui.ts"
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
+      "to": "src/app/a-stage-dynamic-form-mock-ui.ts"
     },
     {
       "from": "src/features/work-orders/components/MockJourneyContextPanel.vue",
@@ -1097,7 +1097,7 @@
       ]
     },
     {
-      "path": "src/app/a-stage-special-mock-ui.ts",
+      "path": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "loc": 291,
       "sourceImporters": 2,
       "localImports": [
@@ -1645,13 +1645,13 @@
       "staticDirectTestRefs": []
     },
     {
-      "path": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "path": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "loc": 260,
       "sourceImporters": 1,
       "localImports": [
         "src/shared/ports/index.ts",
         "src/app/composition.ts",
-        "src/app/a-stage-special-mock-ui.ts",
+        "src/app/a-stage-dynamic-form-mock-ui.ts",
         "src/shared/state/index.ts",
         "src/shared/ui/AppButton.vue",
         "src/shared/ui/AppTextarea.vue",
@@ -2911,8 +2911,8 @@
         "src/shared/ui/AppWorkOrderSkeleton.vue",
         "src/features/work-orders/WorkOrderTaskFocus.vue",
         "src/features/work-orders/R1NodeFormsOverview.vue",
-        "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
-        "src/app/a-stage-special-mock-ui.ts",
+        "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
+        "src/app/a-stage-dynamic-form-mock-ui.ts",
         "src/features/work-orders/R1ProductionChildFormsPanel.vue",
         "src/features/work-orders/R1ProductionMainRepeatPanel.vue",
         "src/shared/ui/loading.ts"
@@ -4072,7 +4072,7 @@
         "src/adapters/api/mock/command-state.ts",
         "src/adapters/api/mock/journey.ts",
         "src/adapters/api/mock/r1-special-protocol.ts",
-        "src/app/a-stage-special-mock-ui.ts",
+        "src/app/a-stage-dynamic-form-mock-ui.ts",
         "src/adapters/api/mock/fixtures.ts",
         "src/shared/ports/index.ts"
       ]

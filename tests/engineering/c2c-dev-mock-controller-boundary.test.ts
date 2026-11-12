@@ -1,11 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 const text = (path: string) => readFileSync(path, 'utf8')
-const special = text('src/features/work-orders/R1SpecialMockTransactionPanel.vue')
+const special = text('src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue')
 const quote = text('src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue')
 const detail = text('src/pages/work-orders/detail.vue')
 const page = text('src/pages/work-orders/action-workspace.vue')
-const specialAdapter = text('src/app/a-stage-special-mock-ui.ts')
+const specialAdapter = text('src/app/a-stage-dynamic-form-mock-ui.ts')
 const quotationAdapter = text('src/app/a-stage-quotation-mock-ui.ts')
 describe('C2-C1 synthetic transaction controller dependency direction', () => {
   it('prevents feature presentation from importing app runtime adapters', () => {
@@ -14,11 +14,14 @@ describe('C2-C1 synthetic transaction controller dependency direction', () => {
     expect(special).toContain('props.createController({')
     expect(quote).toContain('props.createController(actor)')
   })
-  it('composes exact same synthetic controller at both existing page boundaries', () => {
-    expect(detail).toContain(':create-controller="createAStageSpecialControllerForUi"')
-    expect(detail).toContain('createAStageSpecialMockControllerForActor')
+  it('composes the same synthetic controllers through Workspace while Detail only reads receipt qualification', () => {
+    expect(detail).not.toContain('<R1DevMockDynamicFormTransactionPanel')
+    expect(page).toContain(':create-dev-mock-dynamic-form-controller="createDevMockDynamicFormControllerForUi"')
+    expect(text('src/features/work-orders/R1FormActionContentHost.vue')).toContain(':create-controller="createDevMockDynamicFormController"')
+    expect(text('src/features/work-orders/R1DevMockDynamicFormActionContent.vue')).toContain(':create-controller="createController"')
+    expect(detail).toContain('createAStageDynamicFormMockControllerForActor')
     expect(specialAdapter).toContain('const storage = createDefaultStoragePort()')
-    expect(specialAdapter).toContain('return createAStageSpecialMockController({ ...options, storage,')
+    expect(specialAdapter).toContain('return createAStageDynamicFormMockController({ ...options, storage,')
     expect(specialAdapter).toContain('mediaQueue: createDefaultMediaUploadQueue(storage, createSpecialDevMockUploadPort())')
     expect(page).toContain(':create-controller="createAStageMockQuoteOrderControllerForUi"')
     expect(page).toContain('createAStageMockQuoteOrderControllerForActor')

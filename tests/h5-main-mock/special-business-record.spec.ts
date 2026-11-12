@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { expect, test } from '@playwright/test'
 
 test.describe('special bizSelect through offline entity Provider', () => {
@@ -14,6 +15,7 @@ test.describe('special bizSelect through offline entity Provider', () => {
       })
       await page.goto('/#/pages/index/index?devReview=1')
       await page.goto(`/#/pages/work-orders/detail?id=mock-work-order-${kind === 'forms' ? '020-local-forms' : '021-local-repeat'}`)
+      await enterDevMockDynamicFormWorkspace(page)
       const field = page.getByTestId('a-special-field-serviceGoods')
       await expect(field).toContainText('屋面防水维修')
       await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill('业务选择完整事务')

@@ -18,7 +18,7 @@ const commercialViews = [
   'src/pages/work-orders/signing-order-read.vue',
   'src/features/work-orders/R1LocalFormFieldEditor.vue',
   'src/features/work-orders/R1NodeFormsOverview.vue',
-  'src/features/work-orders/R1SpecialMockTransactionPanel.vue',
+  'src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue',
   'src/features/work-orders/components/MockJourneyContextPanel.vue',
   'src/features/work-orders/components/SurveyCompleteConfirmation.vue',
   'src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue',

@@ -5,8 +5,8 @@ import { resetMockJourney } from '@adapters/api/mock/journey'
 import * as mockReads from '@adapters/api/mock/router'
 import * as r1SpecialTransport from '@adapters/api/mock/r1-special-protocol'
 import {
-  createAStageSpecialMockController, type AStageMockActor,
-} from '@app/a-stage-special-mock-ui'
+  createAStageDynamicFormMockController, type AStageMockActor,
+} from '@app/a-stage-dynamic-form-mock-ui'
 import { mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
   mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId } from '@adapters/api/mock/fixtures'
 import type { StoragePort, StorageKey } from '@shared/ports'
@@ -68,7 +68,7 @@ afterEach(() => {
 })
 function controller(kind: 'forms' | 'repeat', getActor = () => actor,
   port: StoragePort = storage()) {
-  return createAStageSpecialMockController({ kind,
+  return createAStageDynamicFormMockController({ kind,
     workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
     storage: port, getActor })
 }
@@ -106,7 +106,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     let online = false
     const network = { current: async () => online ? 'online' as const : 'offline' as const,
       subscribe: () => () => undefined }
-    const ui = createAStageSpecialMockController({ kind: 'forms', workOrderId: mockR1FormsWorkOrderId,
+    const ui = createAStageDynamicFormMockController({ kind: 'forms', workOrderId: mockR1FormsWorkOrderId,
       getActor: () => actor, storage: storage(), network })
     await ui.writeDraft(mockSyntheticDynamicFormDefinitionId, { inspectionSummary: '离线草稿', inspectionPointCount: '-' })
     await ui.writeDraft(mockR1NoteFormDefinitionId, { note: '独立备注' })
@@ -618,7 +618,7 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
             key: 'special/file.jpg', extension: 'jpg', fileName: '现场记录.jpg',
             source: 'library' as const, uploadState: 'uploaded' as const } }),
       })
-    const ui = createAStageSpecialMockController({
+    const ui = createAStageDynamicFormMockController({
       kind, workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
       getActor: () => actor, storage: storage(), mediaQueue: queue, mediaPicker: picker,
     })
@@ -667,7 +667,7 @@ describe('source-backed R1 generic file field in special forms and repeat', () =
               data: { url: 'https://mock-upload.invalid/retry.jpg', key: 'retry.jpg',
                 extension: 'jpg', source: 'library' as const, uploadState: 'uploaded' as const } },
       })
-    const ui = createAStageSpecialMockController({
+    const ui = createAStageDynamicFormMockController({
       kind: 'forms', workOrderId: mockR1FormsWorkOrderId,
       getActor: () => actor, storage: storage(), mediaQueue: queue,
       mediaPicker: { pick: async () => createCapabilityResult('media_file_picker', 'granted',

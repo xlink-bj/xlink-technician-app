@@ -5,8 +5,8 @@ import { resetMockJourney } from '@adapters/api/mock/journey'
 import * as mockReads from '@adapters/api/mock/router'
 import * as r1SpecialTransport from '@adapters/api/mock/r1-special-protocol'
 import {
-  createAStageSpecialMockController, type AStageMockActor,
-} from '@app/a-stage-special-mock-ui'
+  createAStageDynamicFormMockController, type AStageMockActor,
+} from '@app/a-stage-dynamic-form-mock-ui'
 import { mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
   mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId } from '@adapters/api/mock/fixtures'
 import type { StoragePort, StorageKey } from '@shared/ports'
@@ -62,7 +62,7 @@ afterEach(() => {
 })
 function controller(kind: 'forms' | 'repeat', getActor = () => actor,
   port: StoragePort = storage()) {
-  return createAStageSpecialMockController({ kind,
+  return createAStageDynamicFormMockController({ kind,
     workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
     storage: port, getActor })
 }
@@ -86,7 +86,7 @@ async function setup(kind: 'forms' | 'repeat', reverse = false) {
     upload: async () => failUpload ? {state:'failed_retryable' as const, error:createOperationError('network_retryable','synthetic')} : ({ state: 'succeeded' as const, data: { url: 'https://mock-upload.invalid/duplicate-' + count + '.jpg',
       key: 'duplicate-' + count + '.jpg', extension: 'jpg', source: 'library' as const, uploadState: 'uploaded' as const } }),
   })
-  const ui = createAStageSpecialMockController({ kind, workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
+  const ui = createAStageDynamicFormMockController({ kind, workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
     storage: storage(), getActor: () => currentActor, mediaQueue: queue, mediaPicker: { pick: async () => createCapabilityResult('media_file_picker', 'granted', [{
       ref: asOpaqueId<'LocalMediaRef'>('synthetic-duplicate-' + ++count), source: 'library' as const, name: 'synthetic.jpg',
       mimeType: 'image/jpeg', localPath: '/synthetic/duplicate.jpg',

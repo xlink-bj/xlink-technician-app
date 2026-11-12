@@ -355,3 +355,21 @@ describe('Survey effective root slot integrity through normal reader', () => {
     expect(h.calls.some(path=>/upsert|process|upload|updateExts/.test(path))).toBe(false)
   })
 })
+
+describe('read identity continuity without extending source or write authority',()=>{
+ it('survives its owned load gap but never keeps the old snapshot current',async()=>{
+  const h=harness(),old=await h.reader.load('work','node'),identity=h.reader.retainReadIdentity!(old)!
+  h.execute.mockRejectedValueOnce(Error('offline'));await expect(h.reader.load('work','node')).rejects.toThrow('offline')
+  expect(identity.isSameActor()).toBe(true);expect(h.reader.isCurrent(old)).toBe(false)
+  expect(h.reader.retainReadIdentity!(old)).toBeNull()
+ })
+ it.each(['changeSession','changeRole','unlist']as const)('latches false after observed %s',async change=>{
+  const h=harness(),s=await h.reader.load('work','node'),identity=h.reader.retainReadIdentity!(s)!
+  h[change]();expect(identity.isSameActor()).toBe(false);expect(identity.isSameActor()).toBe(false)
+  expect(h.calls.some(p=>/upsert|process|upload/.test(p))).toBe(false)
+ })
+ it('clear revokes identity continuity independently of read generation',async()=>{
+  const h=harness(),s=await h.reader.load('work','node'),identity=h.reader.retainReadIdentity!(s)!
+  h.reader.clear();expect(identity.isSameActor()).toBe(false)
+ })
+})

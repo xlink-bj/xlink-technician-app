@@ -1,6 +1,8 @@
+import type { DevMockDynamicFormWorkspaceResolver } from '@features/work-orders/dev-mock-dynamic-form-workspace-content'
 import { createMockR1BusinessOptions } from '@adapters/api/mock/r1-business-options'
 import { createUniNetworkStatusPort } from '@adapters/platform/uni-network-status'
-import { createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
+import type { ActionDraftIdentity } from '@runtimes/action'
+import { createAStageDynamicFormDraftSession } from './a-stage-dynamic-form-draft-session'
 /** A-only, synthetic main-App bridge for the existing R1 special transaction
  * coordinator. This module cannot dispatch to any real HTTP transport. */
 import { isDevMockJourneyEnabled } from '@adapters/api/mock/journey'
@@ -33,13 +35,13 @@ import {
 import { validateR1SpecialMockFields, type R1SpecialMockFields } from '@features/work-orders/r1-special-mock-form-fields'
 
 import type {
-  AStageSpecialKind, AStageMockActor, AStageSpecialAction, AStageSpecialRecord,
-  AStageSpecialView, AStageSpecialOutcome,
-} from '@features/work-orders/a-stage-special-mock-port'
+  AStageDynamicFormNodeKind, AStageMockActor, AStageDynamicFormAction, AStageDynamicFormRecord,
+  AStageDynamicFormView, AStageDynamicFormOutcome,
+} from '@features/work-orders/a-stage-dynamic-form-mock-port'
 export type {
-  AStageSpecialKind, AStageMockActor, AStageSpecialAction, AStageSpecialRecord,
-  AStageSpecialView, AStageSpecialOutcome,
-} from '@features/work-orders/a-stage-special-mock-port'
+  AStageDynamicFormNodeKind, AStageMockActor, AStageDynamicFormAction, AStageDynamicFormRecord,
+  AStageDynamicFormView, AStageDynamicFormOutcome,
+} from '@features/work-orders/a-stage-dynamic-form-mock-port'
 
 const targets = {
   forms: { sid: mockR1FormsWorkOrderId, node: 'mock-workflow-node-020-forms', run: 'mock-workflow-run-020' },
@@ -65,7 +67,7 @@ async function scopedDefinition(id = definition, isCurrent: () => boolean = () =
 }
 
 /** Source-backed AddFormCode lookup. Unknown definitions never reach a write. */
-async function scopedDefinitions(kind: AStageSpecialKind, node: Record<string, unknown>, isCurrent: () => boolean) {
+async function scopedDefinitions(kind: AStageDynamicFormNodeKind, node: Record<string, unknown>, isCurrent: () => boolean) {
   const nodeDef = object(node.nodeDef)
   if (nodeDef?.formDefId !== definition) throw new Error('节点 FormDef 身份不一致。')
   if (kind === 'repeat') return [{ id: definition, label: '现场复检', definition: await scopedDefinition(definition, isCurrent) }]
@@ -95,11 +97,30 @@ function safeActor(actor: AStageMockActor | null | undefined): actor is AStageMo
   return actor?.userId === 'synthetic-user' && actor.roleId === 'synthetic-role'
     && typeof actor.identity === 'string' && actor.identity.length > 0
 }
-export function isAStageSpecialMockAvailable(kind: AStageSpecialKind, workOrderId: string,
+export function isAStageDynamicFormMockAvailable(kind: AStageDynamicFormNodeKind, workOrderId: string,
   actor: AStageMockActor | null | undefined): boolean {
   return isDevMockJourneyEnabled() && targets[kind]?.sid === workOrderId && safeActor(actor)
 }
-async function rawDetail(kind: AStageSpecialKind) {
+/** Same synthetic source/controller as Detail. Closed URLs alone are insufficient. */
+export const resolveAStageDynamicFormMockWorkspace:DevMockDynamicFormWorkspaceResolver=async input=>{
+  const node=input.detail.workflowNodes?.find(row=>String(row.id)===input.runtimeNodeId)
+  const kind=node?.sourceNodeType,actor=input.getActor()
+  if(!node||(kind!=='forms'&&kind!=='repeat')||input.actionIntent&&input.actionIntent!=='interact_with_form'
+    ||!isAStageDynamicFormMockAvailable(kind,String(input.detail.id),actor)
+    ||String(node.id)!==targets[kind].node||String(node.runId)!==targets[kind].run
+    ||String(node.formDefinitionId)!==definition||node.nodeTypeEvidence!=='runtime_node_def'
+    ||!['active','closed'].includes(node.lifecycle))return null
+  const view=await createAStageDynamicFormMockControllerForActor({kind,workOrderId:String(input.detail.id),getActor:input.getActor}).load().catch(()=>null)
+  if(!view||!actor||input.getActor()?.identity!==actor.identity||input.getActor()?.userId!==actor.userId
+    ||input.getActor()?.roleId!==actor.roleId)return null
+  if(node.lifecycle==='active'&&view.nodeActive)return{kind,node,mode:'active'}
+  if(node.lifecycle==='closed'&&view.nodeClosed===true){
+    if(view.receiptPending)return{kind,node,mode:'pending'}
+    return{kind,node,mode:'completed'}
+  }
+  return null
+}
+async function rawDetail(kind: AStageDynamicFormNodeKind) {
   const target = targets[kind]
   const result = await tryMockRead(`basic/serviceAppointment/queryById/${target.sid}`, {}, { latencyMs: 0 })
   const detail = object(object(result)?.data)
@@ -113,7 +134,7 @@ async function rawDetail(kind: AStageSpecialKind) {
   return node!
 }
 
-function scope(kind: AStageSpecialKind, actor: AStageMockActor, formDefId = definition): R1MultiStepScope {
+function scope(kind: AStageDynamicFormNodeKind, actor: AStageMockActor, formDefId = definition): R1MultiStepScope {
   const target = targets[kind]
   return { userId: actor.userId, workOrderId: target.sid,
     runtimeNodeId: target.node, workflowRunId: target.run,
@@ -121,8 +142,8 @@ function scope(kind: AStageSpecialKind, actor: AStageMockActor, formDefId = defi
     authorizationScope: actor.identity }
 }
 
-export function createAStageSpecialMockController(options: {
-  readonly kind: AStageSpecialKind
+export function createAStageDynamicFormMockController(options: {
+  readonly kind: AStageDynamicFormNodeKind
   readonly workOrderId: string
   readonly getActor: () => AStageMockActor | null
   readonly storage: StoragePort
@@ -134,14 +155,14 @@ export function createAStageSpecialMockController(options: {
   let inFlight = false
   const expected = options.getActor()
   const authorized = () => safeActor(expected)
-    && isAStageSpecialMockAvailable(kind, options.workOrderId, expected)
+    && isAStageDynamicFormMockAvailable(kind, options.workOrderId, expected)
     && options.getActor()?.identity === expected.identity
     && options.getActor()?.roleId === expected.roleId
 
   /** A complete bounded read, never a first-page projection labelled complete.
    * Historical seed rows may omit ownership keys; explicit contradictions still
    * fail closed, and no missing key is fabricated to grant edit permission. */
-  async function scopedForms(kind: AStageSpecialKind, id?: string, formDefId = definition) {
+  async function scopedForms(kind: AStageDynamicFormNodeKind, id?: string, formDefId = definition) {
     const fail = (): never => { throw new Error('表单记录未能完整回读，不能继续提交。') }
     const check = () => { if (!authorized()) fail() }
     check()
@@ -183,7 +204,6 @@ export function createAStageSpecialMockController(options: {
   }
 
   const network = options.network ?? createUniNetworkStatusPort()
-  const drafts = createActionDraftRepository(options.storage)
 
   // Same common queue used by any dynamic FormDef; only a source type=file
   // field is writable. The image reference from 020 cannot enter this path.
@@ -286,40 +306,13 @@ export function createAStageSpecialMockController(options: {
       actionIntent: 'interact_with_form', contentKind: 'dynamic_form',
       contentIdentity: JSON.stringify([formId, recordId ?? null]) }
   }
-  // Drafts retain incomplete editing state, never command payloads or receipts.
-  async function readDraft(formId: string, recordId?: string): Promise<R1SpecialMockFields | null> {
-    const result = await drafts.read(draftIdentity(formId, recordId))
-    if (!authorized() || result.state !== 'succeeded') throw new Error('草稿读取失败')
-    if (!result.data || result.data.status !== 'unfinished') return null
-    const fields = (await scopedDefinition(formId, authorized)).fields ?? []
-    const values = result.data.values
-    if (Object.keys(values).length > 50 || Object.entries(values).some(([key, value]) =>
-      !fields.some(field => field.valueKey === key && !field.readOnly && !field.presentationOnly)
-      || !(typeof value === 'string' && value.length <= 4000
-        || typeof value === 'number' && Number.isFinite(value) || typeof value === 'boolean'
-        || Array.isArray(value) && (value.length <= 30 && value.every(item => typeof item === 'string' && item.length <= 256)
-          || isR1FileWireArray(value))))) {
-      throw new Error('草稿内容无法安全恢复')
-    }
-    if (!authorized()) throw new Error('草稿身份已变化')
-    return values as R1SpecialMockFields
-  }
-  async function writeDraft(formId: string, values: R1SpecialMockFields, recordId?: string): Promise<boolean> {
-    const identity = draftIdentity(formId, recordId)
-    const result = await drafts.write({ version: 1, identity, values: { ...values },
-      status: 'unfinished', updatedAt: new Date().toISOString() })
-    return authorized() && result.state === 'succeeded'
-  }
-  async function removeDraft(formId: string, recordId?: string): Promise<boolean> {
-    const identity = draftIdentity(formId, recordId)
-    const marked = await drafts.write({ version: 1, identity, values: {},
-      status: 'completed', updatedAt: new Date().toISOString() })
-    if (marked.state !== 'succeeded' || !authorized()) return false
-    await drafts.remove(identity) // completed tombstone remains safe if cleanup fails
-    return authorized()
-  }
+  const {readDraft,readSealedDraft,writeDraft,removeDraft,sealDraftForSubmission,isDraftSubmissionPending}=createAStageDynamicFormDraftSession({
+    storage:options.storage,identity:draftIdentity,isCurrent:authorized,
+    fields:async formId=>(await scopedDefinition(formId,authorized)).fields??[],
+    hasReceipt:async()=>(await load()).receiptPending,
+  })
 
-  async function load(): Promise<AStageSpecialView> {
+  async function load(): Promise<AStageDynamicFormView> {
     if (!authorized()) throw new Error('身份或环境已变化，不能操作当前表单。')
     const node = await rawDetail(kind)
     const definitions = await scopedDefinitions(kind, node, authorized)
@@ -327,7 +320,7 @@ export function createAStageSpecialMockController(options: {
     if (!authorized()) throw new Error('角色已变化，请重新进入工单。')
     const originals = kind === 'forms' ? object(node.exts)?.formList : await scopedForms('repeat')
     if (!Array.isArray(originals) || originals.length > 100) throw new Error('表单列表尚未完整读取。')
-    const entries: AStageSpecialRecord[] = []
+    const entries: AStageDynamicFormRecord[] = []
     for (const item of originals) {
       const raw = object(item)
       if (!raw || typeof raw._id !== 'string') throw new Error('表单身份无效。')
@@ -364,7 +357,7 @@ export function createAStageSpecialMockController(options: {
     const pending = receipts.filter(item => item.data !== null)
     const pendingReceipt = pending.length === 1 ? pending[0]!.data : null
     // Any sibling FormDef receipt fences the whole node, not only its editor.
-    return { kind, definition: formDef, definitions, nodeActive: node.state === 0, entries,
+    return { kind, definition: formDef, definitions, nodeActive: node.state === 0, nodeClosed: node.state === 10, entries,
       ...(pending.length === 1 ? { pendingFormDefinitionId: pending[0]!.id } : {}),
       ...(pendingReceipt?.targetFormDataId ? { pendingDraftRecordId: pendingReceipt.targetFormDataId } : {}),
       receiptPending: pending.length > 0,
@@ -408,7 +401,7 @@ export function createAStageSpecialMockController(options: {
   /** Resume only LOCAL receipt reconciliation. This performs fresh Mock reads
    * but never dispatches a FormData, EXTS, remove or Process command. A
    * may-have-dispatched ACK can NEVER be converted into safe-to-retry here. */
-  async function recoverCompleted(originalFields: R1SpecialMockFields): Promise<AStageSpecialOutcome> {
+  async function recoverCompleted(originalFields: R1SpecialMockFields): Promise<AStageDynamicFormOutcome> {
     if (inFlight) return { state: 'blocked', message: '已有操作正在处理，请稍后再核对。' }
     inFlight = true
     try {
@@ -458,11 +451,11 @@ export function createAStageSpecialMockController(options: {
     finally { inFlight = false }
   }
 
-  async function execute(action: AStageSpecialAction): Promise<AStageSpecialOutcome> {
+  async function execute(action: AStageDynamicFormAction): Promise<AStageDynamicFormOutcome> {
     if (inFlight) return { state: 'blocked', message: '正在处理上一笔表单操作。' }
     inFlight = true
     try {
-      return await withR1SpecialMockTransaction<AStageSpecialOutcome>('snapshot-020-021', async () => {
+      return await withR1SpecialMockTransaction<AStageDynamicFormOutcome>('snapshot-020-021', async () => {
       if (!authorized()) return { state: 'blocked', message: '当前账号或操作权限不可用。' }
       if (await network.current() === 'offline') return { state: 'blocked',
         message: '网络不可用，填写内容保留在本机。连接恢复后请主动保存。' }
@@ -630,16 +623,16 @@ export function createAStageSpecialMockController(options: {
       return { state: 'uncertain', message: '表单操作被本机事务锁或回读异常阻止，禁止盲目重试。' }
     } finally { inFlight = false }
   }
-  return { load, execute, recoverCompleted, network, readDraft, writeDraft, removeDraft,
+  return { load, execute, recoverCompleted, network, readDraft, readSealedDraft, writeDraft, removeDraft, sealDraftForSubmission, isDraftSubmissionPending,
     listMediaTasks, pickMedia, retryMedia, discardMedia, finalizeMedia }
 }
 
 /** Page-composed DEV capability. No page or feature creates a storage adapter. */
-export function createAStageSpecialMockControllerForActor(
-  options: Omit<Parameters<typeof createAStageSpecialMockController>[0], 'storage'>,
+export function createAStageDynamicFormMockControllerForActor(
+  options: Omit<Parameters<typeof createAStageDynamicFormMockController>[0], 'storage'>,
 ) {
   const storage = createDefaultStoragePort()
-  return createAStageSpecialMockController({ ...options, storage,
+  return createAStageDynamicFormMockController({ ...options, storage,
     mediaPicker: createDefaultMediaFilePickerPort(),
     mediaQueue: createDefaultMediaUploadQueue(storage, createSpecialDevMockUploadPort()),
   })

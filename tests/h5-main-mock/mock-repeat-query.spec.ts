@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
@@ -16,7 +17,7 @@ test('normal App repeat list → exact record read → synthetic save → refres
   })
   await page.goto('/#/pages/index/index?devReview=1')
   await page.locator('.work-orders-entry').click()
-  await (await searchMockWorkOrder(page, '021')).click()
+  await (await searchMockWorkOrder(page, '021')).click(); await enterDevMockDynamicFormWorkspace(page)
   await expect(page.getByTestId('a-special-row-mock-form-data-021-existing-a')).toContainText('第一次复检')
   await expect(page.getByTestId('a-special-row-mock-form-data-021-existing-b')).toContainText('第二次复检')
   // Historical seed rows lack authoritative edit ownership; retain readonly.
@@ -55,7 +56,7 @@ test('normal App repeat 21-row boundary saves, reloads and explicitly finishes t
   })
   await page.goto('/#/pages/index/index?devReview=1')
   await page.locator('.work-orders-entry').click()
-  await (await searchMockWorkOrder(page, '021')).click()
+  await (await searchMockWorkOrder(page, '021')).click(); await enterDevMockDynamicFormWorkspace(page)
   for (let n = 1; n <= 19; n++) {
     await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill(`完整分页记录${n}`)
     await page.getByTestId('a-special-field-inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()

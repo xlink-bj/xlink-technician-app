@@ -9,7 +9,7 @@
     <view v-else-if="error" class="special-forms__message special-forms__message--error"
       data-testid="a-special-error" role="alert">
       <text>{{ error }}</text>
-      <AppButton variant="secondary" size="compact" :disabled="busy" @tap="refresh">重新读取</AppButton>
+      <AppButton variant="secondary" size="compact" :disabled="busy || restoringDraft" @tap="refresh">重新读取</AppButton>
     </view>
     <template v-else-if="viewState">
       <AppStatus v-if="networkState === 'offline'" tone="warning" quiet
@@ -32,16 +32,16 @@
           <text class="special-forms__record-title">{{ entry.title }}</text>
           <text class="special-forms__record-summary">{{ entry.summary || (entry.editable ? '已保存' : '历史记录 · 内容只读') }}</text>
           <text v-if="entry.state === 'deleted'" class="special-forms__muted">已删除</text>
-          <view v-else-if="entry.editable && !viewState.receiptPending && viewState.nodeActive"
+          <view v-else-if="entry.editable && !localSubmissionPending && !cleanupPending && !viewState.receiptPending && viewState.nodeActive"
             class="special-forms__row-actions">
-            <AppButton variant="text" size="compact" :disabled="busy"
+            <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
               :data-testid="`a-special-edit-${entry.id}`" @tap="edit(entry.id)">编辑</AppButton>
-            <AppButton variant="text" size="compact" :disabled="busy"
+            <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
               :data-testid="`a-special-delete-${entry.id}`" @tap="confirmDeleteId = entry.id">删除</AppButton>
           </view>
           <view v-if="confirmDeleteId === entry.id" class="special-forms__confirmation">
             <text>确定删除这条记录？</text>
-            <AppButton size="compact" :disabled="busy"
+            <AppButton size="compact" :disabled="busy || restoringDraft"
               :data-testid="`a-special-confirm-delete-${entry.id}`"
               @tap="run({ kind: 'delete', id: entry.id, expectedRevision: entry.revision })">确认删除</AppButton>
             <AppButton variant="text" size="compact" @tap="confirmDeleteId = null">取消</AppButton>
@@ -50,7 +50,17 @@
       </view>
       <AppStatus v-if="viewState.receiptPending" tone="warning" quiet
         message="上次操作结果待核对，核对前请勿重复提交。" data-testid="a-special-receipt-pending" />
-      <view v-if="viewState.receiptPending" class="special-forms__recovery" data-testid="a-special-recovery">
+      <view v-if="localSubmissionPending" data-testid="a-special-local-submission-pending">
+        <AppStatus tone="warning" quiet message="上次提交的本机内容尚待核对，禁止恢复或重复保存。请保留记录并联系支持人员核查。" />
+        <view v-for="field in sealedFields.filter(row=>row.supported && Object.hasOwn(sealedValues,row.valueKey))" :key="field.fieldId" data-testid="a-special-sealed-value">
+          <text>{{ field.label }}：{{ Array.isArray(sealedValues[field.valueKey]) ? `已封存列表（${(sealedValues[field.valueKey] as readonly unknown[]).length} 项）` : String(sealedValues[field.valueKey]) }}</text>
+        </view>
+      </view>
+      <view v-else-if="cleanupPending" data-testid="a-special-cleanup-pending">
+        <text>记录已保存，本机草稿清理失败。请留在当前页面重试，不要重复保存。</text>
+        <AppButton :disabled="busy || restoringDraft" data-testid="a-special-cleanup-retry" @tap="retryCleanup">重试本机清理</AppButton>
+      </view>
+      <view v-else-if="viewState.receiptPending" class="special-forms__recovery" data-testid="a-special-recovery">
         <template v-if="viewState.pendingRecoverable">
           <text class="special-forms__finish-copy">{{ uxStateLanguage.pendingReceipt }}可只读核对最新记录，确认后解除重复提交保护。</text>
           <template v-if="viewState.pendingNeedsOriginalFields">
@@ -62,12 +72,12 @@
                 原保存附件须与权威记录一致；可从已恢复的附件队列核对，不重新上传。
               </text>
               <R1FormFieldControl v-else :field="field" :model-value="scalarValueFor(field.valueKey)"
-                :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
+                :disabled="busy || restoringDraft" @update:model-value="setField(field.valueKey, $event)" />
               </view>
             </template>
           </template>
           <AppButton block variant="secondary" :loading="busy"
-            :disabled="busy || (viewState.pendingNeedsOriginalFields && !formValid)"
+            :disabled="busy || restoringDraft || (viewState.pendingNeedsOriginalFields && !formValid)"
             data-testid="a-special-recover" @tap="recoverCompleted">只读核对并恢复</AppButton>
         </template>
         <AppStatus v-else tone="warning" quiet
@@ -83,7 +93,7 @@
             class="special-forms__field" data-testid="a-special-definition-choice">
             <text class="special-forms__label">记录类型</text>
             <AppChoiceGroup :options="formChoices" :model-value="selectedFormDefinitionId"
-              :disabled="busy" @update:model-value="selectDefinition" />
+              :disabled="busy || restoringDraft" @update:model-value="selectDefinition" />
           </view>
           <template v-for="field in viewFields" :key="field.fieldId">
             <view v-if="field.supported && editableFieldTypes.has(field.type)"
@@ -94,35 +104,35 @@
                   <view v-for="(item,index) in mediaValues(field.valueKey)" :key="item.url"
                     class="special-forms__media-item">
                     <text class="special-forms__media-name">{{ mediaDisplayName(item, index) }}</text>
-                    <AppButton variant="text" size="compact" :disabled="busy"
+                    <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
                       :data-testid="`a-special-media-remove-${field.valueKey}-${index}`"
                       @tap="pendingMediaRemoval = { key: field.valueKey, url: item.url }">移除</AppButton>
                   </view>
                   <view v-if="pendingMediaRemoval?.key === field.valueKey" class="special-forms__confirmation"
                     :data-testid="`a-special-media-remove-confirm-${field.valueKey}`">
                     <text>确认移除这份附件？保存修改后生效。</text>
-                    <AppButton variant="text" size="compact" :disabled="busy"
+                    <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
                       :data-testid="`a-special-media-remove-accept-${field.valueKey}`" @tap="confirmMediaRemoval">确认移除</AppButton>
-                    <AppButton variant="text" size="compact" :disabled="busy"
+                    <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
                       :data-testid="`a-special-media-remove-cancel-${field.valueKey}`" @tap="pendingMediaRemoval = null">取消</AppButton>
                   </view>
                   <view v-for="task in tasksFor(field.fieldId).filter(task => task.state !== 'uploaded')"
                     :key="task.taskId" class="special-forms__media-item">
                     <text class="special-forms__media-name">{{ mediaStatus(task) }}</text>
                     <AppButton v-if="task.state === 'failed_retryable'" variant="text" size="compact"
-                      :disabled="busy || task.lastError?.code === 'ambiguous_postprocess'"
+                      :disabled="busy || restoringDraft || task.lastError?.code === 'ambiguous_postprocess'"
                       :data-testid="`a-special-media-retry-${field.valueKey}`"
                       @tap="retryMediaTask(task.taskId)">重试</AppButton>
-                    <AppButton variant="text" size="compact" :disabled="busy"
+                    <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
                       @tap="discardMediaTask(task.taskId)">删除</AppButton>
                   </view>
-                  <AppButton variant="secondary" size="compact" :disabled="busy || mediaValues(field.valueKey).length + tasksFor(field.fieldId).filter(task => task.state !== 'uploaded').length >= 10"
+                  <AppButton variant="secondary" size="compact" :disabled="busy || restoringDraft || mediaValues(field.valueKey).length + tasksFor(field.fieldId).filter(task => task.state !== 'uploaded').length >= 10"
                     :data-testid="`a-special-media-pick-${field.valueKey}`"
                     @tap="pickMediaField(field.fieldId)">添加附件</AppButton>
                 </view>
               </template>
               <R1FormFieldControl v-else :field="field" :model-value="scalarValueFor(field.valueKey)"
-                :disabled="busy" @update:model-value="setField(field.valueKey, $event)" />
+                :disabled="busy || restoringDraft" @update:model-value="setField(field.valueKey, $event)" />
             </view>
             <view v-else class="special-forms__reference" :data-testid="`a-special-reference-${field.valueKey}`">
               <text>{{ field.label }} · {{ field.type === 'image' ? '参考图片（只读，非上传项）' : field.reason || '当前不可编辑' }}</text>
@@ -131,35 +141,35 @@
           <text v-if="!formValid" class="special-forms__validation" data-testid="a-special-form-validation">{{ validationMessage }}</text>
           <view class="special-forms__buttons">
             <view class="special-forms__save-button">
-              <AppButton block :disabled="busy || !formValid || hasPendingMedia" :loading="busy"
+              <AppButton block :disabled="busy || restoringDraft || !formValid || hasPendingMedia" :loading="busy"
                 data-testid="a-special-save" @tap="save">{{ editingId ? '保存修改' : '保存记录' }}</AppButton>
             </view>
             <view v-if="editingId" class="special-forms__cancel-button">
-              <AppButton variant="text" :disabled="busy" @tap="cancelEdit">取消</AppButton>
+              <AppButton variant="text" :disabled="busy || restoringDraft" @tap="cancelEdit">取消</AppButton>
             </view>
           </view>
           <view v-if="kind === 'forms' && !editingId" class="special-forms__finish">
             <AppButton v-if="!confirmSaveFinish" variant="secondary" block
-              :disabled="busy || !formValid || hasPendingMedia" data-testid="a-special-save-finish-request"
+              :disabled="busy || restoringDraft || !formValid || hasPendingMedia" data-testid="a-special-save-finish-request"
               @tap="confirmSaveFinish = true">保存并完成节点</AppButton>
             <view v-else class="special-forms__confirmation">
               <text>确认保存本条记录，并立即完成当前节点？</text>
-              <AppButton :disabled="busy || !formValid || hasPendingMedia" data-testid="a-special-save-finish-confirm"
+              <AppButton :disabled="busy || restoringDraft || !formValid || hasPendingMedia" data-testid="a-special-save-finish-confirm"
                 @tap="run({ kind: 'save_finish', fields: draftValues, formDefinitionId: selectedFormDefinitionId })">确认保存并完成</AppButton>
-              <AppButton variant="text" :disabled="busy" @tap="confirmSaveFinish = false">返回检查</AppButton>
+              <AppButton variant="text" :disabled="busy || restoringDraft" @tap="confirmSaveFinish = false">返回检查</AppButton>
             </view>
           </view>
         </view>
         <view class="special-forms__finish">
           <text class="special-forms__finish-copy">{{ canFinish ? '确认记录齐全后可以完成；完成后不可再编辑。' : '请先保存至少一条有效记录。' }}</text>
           <AppButton v-if="!confirmFinish" variant="secondary" block
-            :disabled="busy || !canFinish" data-testid="a-special-finish-request"
+            :disabled="busy || restoringDraft || !canFinish" data-testid="a-special-finish-request"
             @tap="confirmFinish = true">完成现场记录</AppButton>
           <view v-else class="special-forms__confirmation">
             <text>确认记录已齐全并完成当前节点？</text>
-            <AppButton :disabled="busy" data-testid="a-special-finish-confirm"
+            <AppButton :disabled="busy || restoringDraft" data-testid="a-special-finish-confirm"
               @tap="run({ kind: 'finish' })">确认完成</AppButton>
-            <AppButton variant="text" :disabled="busy" @tap="confirmFinish = false">返回检查</AppButton>
+            <AppButton variant="text" :disabled="busy || restoringDraft" @tap="confirmFinish = false">返回检查</AppButton>
           </view>
         </view>
       </template>
@@ -172,9 +182,9 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { WorkflowNodeRead } from '@shared/ports'
 import type {
-  AStageSpecialView, AStageSpecialAction, AStageSpecialKind,
-  AStageSpecialMockController, AStageSpecialMockControllerFactory,
-} from './a-stage-special-mock-port'
+  AStageDynamicFormView, AStageDynamicFormAction, AStageDynamicFormNodeKind,
+  AStageDynamicFormMockController, AStageDynamicFormMockControllerFactory,
+} from './a-stage-dynamic-form-mock-port'
 import { useSessionStore } from '@shared/state'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -188,16 +198,21 @@ import {
   type R1FileWireValue, type MediaUploadTask, type MediaUploadTaskId,
 } from '@shared/types'
 
-const props = defineProps<{ readonly kind: AStageSpecialKind; readonly workOrderId: string;
-  readonly node: WorkflowNodeRead; readonly createController: AStageSpecialMockControllerFactory }>()
+const props = defineProps<{ readonly kind: AStageDynamicFormNodeKind; readonly workOrderId: string;
+  readonly node: WorkflowNodeRead; readonly createController: AStageDynamicFormMockControllerFactory }>()
 const emit = defineEmits<{ (event: 'changed'): void }>()
 const session = useSessionStore()
-const viewState = ref<AStageSpecialView | null>(null)
+const viewState = ref<AStageDynamicFormView | null>(null)
 const loading = ref(true)
+const restoringDraft=ref(false)
 const busy = ref(false)
 const error = ref('')
 const operationFeedback = ref('')
 const recoveryFeedback = ref('')
+const localSubmissionPending=ref(false)
+const sealedValues=ref<R1SpecialMockFields>({})
+const sealedFields=computed(()=>selectedDefinition.value?projectR1LocalFields(selectedDefinition.value,sealedValues.value):[])
+const cleanupPending = ref<{formId:string;recordId?:string;view:AStageDynamicFormView}|null>(null)
 const draftValues = ref<R1SpecialMockFields>({})
 const editableFieldTypes = r1SpecialMockWritableTypes
 const mediaTasks = ref<readonly MediaUploadTask[]>([])
@@ -342,7 +357,7 @@ async function removeMediaValue(key: string, index: number): Promise<void> {
   if (ticket === revision) setField(key, values.filter((_, i) => i !== index))
 }
 function setField(key: string, value: R1SpecialMockFields[string]): void {
-  if (busy.value || !viewState.value) return
+  if (busy.value || restoringDraft.value || !viewState.value) return
   const field = viewFields.value.find(item => item.valueKey === key && item.supported)
   if (!field?.supported || !editableFieldTypes.has(field.type)
     || (typeof value === 'string' && value.length > 4000)
@@ -366,11 +381,11 @@ const canFinish = computed(() => Boolean(viewState.value?.entries.some(row =>
   row.state === 'active' && (props.kind === 'forms' || row.editable))))
 let revision = 0
 let loadRevision = 0
-let controller: AStageSpecialMockController | null = null
+let controller: AStageDynamicFormMockController | null = null
 const draftFeedback = ref('')
 const networkState = ref<import('@shared/ports').NetworkStatus>('unknown')
 let unsubscribeNetwork: (() => void) | undefined
-let draftWrites: Promise<unknown> = Promise.resolve()
+let draftWrites: Promise<boolean> = Promise.resolve(true)
 let editRevision = 0
 function draftRecordId(): string | undefined {
   return editingId.value
@@ -381,17 +396,41 @@ function persistLocalDraft(): void {
   if (!current || !formId) return
   const values = { ...draftValues.value }, ticket = revision
   draftFeedback.value = '正在保存到本机…'
-  draftWrites = draftWrites.catch(() => undefined).then(async () => {
+  draftWrites = draftWrites.catch(() => false).then(async () => {
+    if (ticket !== revision) return false
     const saved = await current.writeDraft(formId, values, recordId)
     if (ticket === revision) draftFeedback.value = saved ? '已保存到本机，尚未提交' : '本机保存失败，请保留当前页面后重试'
-  }).catch(() => { if (ticket === revision) draftFeedback.value = '本机保存失败，请保留当前页面后重试' })
+    return saved && ticket === revision
+  }).catch(() => { if (ticket === revision) draftFeedback.value = '本机保存失败，请保留当前页面后重试';return false })
 }
+async function waitLocalWrites(ticket:number):Promise<boolean> {
+  while (ticket === revision) {
+    const latest=draftWrites
+    const ok=await latest
+    if(ticket!==revision)return false
+    if(latest!==draftWrites)continue
+    return ok && !cleanupPending.value
+  }
+  return false
+}
+async function flushLocalDraft():Promise<boolean>{
+  return !busy.value && Boolean(controller) && await waitLocalWrites(revision)
+}
+defineExpose({flushLocalDraft})
 async function restoreLocalDraft(): Promise<void> {
   const current = controller, formId = selectedFormDefinitionId.value, recordId = draftRecordId()
   const ticket = revision, changes = editRevision
   if (!current || !formId) return
+  restoringDraft.value=true
   try {
     await draftWrites
+    const pending=await current.isDraftSubmissionPending(formId,recordId)
+    if(ticket!==revision)return
+    localSubmissionPending.value=pending
+    if(pending){
+      const sealed=await current.readSealedDraft(formId,recordId);if(ticket!==revision)return
+      sealedValues.value=sealed??{};draftFeedback.value='上次提交的本机内容已封存，尚待核对。';return
+    }
     const values = await current.readDraft(formId, recordId)
     if (ticket !== revision || changes !== editRevision || formId !== selectedFormDefinitionId.value
       || recordId !== draftRecordId()) return
@@ -402,7 +441,8 @@ async function restoreLocalDraft(): Promise<void> {
         : '已恢复本机草稿，尚未提交'
     }
     else draftFeedback.value = ''
-  } catch { if (ticket === revision) draftFeedback.value = '本机草稿读取失败，原草稿已保留' }
+  } catch { if (ticket === revision) {localSubmissionPending.value=true;draftFeedback.value = '本机草稿读取失败，原草稿已保留'} }
+  finally{if(ticket===revision)restoringDraft.value=false}
 }
 function actor() {
   const current = session.session
@@ -432,16 +472,21 @@ async function refresh(): Promise<void> {
   } finally { if (revision === ticket && loadTicket === loadRevision) loading.value = false }
 }
 watch(() => [props.kind, props.workOrderId, props.node.id,
-  session.session?.sessionRef, session.session?.currentRole?.id, session.session?.roleVersion] as const,
+  session.session?.sessionRef, session.session?.user.id, session.session?.currentRole?.id, session.session?.roleVersion] as const,
 () => {
   revision++
   busy.value = false
+  restoringDraft.value=false
   editRevision++
   unsubscribeNetwork?.()
   viewState.value = null
   error.value = ''
   operationFeedback.value = ''
   recoveryFeedback.value = ''
+  cleanupPending.value = null
+  localSubmissionPending.value=false
+  sealedValues.value={}
+  draftWrites = Promise.resolve(true)
   draftValues.value = {}
   mediaTasks.value = []
   selectedFormDefinitionId.value = ''
@@ -450,8 +495,9 @@ watch(() => [props.kind, props.workOrderId, props.node.id,
   confirmDeleteId.value = null
   confirmFinish.value = false
   confirmSaveFinish.value = false
+  const owner=revision
   controller = props.createController({ kind: props.kind,
-    workOrderId: props.workOrderId, getActor: actor })
+    workOrderId: props.workOrderId, getActor: () => owner===revision ? actor() : null })
   const current = controller
   const ticket = revision
   unsubscribeNetwork = current.network.subscribe(status => {
@@ -484,28 +530,50 @@ function cancelEdit(restoreDraft = true): void {
   if (restoreDraft) void restoreLocalDraft().then(() => restoreMediaTasks())
 }
 async function save(): Promise<void> {
-  const action: AStageSpecialAction = editingId.value
+  const action: AStageDynamicFormAction = editingId.value
     ? { kind: 'edit', id: editingId.value, fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value,
       ...(editingRevision.value ? { expectedRevision: editingRevision.value } : {}) }
     : { kind: 'save', fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value }
   await run(action)
 }
-async function run(action: AStageSpecialAction): Promise<void> {
+async function run(action: AStageDynamicFormAction): Promise<void> {
   const current = controller
-  if (!current || busy.value || hasPendingMedia.value) return
+  if (!current || busy.value || restoringDraft.value || localSubmissionPending.value || cleanupPending.value || hasPendingMedia.value) return
   busy.value = true
   error.value = ''
   operationFeedback.value = ''
   const ticket = revision
   try {
-    await draftWrites
+    if(!await waitLocalWrites(ticket)){
+      // A completed edit advances the local generation. Read the newer row for
+      // conflict feedback without dispatching through the stale editor.
+      if(action.kind==='edit'&&action.expectedRevision){
+        await refresh()
+        if(ticket!==revision||current!==controller)return
+        const row=viewState.value?.entries.find(entry=>entry.id===action.id)
+        if(row?.revision&&row.revision!==action.expectedRevision){
+          operationFeedback.value='记录已被其他编辑器更新，请核对最新记录。';return
+        }
+      }
+      operationFeedback.value='本机草稿尚未安全保存，请保留页面后重试。';return
+    }
     const savedDefinition = selectedFormDefinitionId.value, savedRecord = editingId.value ?? undefined
+    if('fields' in action && await current.network.current()!=='offline'){
+      if(ticket!==revision)return
+      const sealed=await current.sealDraftForSubmission(savedDefinition,action.fields,savedRecord).catch(()=>false)
+      if(ticket!==revision||current!==controller)return
+      if(!sealed){operationFeedback.value='本机提交保护尚未安全保存，请保留页面后重试。';return}
+    }
+    if(ticket!==revision)return
     const result = await current.execute(action)
     if (ticket !== revision) return
     if (result.state !== 'succeeded') {
       await refresh()
       if (ticket === revision) {
         operationFeedback.value = result.message
+        const pending=await current.isDraftSubmissionPending(savedDefinition,savedRecord).catch(()=>true)
+        if(ticket!==revision||current!==controller)return
+        localSubmissionPending.value=pending
         if (viewState.value?.receiptPending && !draftFeedback.value.includes('失败')) {
           draftFeedback.value = '本机草稿已保留，提交结果待核对'
         }
@@ -515,17 +583,33 @@ async function run(action: AStageSpecialAction): Promise<void> {
     if (action.kind === 'save' || action.kind === 'edit' || action.kind === 'save_finish') {
       const cleaned = await current.finalizeMedia(savedDefinition, savedRecord)
       if (!cleaned && ticket === revision) operationFeedback.value = '记录已保存，部分本机附件待清理。'
-      await current.removeDraft(savedDefinition, savedRecord)
+      const removed = await current.removeDraft(savedDefinition, savedRecord).catch(()=>false)
       if (ticket !== revision) return
+      if(!removed){
+        cleanupPending.value={formId:savedDefinition,recordId:savedRecord,view:result.view}
+        viewState.value=result.view;draftFeedback.value='记录已保存，本机草稿清理失败，请保留页面重试。'
+        return
+      }
     }
     viewState.value = result.view
     draftFeedback.value = ''
-    cancelEdit()
+    cancelEdit(false)
     confirmDeleteId.value = null
     confirmFinish.value = false
     confirmSaveFinish.value = false
     emit('changed')
   } finally { if (ticket === revision) busy.value = false }
+}
+async function retryCleanup():Promise<void>{
+  const pending=cleanupPending.value,current=controller,ticket=revision
+  if(!pending||!current||busy.value)return
+  busy.value=true
+  try{
+    const removed=await current.removeDraft(pending.formId,pending.recordId).catch(()=>false)
+    if(ticket!==revision||cleanupPending.value!==pending||!removed)return
+    cleanupPending.value=null;viewState.value=pending.view;draftFeedback.value=''
+    cancelEdit(false);emit('changed')
+  }finally{if(ticket===revision)busy.value=false}
 }
 async function recoverCompleted(): Promise<void> {
   const current = controller
@@ -550,6 +634,11 @@ async function recoverCompleted(): Promise<void> {
       catch { draftRemoved = false }
     }
     if (ticket !== revision) return
+    if(!draftRemoved && formId){
+      cleanupPending.value={formId,recordId,view:result.view}
+      viewState.value=result.view;draftFeedback.value='记录已核对，本机草稿清理失败，请保留当前页面并重试。'
+      return
+    }
     viewState.value = result.view
     cancelEdit(false)
     if (!mediaFinalized) operationFeedback.value = '记录已核对，部分本机附件待清理。'

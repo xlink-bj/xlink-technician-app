@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { expect, test } from '@playwright/test'
 
 test('430×932 offline editing, multi-FormDef isolation, restart recovery and explicit submission', async ({ page, context }) => {
@@ -12,6 +13,7 @@ test('430×932 offline editing, multi-FormDef isolation, restart recovery and ex
   page.on('pageerror', error => errors.push(error.message))
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  await enterDevMockDynamicFormWorkspace(page)
   await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
   const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
   const savedDraftField = (formDefinitionId: string, fieldId: string) => page.evaluate(({ formDefinitionId, fieldId }) => {
@@ -51,6 +53,7 @@ test('430×932 offline editing, multi-FormDef isolation, restart recovery and ex
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-021-local-repeat')
   await page.reload()
   await expect(page.getByText('田女士', { exact: true }).first()).toBeVisible()
+  await enterDevMockDynamicFormWorkspace(page)
   await expect(field('inspectionSummary').locator('textarea')).toHaveValue('')
   await field('inspectionSummary').locator('textarea').fill('第二工单独立草稿')
   await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
@@ -78,6 +81,7 @@ test('430×932 offline editing, multi-FormDef isolation, restart recovery and ex
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-021-local-repeat')
   await page.reload()
   await expect(page.getByText('田女士', { exact: true }).first()).toBeVisible()
+  await enterDevMockDynamicFormWorkspace(page)
   await expect(field('inspectionSummary').locator('textarea')).toHaveValue('第二工单独立草稿')
   expect(external).toEqual([])
   expect(errors).toEqual([])
@@ -94,6 +98,7 @@ test('430×932 failed submit / lost Mock commit ACK preserves draft and never re
   await page.setViewportSize({ width: 430, height: 932 })
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  await enterDevMockDynamicFormWorkspace(page)
   await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill('回执丢失也必须保留的草稿')
   await page.getByTestId('a-special-field-inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()
   await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
@@ -136,6 +141,7 @@ test('430×932 storage quota denial never acknowledges an unsaved draft; explici
   await page.setViewportSize({ width: 430, height: 932 })
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  await enterDevMockDynamicFormWorkspace(page)
   const input = page.getByTestId('a-special-field-inspectionSummary').locator('textarea')
   await input.fill('容量故障前已经安全保存的内容')
   await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')
@@ -167,6 +173,7 @@ test('430×932 competing saved revision is not silently overwritten by a stale e
   await page.setViewportSize({ width: 430, height: 932 })
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  await enterDevMockDynamicFormWorkspace(page)
   const input = page.getByTestId('a-special-field-inspectionSummary').locator('textarea')
   await input.fill('当前会话最初保存的草稿')
   await expect(page.getByTestId('a-special-local-draft')).toContainText('已保存到本机')

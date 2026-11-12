@@ -56,10 +56,10 @@ function snapshot(): R1NodeFormsSnapshot {
 function find(root: Host, predicate: (n: Host) => boolean): Host | undefined { if (predicate(root)) return root; for (const child of root.children) { const match = find(child, predicate); if (match) return match } }
 async function settle() { for (let i = 0; i < 6; i++) { await Promise.resolve(); await Vue.nextTick() } }
 async function mounted(allowActions = true, initial = snapshot(), extraActions: {
-  canEdit?: (id: string) => boolean; initialValues?: (id: string) => Readonly<Record<string, any>>;
+  canEdit?: (id: string) => boolean; initialValues?: (id: string) => Readonly<Record<string, any>>; originalRead?: Readonly<Record<string, unknown>>;
 } = {}) {
   let current = initial
-  const reader = { enabled: () => true, load: vi.fn(async () => current), clear: vi.fn(), isCurrent: (value: R1NodeFormsSnapshot) => value === current }
+  const reader = { currentFormOriginal:()=>extraActions.originalRead??null,retainReadIdentity:()=>({isSameActor:()=>true}),enabled: () => true, load: vi.fn(async () => current), clear: vi.fn(), isCurrent: (value: R1NodeFormsSnapshot) => value === current }
   const savedValues: Record<string, unknown>[] = []
   const saveOnly = vi.fn(async (values: Record<string, unknown>) => {
     const normalized = repeatForm.normalizeR1RepeatValues(current, values); savedValues.push(normalized)
@@ -95,7 +95,7 @@ describe('normal appointment repeat conditional page', () => {
         { fieldId: 'part', valueKey: 'part', label: 'synthetic original path', type: 'cascade', required: true, readOnly: true }] },
       records: [{ id: asOpaqueId<'FormDataId'>('saved'), definitionId, values: original }] }
     // Explicit synthetic unit provider, not production authority or browser E2E.
-    const h = await mounted(true, value, { canEdit: () => true, initialValues: () => original })
+    const h = await mounted(true, value, { canEdit: () => true, initialValues: () => original, originalRead:{_id:'saved',part:['3','310'],length:2,width:3,planeArea:6} })
     try {
       find(h.root, n => n.props['data-testid'] === 'r1-normal-edit-saved')!.props.onTap(); await settle()
       await h.input('length', '2.345')

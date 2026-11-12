@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { expect, test, type Page } from '@playwright/test'
 
 // Synthetic file only; no customer media, network upload or Production write.
@@ -14,6 +15,7 @@ async function openForms(page: import('@playwright/test').Page, kind: 'forms' | 
   await page.setViewportSize({ width: 430, height: 932 })
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto(`/#/pages/work-orders/detail?id=mock-work-order-${kind === 'forms' ? '020-local-forms' : '021-local-repeat'}`)
+  await enterDevMockDynamicFormWorkspace(page)
   await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
 }
 async function populate(page: import('@playwright/test').Page, summary: string) {

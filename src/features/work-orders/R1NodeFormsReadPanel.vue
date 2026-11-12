@@ -137,7 +137,22 @@ const validDraft = computed(() => { if(fileCancelling.value)return false;try {vo
 let version = 0
 // A failed explicit reread hides the editor but must not erase its recovery
 // identity. Only a fresh authorized snapshot can restore it.
-let pendingEditor: { readonly id: string | undefined } | null = null
+type ReadIdentity = NonNullable<ReturnType<NonNullable<R1NodeFormsReader['retainReadIdentity']>>>
+let editorSource: string | null = null, editorIdentity: ReadIdentity | null = null
+let pendingEditor: { readonly id: string | undefined; readonly source: string | null; readonly identity: ReadIdentity | null } | null = null
+// These transient bytes compare reader-issued originals, never display values
+// or write credentials. A successful fresh read must independently authorize edit.
+function editSource(source: R1NodeFormsSnapshot, id: string): string | null {
+  try {
+    if (!props.actorScope || !viewReader.isCurrent(source)) return null
+    const original = viewReader.currentFormOriginal?.(source, id)
+    if (!original) return null
+    return JSON.stringify([props.actorScope, source.workOrderId, source.node,
+      source.definition, source.fillableFieldIds ?? null, id, original], (_key, value) =>
+      value && typeof value === 'object' && !Array.isArray(value)
+        ? Object.fromEntries(Object.keys(value).sort().map(key => [key, value[key]])) : value)
+  } catch { return null }
+}
 const visibleSnapshot = computed(() => props.actorScope && props.actorScope === snapshotActorScope.value && snapshot.value
   && snapshot.value.workOrderId === props.workOrderId && String(snapshot.value.node.id) === props.runtimeNodeId
   && viewReader.isCurrent(snapshot.value) ? snapshot.value : null)
@@ -145,14 +160,25 @@ watch(actions,(next,old)=>{if(old?.fileMedia&&next?.fileMedia!==old.fileMedia)ol
 // Share only the exact visible read state, never a save ACK or the stale parent EXTS summary.
 watch(visibleSnapshot, value => emit('snapshot-change', value && snapshotActorScope.value
   ? { actorScope: snapshotActorScope.value, snapshot: value } : null), { immediate: true, flush: 'sync' })
-function clear() { lastLocalWrite=null;draftSession=null; draftRead.value=null; draftMessage.value=''; draftWorking.value=false; confirmDraftDiscard.value=false; actions.value?.fileMedia?.dispose(); version++; pendingEditor = null; viewReader.clear(); snapshot.value = null; snapshotActorScope.value = null; loading.value = false; busy.value = false; fileEditorClosed.value=false;fileCancelling.value=false; message.value = ''; values.value = {}; confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined }
+function clear() { lastLocalWrite=null;draftSession=null; draftRead.value=null; draftMessage.value=''; draftWorking.value=false; confirmDraftDiscard.value=false; actions.value?.fileMedia?.dispose(); version++; pendingEditor = null; editorSource = null; editorIdentity = null; viewReader.clear(); snapshot.value = null; snapshotActorScope.value = null; loading.value = false; busy.value = false; fileEditorClosed.value=false;fileCancelling.value=false; message.value = ''; values.value = {}; confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined }
 watch(() => [props.workOrderId, props.runtimeNodeId, props.actorScope], clear)
 onBeforeUnmount(()=>{clear();readerView.drop()})
 watch(()=>props.reader,next=>{clear();readerView.drop();readerView=claimNormalReader(next);viewReader=readerView.reader})
 async function load() {
   if (loading.value || busy.value || fileBusy.value || fileCancelling.value || draftWorking.value || !props.actorScope) return
   const ticket = ++version, actorScope = props.actorScope
-  if (editing.value) pendingEditor = { id: editingId.value }
+  let invalidatedEditor = false
+  if (editing.value) {
+    const id = editingId.value, source = visibleSnapshot.value, action = actions.value
+    const currentSource = id && source ? editSource(source, id) : null
+    if (id && (!action || action.locked() || !action.canEdit?.(id)
+      || !editorIdentity?.isSameActor() || !currentSource || currentSource !== editorSource)) {
+      pendingEditor = null; editorSource = null; editorIdentity = null; values.value = {}; invalidatedEditor = true
+    } else pendingEditor = { id, source: currentSource, identity: editorIdentity }
+  }
+  if (pendingEditor && (!viewReader.enabled() || (pendingEditor.id && !pendingEditor.identity?.isSameActor()))) {
+    pendingEditor = null; editorSource = null; editorIdentity = null; values.value = {}; invalidatedEditor = true
+  }
   const editor = pendingEditor
   confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined
   snapshot.value = null; message.value = ''; loading.value = true
@@ -168,8 +194,13 @@ async function load() {
       if(!inspected){message.value=`已从后台读取 ${value.records.length} 条记录；${media.message()||'本地附件队列尚未核实，不能新建或保存。'}`;return}
     }
     if(editor && pendingEditor === editor){
-      if(fresh && !fresh.locked() && (editor.id?fresh.canEdit?.(editor.id):fresh.canCreate?.())){
-        editing.value=true;editingId.value=editor.id
+      const sameSource = !editor.id || Boolean(editor.identity?.isSameActor() && editor.source && editSource(value, editor.id) === editor.source)
+      if(fresh && !fresh.locked() && sameSource && (editor.id?fresh.canEdit?.(editor.id):fresh.canCreate?.())){
+        editing.value=true;editingId.value=editor.id;editorSource=editor.source;editorIdentity=editor.identity
+      } else {
+        // Explicitly invalidate the whole old editor; never turn it into a new
+        // zero-record draft or silently adopt the fresh original as its baseline.
+        values.value={};editorSource=null;editorIdentity=null;invalidatedEditor=true
       }
       // A successful read resolves recovery; revoked authority must not leave
       // a dormant identity that could revive a draft on a later grant.
@@ -189,8 +220,16 @@ async function load() {
         draftMessage.value=read.state==='recoverable'?'有未提交的本地草稿，可恢复后继续填写。':read.state==='empty'?'':read.message
       }
     }
-    message.value = `已从后台读取 ${value.records.length} 条记录，当前仅查看。`
-  } catch { if (ticket === version) message.value = '记录暂时无法完整核实，请重新读取工单后再试。' }
+    message.value = invalidatedEditor ? '后台记录或编辑权限已变化，未保存内容已失效；请重新打开记录后填写。'
+      : `已从后台读取 ${value.records.length} 条记录，当前仅查看。`
+  } catch { if (ticket === version) {
+    if (pendingEditor?.id && !pendingEditor.identity?.isSameActor()) {
+      pendingEditor=null;editorSource=null;editorIdentity=null;values.value={};invalidatedEditor=true
+    }
+    message.value = invalidatedEditor
+      ? '编辑身份或记录来源已失效，未保存内容已失效；记录暂时无法完整核实，请重新读取。'
+      : '记录暂时无法完整核实，请重新读取工单后再试。'
+  } }
   finally { if (ticket === version) loading.value = false }
 }
 function setValue(key: string,value: R1LocalFieldValue) {
@@ -275,7 +314,7 @@ async function cancelEdit() {
   const media=actions.value?.fileMedia
   if(!media){
     if(draftSession&&!editingId.value){const session=draftSession,ticket=version;draftWorking.value=true;try{await session.discard();if(ticket!==version||draftSession!==session)return;draftSession=null;draftRead.value=null;draftMessage.value=''}catch{if(ticket===version)draftMessage.value='本地草稿尚未清理，请保留内容后重试。';return}finally{if(ticket===version)draftWorking.value=false}}
-    pendingEditor=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;return}
+    pendingEditor=null;editorSource=null;editorIdentity=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;return}
   const ticket=version,actorScope=props.actorScope,source=visibleSnapshot.value
   fileCancelling.value=true
   try{
@@ -283,7 +322,7 @@ async function cancelEdit() {
     if(ticket!==version||props.actorScope!==actorScope||actions.value?.fileMedia!==media||!source||!viewReader.isCurrent(source))return
     if(!cancelled){message.value=media.message()||'取消结果尚未核实，请保留当前草稿并核对附件状态。';return}
     if(draftSession){try{await draftSession.discard()}catch{message.value='附件已取消，本地草稿尚未清理，请保留页面后重试。';return};if(ticket!==version||props.actorScope!==actorScope)return;draftSession=null;draftRead.value=null;draftMessage.value=''}
-    pendingEditor=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;fileEditorClosed.value=true
+    pendingEditor=null;editorSource=null;editorIdentity=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;fileEditorClosed.value=true
     message.value='未保存草稿已取消，可重新新增。'
   }catch{if(ticket===version&&props.actorScope===actorScope)message.value='取消结果尚未核实，请保留当前草稿并核对附件状态。'}
   finally{if(ticket===version&&props.actorScope===actorScope)fileCancelling.value=false}
@@ -309,6 +348,8 @@ function edit(id:string) {
   if(busy.value||!actions.value?.canEdit?.(id))return
   const initial=actions.value.initialValues?.(id)
   if(!initial)return
+  pendingEditor=null;editorSource=visibleSnapshot.value?editSource(visibleSnapshot.value,id):null
+  editorIdentity=visibleSnapshot.value?viewReader.retainReadIdentity?.(visibleSnapshot.value)??null:null
   values.value={...initial} as Record<string,R1LocalFieldValue>;editing.value=true;editingId.value=id
   confirmCompletion.value=false;confirmSaveCompletion.value=false
 }
@@ -320,7 +361,12 @@ async function finalizeLocalDraft(session:R1NormalDraftSession|null){
 async function save(finish=false) {
   const action = actions.value
   if (!action || loading.value || busy.value || draftBlocked.value || draftWorking.value || !validDraft.value || (finish && (!confirmSaveCompletion.value || !action.saveAndComplete))) return
-  const ticket = version, actorScope = props.actorScope, session=editingId.value?null:draftSession; busy.value = true; message.value = ''
+  const ticket = version, actorScope = props.actorScope, session=editingId.value?null:draftSession
+  // A pre-dispatch save reread can revoke this reader generation. Keep only
+  // its existing baseline; the fresh action and persisted receipt decide retry.
+  if(editingId.value && editorSource && editorIdentity?.isSameActor())
+    pendingEditor={id:editingId.value,source:editorSource,identity:editorIdentity}
+  busy.value = true; message.value = ''
   try {
     if(session){
       try{await session.markUncertain(values.value)}catch{if(ticket===version){message.value='本地草稿未能保存，尚未提交记录。';draftRead.value={state:'failed',message:message.value};draftMessage.value=message.value};return}
@@ -330,15 +376,15 @@ async function save(finish=false) {
       await action.saveAndComplete!(values.value,editingId.value)
       if(ticket!==version||props.actorScope!==actorScope)return
       await finalizeLocalDraft(session);if(ticket!==version||props.actorScope!==actorScope)return;draftSession=null;draftRead.value=null;
-      snapshot.value=null;values.value={};editing.value=false;editingId.value=undefined;message.value='记录已保存，已重新读取并确认当前节点完成。';emit('changed');return
+      pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value=null;values.value={};editing.value=false;editingId.value=undefined;message.value='记录已保存，已重新读取并确认当前节点完成。';emit('changed');return
     }
     const saved = await action.saveOnly(values.value,editingId.value)
     if (ticket !== version || props.actorScope !== actorScope || !viewReader.isCurrent(saved)) return
     await finalizeLocalDraft(session)
     if(ticket!==version||props.actorScope!==actorScope)return
     draftSession=null;draftRead.value=null;
-    snapshot.value = saved; values.value = {}; editing.value=false; editingId.value=undefined; confirmSaveCompletion.value=false; message.value = '记录已保存并从后台重新读取，当前节点尚未完成。'
-  } catch { if (ticket === version) {message.value = '保存未完成或结果尚未核实，请勿重复提交。';if(session){draftRead.value={state:'uncertain',message:message.value};draftMessage.value='上次保存结果尚未核实。本地草稿已保留，请核对已保存记录，勿重复提交。'}} }
+    pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value = saved; values.value = {}; editing.value=false; editingId.value=undefined; confirmSaveCompletion.value=false; message.value = '记录已保存并从后台重新读取，当前节点尚未完成。'
+  } catch { if (ticket === version) {if(pendingEditor?.id){editing.value=false;editingId.value=undefined};message.value = '保存未完成或结果尚未核实，请勿重复提交。';if(session){draftRead.value={state:'uncertain',message:message.value};draftMessage.value='上次保存结果尚未核实。本地草稿已保留，请核对已保存记录，勿重复提交。'}} }
   finally { if (ticket === version) busy.value = false }
 }
 async function complete() {

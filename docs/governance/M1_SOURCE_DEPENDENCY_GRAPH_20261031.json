@@ -257,7 +257,7 @@
       "owner": "app"
     },
     {
-      "path": "src/app/a-stage-special-mock-ui.ts",
+      "path": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "owner": "app"
     },
     {
@@ -405,7 +405,7 @@
       "owner": "features/work-orders/core"
     },
     {
-      "path": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "path": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "owner": "features/work-orders/core"
     },
     {
@@ -413,7 +413,7 @@
       "owner": "features/work-orders/core"
     },
     {
-      "path": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "path": "src/features/work-orders/a-stage-dynamic-form-mock-port.ts",
       "owner": "features/work-orders/core"
     },
     {
@@ -2063,47 +2063,47 @@
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/adapters/api/mock/fixtures.ts",
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/adapters/api/mock/journey.ts",
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/adapters/api/mock/r1-special-protocol.ts",
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/adapters/api/mock/router.ts",
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/app/composition.ts",
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/app/r1-stage1-functional-flow.ts",
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
-      "to": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
+      "to": "src/features/work-orders/a-stage-dynamic-form-mock-port.ts",
       "typeOnly": true
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/features/work-orders/r1-multistep-offline-transaction.ts",
       "typeOnly": false
     },
     {
-      "from": "src/app/a-stage-special-mock-ui.ts",
+      "from": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "to": "src/shared/ports/index.ts",
       "typeOnly": true
     },
@@ -4483,37 +4483,37 @@
       "typeOnly": false
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
-      "to": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
+      "to": "src/features/work-orders/a-stage-dynamic-form-mock-port.ts",
       "typeOnly": true
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "to": "src/shared/ports/index.ts",
       "typeOnly": true
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "to": "src/shared/state/index.ts",
       "typeOnly": false
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "to": "src/shared/ui/AppButton.vue",
       "typeOnly": false
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "to": "src/shared/ui/AppStatus.vue",
       "typeOnly": false
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "to": "src/shared/ui/AppTextarea.vue",
       "typeOnly": false
     },
     {
-      "from": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "from": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "to": "src/shared/ui/ux-state-language.ts",
       "typeOnly": false
     },
@@ -5059,7 +5059,7 @@
     },
     {
       "from": "src/pages/work-orders/detail.vue",
-      "to": "src/app/a-stage-special-mock-ui.ts",
+      "to": "src/app/a-stage-dynamic-form-mock-ui.ts",
       "typeOnly": false
     },
     {
@@ -5074,7 +5074,7 @@
     },
     {
       "from": "src/pages/work-orders/detail.vue",
-      "to": "src/features/work-orders/a-stage-special-mock-port.ts",
+      "to": "src/features/work-orders/a-stage-dynamic-form-mock-port.ts",
       "typeOnly": true
     },
     {
@@ -5124,7 +5124,7 @@
     },
     {
       "from": "src/pages/work-orders/detail.vue",
-      "to": "src/features/work-orders/R1SpecialMockTransactionPanel.vue",
+      "to": "src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue",
       "typeOnly": false
     },
     {

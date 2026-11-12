@@ -1,4 +1,4 @@
-import { useNormalFormActionPage } from '@features/work-orders/normal-form-action-page'
+import { useNormalFormActionPage, formHostHasDetailBack } from '@features/work-orders/normal-form-action-page'
 import fs from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
@@ -220,7 +220,7 @@ async function mountedParent(realStore = false) {
   const modules: Record<string, unknown> = {
     vue: Vue,
     '@dcloudio/uni-app': { onLoad: (fn: typeof load) => { load = fn }, onShow: () => {}, onHide: () => {}, onBackPress: () => {}, onUnload: () => {} },
-    '@features/work-orders/normal-form-action-page': { useNormalFormActionPage },
+    '@features/work-orders/normal-form-action-page': { useNormalFormActionPage, formHostHasDetailBack },
     '@shared/state': { useSessionStore: () => actor },
     '@shared/config': { isProductionReadOnlyRuntime: () => false },
     '@features/home/access': { hasAuthenticatedSession: (status: string) => status === 'authenticated' },

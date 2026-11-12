@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { expect, test } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 
@@ -21,6 +22,7 @@ test('430×932 three-level cascade reaches leaves and retains the entire saved p
   })
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
+  await enterDevMockDynamicFormWorkspace(page)
   await page.getByTestId('a-special-definition-choice').locator('.app-choice').filter({ hasText: '现场记录' }).click()
   await expect(field).toBeVisible()
   await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill('三级级联完整路径')

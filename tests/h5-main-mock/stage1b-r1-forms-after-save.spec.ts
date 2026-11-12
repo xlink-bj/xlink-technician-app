@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 
@@ -22,7 +23,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
-    await (await searchMockWorkOrder(page, '020')).click()
+    await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     await expect(page.getByTestId('a-stage-special-panel')).not.toContainText(/DEV|Mock|fixture/i)
   }
@@ -43,7 +44,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
-    await (await searchMockWorkOrder(page, '020')).click()
+    await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
 
     const panel = page.getByTestId('a-stage-special-panel')
     await expect(panel).toBeVisible()

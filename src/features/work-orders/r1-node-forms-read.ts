@@ -52,6 +52,9 @@ export interface R1NodeFormsReader {
   isCurrentSurveyMediaSource?(snapshot:R1NodeFormsSnapshot,evidence:unknown):boolean
   currentSurveyConditionalSource?(snapshot: R1NodeFormsSnapshot): object | null
   isCurrentSurveyConditionalSource?(snapshot: R1NodeFormsSnapshot, evidence: unknown): boolean
+  /** Transient identity continuity only, not source freshness or a write grant.
+   * Survives this reader's own load gap; latches false on observed scope loss. */
+  retainReadIdentity?(snapshot: R1NodeFormsSnapshot): { isSameActor(): boolean } | null
   currentFormOriginal?(snapshot: R1NodeFormsSnapshot, recordId: string): Readonly<Record<string, unknown>> | null
   /** Private-reader issuance: exact string Ext.type=0, matching raw field
    * collection identities and exact selected original; never an ACK grant. */

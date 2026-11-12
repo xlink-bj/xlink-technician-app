@@ -61,7 +61,7 @@
 | **B0-03** | **P0** | 任务首屏被“审计证据/安全解释/业务信息”三种层级混合抢占，尤其签约 | C01、Detail、部分 Q | **业务状态→下一步→必要安全提示**三层；工程详证藏在受控 DEV 容器，不删禁用/权限事实 | E01 `c01`、E02 详情；`signing-order-read.vue` |
 | **B0-04** | **P1** | Q01–Q03 工作上下文重复但重点变化不明显，选品前后“已选/回到何处”反馈偏弱 | Q01、Catalog、Configure、Workbench | 固定“当前维修部位 / 已选数 / 当前步骤”，添加后明确返回原分组与配置结果；不造新的业务页面 | E01 Q01/Q03；报价四屏方案与 Owner Q00/Q01/Q03 批准 |
 | **B0-05** | **P1** | S01 已批准图与当前动态控件的**实现对照尚未完成当前版本的完整视觉核验** | Survey 及动态表单 | S01 直接测量、媒体缩略图/失败、S02 单选、S03 多选、S05 可靠门禁逐项截图确认；差异才修 | 源码；`DYNAMIC_FORM_COMMERCIAL_UI_UX_STANDARD_V1.md`；`GAP` |
-| **B0-06** | **P1** | 特殊 `forms/repeat` 仍以工程面板/详情长嵌列表组织动作，难与统一 Action Workspace 对齐 | MOCK-020/021 及对应真实节点 | 以“当前节点→记录列表→编辑/保存→完成确认→回读结果”一个交互模型重组呈现；不改已通过的协议与持久化 | E03 + `R1SpecialMockTransactionPanel.vue` |
+| **B0-06** | **P1** | 特殊 `forms/repeat` 仍以工程面板/详情长嵌列表组织动作，难与统一 Action Workspace 对齐 | MOCK-020/021 及对应真实节点 | 以“当前节点→记录列表→编辑/保存→完成确认→回读结果”一个交互模型重组呈现；不改已通过的协议与持久化 | E03 + `R1DevMockDynamicFormTransactionPanel.vue` |
 | **B0-07** | **P1** | 模拟/只读、保存中/本机已存、无法读取/结果未知提示在多组件分别发明，造成文字和卡片密度膨胀 | 全流程 | 一个共享的状态和反馈 Contract（`source`,`persistence`,`action`,`confidence`,`nextAction`），映射到现有 `AppStatus`/ActionBar | E01–E03；设计系统、现有组件 |
 | **B0-08** | **P1** | 某些局部操作仍低于共享触控准则（如勘察摘要中的“采用建议”36px、“详情”35px）；代码两套 `rpx`/`px` 层叠 | Q01 的 `MockJourneyContextPanel` | 在唯一 375×667 基准核查目标≥44px 等效高度，不额外开展多尺寸适配 | `MockJourneyContextPanel.vue`（`SOURCE`） |
 | **B0-09** | **P1** | 真实签约只读页的自动化通过程序化导航进入样本，完整 Mock 用户点按进入同一页面的连续路径**未被最新 Sheet 证明** | Quote→C01 | 为**已核验、Order-specific**的真实读路径补“从订单卡点击进入→返回原卡”视觉回归；不把 Mock 草稿升格为正式 Order | `tests/s2-ux-review/flow.spec.ts`（`SOURCE`）；详情现有受限入口 |

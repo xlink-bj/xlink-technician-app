@@ -1,3 +1,4 @@
+import type { DevMockDynamicFormWorkspaceResolver, DevMockDynamicFormWorkspaceContent } from './dev-mock-dynamic-form-workspace-content'
 import { appointmentReplacementProblem } from '@shared/form/appointment-replacement-context'
 import { computed, ref } from 'vue'
 import { readQuotationRepairParts, type LocalQuotationRepairPartsReader } from './quotation/repair-parts-provider'
@@ -175,6 +176,7 @@ function lifecycleForFailure(state: OperationState): Extract<ActionLifecycle, 'f
 export interface ActionWorkspaceDependencies {
   readonly apiRead: TechnicianApiReadPort
   readonly normalFormContentEnabled?: () => boolean
+  readonly devMockDynamicFormResolver?: DevMockDynamicFormWorkspaceResolver
   readonly commandApi: TechnicianApiCommandPort
   readonly quotationOrderCommand?: QuotationOrderCommandPort
   readonly quotationOrderRead?: QuotationOrderReadPort
@@ -234,6 +236,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const appointmentForm = ref<AppointmentFormRead | null>(null)
   const dynamicForm = ref<DynamicFormRead | null>(null)
   const normalFormNode = ref<WorkflowNodeRead | null>(null)
+  const devMockDynamicFormContent = ref<DevMockDynamicFormWorkspaceContent|null>(null)
   let normalHostPageLease: object | undefined
   let normalRefreshVersion=0
   const quotationContentState = ref<'idle' | 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'>('idle')
@@ -288,6 +291,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   let draftWriteInFlight: Promise<OperationSnapshot<void>> | null = null
   let draftRevision = 0
   let loadVersion = 0
+  let pendingContentRead: {pageLease:object;key:string;cancelled:boolean;promise?:Promise<OperationSnapshot<ActionDescriptor>>}|null=null
   let appointmentPageLease: object | undefined
   let appointmentPageLeft = false
   let pendingAppointmentReentry: {
@@ -314,9 +318,16 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
 
   /** Page lifecycle signal only; never creates replacement provenance from an ACK. */
   function leavePage(expectedAction: ActionDescriptor | null, pageLease?: object): void {
+    if (pageLease && pendingContentRead?.pageLease===pageLease) pendingContentRead.cancelled=true
     if (appointmentPageLease && pageLease !== appointmentPageLease) return
+    // Pending read ownership is independent of the eventual content/adapter.
+    // A resolver may decline after await; the departed page still cannot own it.
+    if (pageLease && appointmentPageLease === pageLease && loadState.value === 'loading'
+      && !automaticAppointmentReentry && !appointmentReentryTransfer) {
+      clear();return
+    }
     if (normalHostPageLease === pageLease && pageLease
-      && ((normalFormNode.value && descriptor.value === expectedAction) || loadState.value === 'loading')) {
+      && (((normalFormNode.value || devMockDynamicFormContent.value) && descriptor.value === expectedAction) || loadState.value === 'loading')) {
       clear();return
     }
     if (appointmentReentryTransfer) {
@@ -437,6 +448,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   function clear(): void {
+    if(pendingContentRead)pendingContentRead.cancelled=true
+    pendingContentRead=null
     if (descriptor.value?.contentKind === 'quotation') void quotationComposition.flushDraft()
     quotationComposition.clear()
     quotationCatalogBrowser.clear()
@@ -468,6 +481,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentForm.value = null
     dynamicForm.value = null
     normalFormNode.value = null
+    devMockDynamicFormContent.value = null
     quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
@@ -706,6 +720,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     appointmentForm.value = null
     dynamicForm.value = null
     normalFormNode.value = null
+    devMockDynamicFormContent.value = null
     quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
@@ -729,6 +744,21 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return failureFrom<WorkOrderDetail, ActionDescriptor>(read)
     }
     const projection = detailWorkflowProjectionFor(read.data, session)
+    const devMockForm=await configured.devMockDynamicFormResolver?.({detail:read.data,runtimeNodeId:String(input.workflowNodeId),actionIntent:input.actionIntent,
+      getActor:()=>devMockDynamicFormActor(configured.getSession())})
+    if(requestVersion!==loadVersion||!ownedStillCurrent())return failure('cancelled','Action Workspace load was superseded')
+    if(!scopeUnchanged())return blockStaleScope()
+    if(devMockForm&&String(read.data.id)===String(input.workOrderId)
+      &&String(devMockForm.node.id)===String(input.workflowNodeId)
+      &&(devMockForm.mode==='pending'||devMockForm.mode==='completed'||devMockForm.mode==='active'&&projection.currentTask?.nodeId===devMockForm.node.id
+        &&projection.currentTask.actionIntent==='interact_with_form')){
+      normalHostPageLease=input.pageLease;detail.value=read.data;devMockDynamicFormContent.value=devMockForm
+      descriptor.value={userId:session.user.id,workOrderId:read.data.id,workflowNodeId:devMockForm.node.id,
+        actionIntent:'interact_with_form',contentKind:'dynamic_form',title:devMockForm.node.displayName||'现场记录',execution:'disabled'}
+      loadedSessionScope.value=requestedSessionScope;loadState.value='succeeded';lifecycle.value='available';error.value=null
+      return{state:'succeeded',data:descriptor.value}
+    }
+
     const target = selectActionWorkspaceLoadTarget({
       detail: read.data,
       session,
@@ -1212,9 +1242,20 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     /** Unique mounted page instance; never part of API/draft identity. */
     readonly pageLease?: object
   }): Promise<OperationSnapshot<ActionDescriptor>> {
+    const pendingScope=dependencies?.getSession()
+    observeQuotationEditAuthorization(pendingScope??null)
+    const contentReadKey=JSON.stringify([input.workOrderId,input.workflowNodeId,input.actionIntent??'',input.localPreviewOnly===true,
+      pendingScope?sessionScopeKey(pendingScope):null])
+    if(input.pageLease&&pendingContentRead){
+      if(!pendingContentRead.cancelled&&pendingContentRead.pageLease===input.pageLease&&pendingContentRead.key===contentReadKey
+        &&pendingContentRead.promise)return pendingContentRead.promise
+      pendingContentRead.cancelled=true
+      if(loadState.value==='loading'&&!automaticAppointmentReentry&&!appointmentReentryTransfer)clear()
+    }
     const normalReadRequest = !isProductionReadOnlyRuntime()
       && dependencies?.normalFormContentEnabled?.() === true && (!input.actionIntent || input.actionIntent === 'interact_with_form' || input.actionIntent === 'set_appointment')
-    if (normalHostPageLease && normalHostPageLease !== input.pageLease && loadState.value === 'loading') clear()
+    if (input.pageLease && appointmentPageLease && appointmentPageLease !== input.pageLease && loadState.value === 'loading'
+      && !automaticAppointmentReentry && !appointmentReentryTransfer) clear()
     if (normalReadRequest) normalHostPageLease = input.pageLease
     else normalHostPageLease = undefined
     const reentryKey = JSON.stringify([input.workOrderId, input.workflowNodeId, input.actionIntent ?? ''])
@@ -1309,7 +1350,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       && String(current.workflowNodeId) === String(input.workflowNodeId)
       && (!input.actionIntent || current.actionIntent === input.actionIntent),
     )
-    if (sameAction && loadState.value === 'succeeded' && normalFormNode.value) return load(input)
+    if (sameAction && loadState.value === 'succeeded' && (normalFormNode.value || devMockDynamicFormContent.value)) return load(input)
     if (sameAction && loadState.value === 'succeeded') {
       const form = dynamicForm.value
       if (appointmentPageLeft && form?.purpose === 'appointment' && !form.dataId
@@ -1362,7 +1403,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       appointmentPageLeft = false
       return { state: 'succeeded', data: current! }
     }
-    return load(input)
+    if(!input.pageLease)return load(input)
+    // Own the whole load, including quotation/local-write preparation before
+    // loadState becomes loading. Existing appointment flights keep their owners.
+    const owner={pageLease:input.pageLease,key:contentReadKey,cancelled:false,promise:undefined as Promise<OperationSnapshot<ActionDescriptor>>|undefined}
+    pendingContentRead=owner
+    owner.promise=load(input,()=>pendingContentRead===owner&&!owner.cancelled)
+    try{return await owner.promise}finally{if(pendingContentRead===owner)pendingContentRead=null}
   }
 
   function setField(fieldId: string, value: FormFieldValue): OperationSnapshot<void> {
@@ -2434,13 +2481,26 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   function ownsPage(expected: ActionDescriptor | null, pageLease: object | undefined): boolean {
     return Boolean(expected && descriptor.value === expected && appointmentPageLease === pageLease && commandSessionScopeCurrent())
   }
+  function devMockDynamicFormActor(session:SessionSnapshot|null){
+    return session?.user.id&&session.currentRole?.id&&session.sessionRef?{userId:String(session.user.id),roleId:String(session.currentRole.id),
+      identity:JSON.stringify([session.sessionRef,session.user.id,session.currentRole.id,session.roleVersion??null])}:null
+  }
   async function refreshNormalContext(expected: ActionDescriptor | null, pageLease: object): Promise<void> {
-    if (!normalFormNode.value || !ownsPage(expected,pageLease) || !dependencies) return
+    if ((!normalFormNode.value && !devMockDynamicFormContent.value) || !ownsPage(expected,pageLease) || !dependencies) return
     const version=loadVersion, refresh=++normalRefreshVersion
     const result=await dependencies.apiRead.getWorkOrderDetail(expected!.workOrderId)
     if (version!==loadVersion || refresh!==normalRefreshVersion || !ownsPage(expected,pageLease)) return
-    if (result.state!=='succeeded' || !result.data) { normalFormNode.value=null;loadState.value=result.state;error.value=result.error??null;return }
+    if (result.state!=='succeeded' || !result.data) { normalFormNode.value=null;devMockDynamicFormContent.value=null;loadState.value=result.state;error.value=result.error??null;return }
     const actor=dependencies.getSession()
+    if(devMockDynamicFormContent.value){
+      const next=String(result.data.id)===String(expected!.workOrderId)?await dependencies.devMockDynamicFormResolver?.({detail:result.data,
+        runtimeNodeId:String(expected!.workflowNodeId),actionIntent:expected!.actionIntent,getActor:()=>devMockDynamicFormActor(dependencies?.getSession()??null)}):null
+      if(version!==loadVersion||refresh!==normalRefreshVersion||!ownsPage(expected,pageLease))return
+      const currentTask=actor?detailWorkflowProjectionFor(result.data,actor).currentTask:null
+      if(!next||next.mode==='active'&&(currentTask?.nodeId!==next.node.id||currentTask.actionIntent!=='interact_with_form')){devMockDynamicFormContent.value=null;loadState.value='blocked';return}
+      detail.value=result.data;devMockDynamicFormContent.value=next;return
+    }
+
     const target=actor ? selectActionWorkspaceLoadTarget({detail:result.data,session:actor,
       currentTask:detailWorkflowProjectionFor(result.data,actor).currentTask,
       request:{workOrderId:expected!.workOrderId,workflowNodeId:expected!.workflowNodeId,actionIntent:expected!.actionIntent},
@@ -2453,13 +2513,13 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     normalFormNode.value=target.node
   }
   async function leaveNormalContent(expected: ActionDescriptor | null, pageLease: object, fromDetail = false): Promise<OperationSnapshot<void>> {
-    if (!normalFormNode.value || !ownsPage(expected,pageLease) || !dependencies) return failure('session_invalid','当前操作空间已变化。')
+    if ((!normalFormNode.value && !devMockDynamicFormContent.value) || !ownsPage(expected,pageLease) || !dependencies) return failure('session_invalid','当前操作空间已变化。')
     if (fromDetail && dependencies.navigation.back) await dependencies.navigation.back()
     else await resetTo(`/pages/work-orders/detail?id=${encodeURIComponent(String(expected!.workOrderId))}`)
     return {state:'succeeded',data:undefined}
   }
   async function exit(): Promise<OperationSnapshot<void>> {
-    if (normalFormNode.value) return failure('validation','请先由当前表单确认本地草稿状态再离开。')
+    if (normalFormNode.value || devMockDynamicFormContent.value) return failure('validation','请先由当前表单确认本地草稿状态再离开。')
     const exitingAction = descriptor.value
     const exitingPageLease = appointmentPageLease
     const exitingVersion = loadVersion
@@ -2492,7 +2552,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   return {
-    normalFormNode, ownsPage, refreshNormalContext, leaveNormalContent,
+    normalFormNode, devMockDynamicFormContent, ownsPage, refreshNormalContext, leaveNormalContent,
     leavePage,
     loadState,
     lifecycle,

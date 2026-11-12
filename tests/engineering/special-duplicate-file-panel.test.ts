@@ -10,7 +10,7 @@ import { asOpaqueId, isR1FileWireArray } from '@shared/types'
 
 // Actual SFC method bodies with Vue refs, not a DOM/browser test.
 function methods(bindings: Record<string, unknown>) {
-  const source=readFileSync('src/features/work-orders/R1SpecialMockTransactionPanel.vue','utf8').split('<script setup lang="ts">')[1]!.split('</script>')[0]!
+  const source=readFileSync('src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue','utf8').split('<script setup lang="ts">')[1]!.split('</script>')[0]!
   const ast=ts.createSourceFile('panel.ts',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS)
   const names=['setField','removeMediaValue']
   const body=ast.statements.filter(n=>ts.isFunctionDeclaration(n)&&names.includes(n.name?.text??'')).map(n=>n.getText(ast)).join('\n')
@@ -29,7 +29,7 @@ function setup(reverse=false) {
     {taskId:'active',scope:{fieldId:'mock-file-follow-up',valueKey:'inspectionFiles'},uploadedRef:{url:file.url}},
   ])
   const discardMedia=vi.fn(async()=>true),persistLocalDraft=vi.fn()
-  const m=methods({busy,viewState:ref({}),viewFields,editableFieldTypes:r1SpecialMockWritableTypes,isR1FileWireArray,draftValues,
+  const m=methods({busy,restoringDraft:ref(false),viewState:ref({}),viewFields,editableFieldTypes:r1SpecialMockWritableTypes,isR1FileWireArray,draftValues,
     persistLocalDraft,mediaTasks,controller:{discardMedia},selectedFormDefinitionId:ref('mock-definition'),editingId:ref(null),
     operationFeedback:ref(''),mediaValues:(key:string)=>draftValues.value[key]??[],revision:1,editRevision:0})
   return {m,draftValues,mediaTasks,discardMedia,persistLocalDraft,busy}

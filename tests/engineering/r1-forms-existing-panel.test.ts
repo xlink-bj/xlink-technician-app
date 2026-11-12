@@ -52,7 +52,12 @@ function deferred<T>(){let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>
 async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider){
  let current:R1NodeFormsSnapshot|null=null,next=makeSnapshot('node-a',1)
  const props=Vue.reactive({workOrderId:'work-a',runtimeNodeId:'node-a',actorScope:'actor-a' as string|null})
- const reader={enabled:()=>true,clear:vi.fn(()=>{current=null}),isCurrent:(s:R1NodeFormsSnapshot)=>s===current,
+ // The private complete original is a separate synthetic backend fixture,
+ // never reconstructed from the public snapshot projection.
+ let originalRecord={_id:'server-0',note:'已保存',serverRevision:1},epoch=0
+ const reader={enabled:()=>true,clear:vi.fn(()=>{epoch++;current=null}),
+  currentFormOriginal:(s:R1NodeFormsSnapshot,id:string)=>s===current&&id==='server-0'?structuredClone(originalRecord):null,
+  retainReadIdentity:()=>{const actor=props.actorScope,at=epoch;let intact=true;return{isSameActor:()=>intact=intact&&actor===props.actorScope&&epoch===at}},isCurrent:(s:R1NodeFormsSnapshot)=>s===current,
   load:vi.fn(async()=>{current=next;return next})}
  let permitEdit=true,permitCreate=true
  const saveOnly=vi.fn(async()=>{current=null;throw Error('pre-dispatch read failed')}),complete=vi.fn(async()=>({acknowledged:true,transitionVerified:true}as const)),saveAndComplete=vi.fn(async()=>({acknowledged:true,transitionVerified:true}as const)),changed=vi.fn()
@@ -63,7 +68,7 @@ async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider){
  const get=(id:string)=>find(root,n=>n.props['data-testid']===id),read=()=>find(root,n=>n.type==='button')!
  const tap=async(id:string)=>{get(id)!.props.onTap();await settle()},load=async()=>{read().props.onTap();await settle()},input=()=>find(root,n=>n.props['data-key']==='note')!
  const fill=async(value:string)=>{input().props.onInput(value);await settle()}
- return{app,root,props,reader,get,read,tap,load,input,fill,saveOnly,complete,saveAndComplete,changed,setNext:(s:R1NodeFormsSnapshot)=>next=s,revoke:()=>{permitEdit=false;permitCreate=false},permit:()=>{permitEdit=true;permitCreate=true},setCurrent:(s:R1NodeFormsSnapshot)=>current=s}
+ return{app,root,props,reader,get,read,tap,load,input,fill,setOriginalRevision:(n:number)=>{originalRecord={...originalRecord,serverRevision:n}},saveOnly,complete,saveAndComplete,changed,setNext:(s:R1NodeFormsSnapshot)=>next=s,revoke:()=>{permitEdit=false;permitCreate=false},permit:()=>{permitEdit=true;permitCreate=true},setCurrent:(s:R1NodeFormsSnapshot)=>current=s}
 }
 describe('normal forms existing-record panel capability and recovery',()=>{
  it('restores an append draft only after fresh authorized reread following pre-dispatch failure',async()=>{
@@ -205,5 +210,18 @@ it('blocks same-scope reread during delayed discard and returns the existing edi
   await h.tap('r1-normal-edit-server-0');pending.resolve();await settle()
   expect(h.input().props.value).toBe('已保存');expect(h.input().props.disabled).toBe(false);expect(h.get('r1-normal-save')!.props.disabled).toBe(false)
   await h.fill('Usable current editor');await h.tap('r1-normal-save');expect(h.saveOnly).toHaveBeenCalledWith({note:'Usable current editor'},'server-0')
+ }finally{h.app.unmount()}
+})
+
+it('refuses old whole editor values when same record private original changes on reread',async()=>{
+ const h=await mounted();try{await h.load();await h.tap('r1-normal-edit-server-0');await h.fill('旧编辑内容');h.setOriginalRevision(2);await h.load()
+  expect(h.get('r1-normal-save')).toBeUndefined();expect(text(h.root)).toContain('未保存内容已失效');expect(h.saveOnly).not.toHaveBeenCalled()
+  await h.load();expect(h.get('r1-normal-save')).toBeUndefined()
+  await h.tap('r1-normal-edit-server-0');expect(h.input().props.value).toBe('已保存')
+ }finally{h.app.unmount()}
+})
+it('cannot replace baseline with changed original after an offline reread',async()=>{
+ const h=await mounted();try{await h.load();await h.tap('r1-normal-edit-server-0');await h.fill('旧编辑内容');h.reader.load.mockRejectedValueOnce(Error('offline'));await h.load()
+  h.setOriginalRevision(2);await h.load();expect(h.get('r1-normal-save')).toBeUndefined();expect(h.saveOnly).not.toHaveBeenCalled()
  }finally{h.app.unmount()}
 })

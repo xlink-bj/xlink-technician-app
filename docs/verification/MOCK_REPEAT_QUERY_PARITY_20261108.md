@@ -15,7 +15,7 @@
 
 保留既有候选记录和删除读边界：repeat 列表仍只含原来允许的有效行；普通 forms 的已删除精确ID回读规则不变。这只是保留当前 Mock 兼容边界：固定后台 ExtFormServiceImpl.java:327–349 的 Repeat remove 为soft-delete，普通query没有无条件删除排除；因此不将Mock隐藏已删repeat精确读、却允许已删forms精确读称为后台删除等价。原始业务值、未知 exts 和历史元数据不改。种子缺失的 tenant/sid/node/createTime 不补造；显式归属过滤不能用不存在的字段自动匹配。对已保留 createTime 排序，显式desc沿用R1请求；省略sortOrder按固定后台EMongoTemplate:521–522的默认asc，已补反例。缺时间行稳定保留原相对顺序并置后；后台未追加 `_id` tie-breaker，默认repeat及新保存Mock行均缺createTime，所以这只是合成fallback，不声称已经证明真实时间顺序。
 
-现有 `a-stage-special-mock-ui.ts:scopedForms` 原来直调 `tryMockRead` 只取data，没传page/rows、没查total；分页修复后2条历史+19条新增会在第19次保存后落盘但回执待核对，已有21条集合也会漏末行。实际controller红测已复现，随后将该读取移入controller：每页20、最多100条，逐页检查actor/scope、页号/行界、过滤后total稳定、重复ID、已出现的归属/定义矛盾，完整后才返回集合，所有load/回读/完成均复用它。达100条时新增在upsert前拒绝，避免写出自身无法完整读取的第101条。坏页、重复/短页/错误页号、错误归属、超过上限及读取中身份变化均不得发完成命令。
+现有 `a-stage-dynamic-form-mock-ui.ts:scopedForms` 原来直调 `tryMockRead` 只取data，没传page/rows、没查total；分页修复后2条历史+19条新增会在第19次保存后落盘但回执待核对，已有21条集合也会漏末行。实际controller红测已复现，随后将该读取移入controller：每页20、最多100条，逐页检查actor/scope、页号/行界、过滤后total稳定、重复ID、已出现的归属/定义矛盾，完整后才返回集合，所有load/回读/完成均复用它。达100条时新增在upsert前拒绝，避免写出自身无法完整读取的第101条。坏页、重复/短页/错误页号、错误归属、超过上限及读取中身份变化均不得发完成命令。
 
 该有界集合校验不是后台跨页事务快照/CAS，也不修复历史并发风险。100条是现有消费者读取上限；Mock Process既有单批最多50个自有ID的限制不变，本轮完成正例为19个自有ID，2条历史只读行未伪装为自有。未证明100条皆可完成。
 

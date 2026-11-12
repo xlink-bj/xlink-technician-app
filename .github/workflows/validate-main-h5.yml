@@ -354,6 +354,8 @@ jobs:
         env:
           XLINK_DRAFT_EXISTING_EDIT: 'true'
         run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
+      - name: Verify fresh-original existing editor continuity (2 cases)
+        run: pnpm exec playwright test --config config/playwright/normal-form-fresh-original.config.ts
       - name: Verify normal forms Action Workspace lifecycle (5 cases)
         env:
           VITE_XLINK_ENVIRONMENT: 'test'
@@ -364,6 +366,8 @@ jobs:
           VITE_XLINK_ENVIRONMENT: test
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/normal-repeat-workspace.config.ts
+      - name: Verify DEV Mock dynamic form Action Workspace lifecycle (5 cases)
+        run: pnpm exec playwright test --config config/playwright/dev-mock-dynamic-form-workspace.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -397,8 +401,10 @@ jobs:
             test-results/forms-unified-create/
             test-results/normal-form-draft-recovery/normal10/
             test-results/normal-form-draft-recovery/existing2/
+            test-results/normal-form-fresh-original/
             test-results/normal-action-workspace/
             test-results/normal-repeat-workspace/
+            test-results/dev-mock-dynamic-form-workspace/
           if-no-files-found: warn
           retention-days: 7
 

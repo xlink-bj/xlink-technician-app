@@ -1,3 +1,4 @@
+import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
@@ -20,7 +21,7 @@ test.describe('Stage 2A source-driven FormDef multi-field round-trip', () => {
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
-    await (await searchMockWorkOrder(page, '020')).click()
+    await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
 
     const panel = page.getByTestId('a-stage-special-panel')
     await expect(panel).toBeVisible()

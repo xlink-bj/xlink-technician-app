@@ -165,9 +165,10 @@ export function createNormalNodeFormsReader(input: {
     return enabled() && a ? sessionAuthorizationFingerprint({ sessionRef: a.sessionRef,
       userId: a.user.id, roleId: a.currentRole?.id, roleVersion: a.roleVersion }) : null
   }
+  let viewEpoch = 0
   const api:R1NodeFormsReader = {
     enabled,
-    clear() { generation++; current = null },
+    clear() { viewEpoch++; generation++; current = null },
     beginSurveyMediaRead(snapshot,evidence){
       if(api.isCurrentSurveyMediaSource?.(snapshot,evidence)!==true)return deny()
       const ticket=generation+1
@@ -267,6 +268,16 @@ export function createNormalNodeFormsReader(input: {
       return current?.snapshot === snapshot && fingerprint() === current.fingerprint
         && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true && current.formsExts
         ? JSON.parse(current.formsExts) as Record<string, unknown> : null
+    },
+    retainReadIdentity(snapshot) {
+      if (!api.isCurrent(snapshot)) return null
+      const identity = fingerprint(), epoch = viewEpoch
+      let intact = Boolean(identity)
+      return Object.freeze({ isSameActor() {
+        intact = intact && viewEpoch === epoch && fingerprint() === identity
+          && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true
+        return intact
+      } })
     },
     currentFormOriginal(snapshot, recordId) {
       const raw = current?.snapshot === snapshot && fingerprint() === current.fingerprint
