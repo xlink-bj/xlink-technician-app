@@ -143,12 +143,15 @@ describe('App UI Design System v0.2', () => {
   })
 
   it('migrates all Appointment surfaces to shared grammar and shared icons', async () => {
-    const [workspace, time, confirmation, shell] = await Promise.all([
+    const [workspace, timePage, confirmation, shell, timeContent] = await Promise.all([
       readFile(pagePath('action-workspace.vue'), 'utf8'),
       readFile(pagePath('action-time.vue'), 'utf8'),
       readFile(pagePath('action-confirmation.vue'), 'utf8'),
       readFile(uiPath('ActionWorkspaceShell.vue'), 'utf8'),
+      readFile(new URL('../../src/features/work-orders/components/AppointmentTimeSelectionContent.vue', import.meta.url), 'utf8'),
     ])
+    const time = [timePage, timeContent].join('\n')
+    expect(timePage).toContain('<AppointmentTimeSelectionContent')
 
     expect(workspace).toContain('app-surface')
     expect(workspace).toContain('AppField')

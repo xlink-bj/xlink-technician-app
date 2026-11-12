@@ -6,7 +6,12 @@
     <text v-if="count !== null" data-testid="normal-form-workspace-count">已加载 {{ count }} 条</text>
     <R1NodeFormsReadPanel v-if="reader?.enabled()" :key="panelKey" ref="panel"
       :reader="reader" :work-order-id="workOrderId" :runtime-node-id="String(node.id)"
-      :actor-scope="actorScope" :read-field-override="isCauseReadField" @changed="emit('changed')" @snapshot-change="readState=$event">
+      :actor-scope="actorScope" :read-field-override="isCauseReadField" :edit-experience-override="isAppointmentEdit" @changed="emit('changed')" @snapshot-change="readState=$event">
+      <template #edit-experience="{context}">
+        <template v-for="editContext in [context]" :key="editContext.recordId">
+          <NormalAppointmentEditExperience :view="editContext" />
+        </template>
+      </template>
       <template #read-field="{snapshot,record}">
         <SurveyLeakageCauseExperience :read-view="causeRead?.forRecord(snapshot,record) ?? null" />
       </template>
@@ -24,6 +29,8 @@ import type { FormDataRead, WorkflowNodeRead } from '@shared/ports'
 import { r1NodeFormsReaderKey, type R1NodeFormsSnapshot } from './r1-node-forms-read'
 import { createNormalSurveyCauseRead, surveyLeakageCauseReadKey } from './survey-leakage-cause-read'
 import SurveyLeakageCauseExperience from './components/SurveyLeakageCauseExperience.vue'
+import NormalAppointmentEditExperience from './components/NormalAppointmentEditExperience.vue'
+import { appointmentEditDraft } from './r1-repeat-appointment-edit'
 import type { R1RecordReadField } from './r1-record-read-fields'
 import R1NodeFormsReadPanel from './R1NodeFormsReadPanel.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
@@ -40,6 +47,12 @@ const causeRead = reader && causeDependencies ? createNormalSurveyCauseRead({ re
  return props.visible && s && props.actorScope && s.actorScope === props.actorScope
    ? { snapshot: s.snapshot, actorScope: props.actorScope, workOrderId: props.workOrderId, nodeId: String(props.node.id) } : null
 } }) : null
+function isAppointmentEdit(snapshot:R1NodeFormsSnapshot,recordId:string):boolean {
+  if(!reader?.isCurrent(snapshot))return false
+  const evidence=reader.currentRepeatAppointment?.(snapshot,recordId)
+  if(!evidence||!reader.isCurrentRepeatAppointment?.(snapshot,recordId,evidence))return false
+  try{appointmentEditDraft(snapshot,evidence);return true}catch{return false}
+}
 function isCauseReadField(snapshot:R1NodeFormsSnapshot, record:FormDataRead, field:R1RecordReadField):boolean {
  return causeRead?.forRecord(snapshot,record)?.fieldId === field.fieldId
 }

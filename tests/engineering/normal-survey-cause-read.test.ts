@@ -12,6 +12,7 @@ import * as actionPort from '@features/work-orders/r1-repeat-actions-port'
 import * as drafts from '@features/work-orders/r1-normal-form-drafts'
 import * as files from '@features/work-orders/r1-normal-file-values'
 import * as repeat from '@features/work-orders/r1-repeat-form'
+import * as appointmentEdit from '@features/work-orders/r1-repeat-appointment-edit'
 import * as projection from '@features/work-orders/r1-record-read-fields'
 import * as causeRead from '@features/work-orders/survey-leakage-cause-read'
 import * as workspace from '@features/work-orders/action-workspace'
@@ -27,7 +28,7 @@ const renderer = Vue.createRenderer<Host, Host>({
 const Primitive=Vue.defineComponent({inheritAttrs:false,setup:(_p,c)=>()=>Vue.h('primitive',c.attrs,[c.slots.default?.(),c.slots.actions?.(),c.slots.heading?.()])})
 const Button=Vue.defineComponent({inheritAttrs:false,emits:['tap'],setup:(_p,c)=>()=>Vue.h('button',{...c.attrs,onTap:()=>c.emit('tap')},c.slots.default?.())})
 const Grouped=Vue.defineComponent({inheritAttrs:false,props:['visible','selectedIds','selectedLabels','readOnly','canOpen','testIdPrefix'],setup:(p,c)=>()=>p.visible?Vue.h('grouped',{...c.attrs,'data-testid':p.testIdPrefix,readOnly:p.readOnly,canOpen:p.canOpen,selectedIds:p.selectedIds},p.selectedLabels?.join('、')):Vue.createCommentVNode('hidden-cause')})
-const modules:Record<string,unknown>={vue:Vue,'@shared/types':sharedTypes,'./r1-node-forms-read':readerPort,'./r1-repeat-actions-port':actionPort,'./r1-normal-form-drafts':drafts,'./r1-normal-file-values':files,'./r1-repeat-form':repeat,'./r1-record-read-fields':projection,'./survey-leakage-cause-read':causeRead,'../action-workspace':workspace}
+const modules:Record<string,unknown>={vue:Vue,'@shared/types':sharedTypes,'./r1-node-forms-read':readerPort,'./r1-repeat-actions-port':actionPort,'./r1-normal-form-drafts':drafts,'./r1-normal-file-values':files,'./r1-repeat-form':repeat,'./r1-repeat-appointment-edit':appointmentEdit,'./r1-record-read-fields':projection,'./survey-leakage-cause-read':causeRead,'../action-workspace':workspace}
 function sfc(name:string):Vue.Component {
  const filename=path.resolve('src/features/work-orders/'+name+'.vue'),parsed=parse(fs.readFileSync(filename,'utf8'),{filename})
  const source=compileScript(parsed.descriptor,{id:'normal-survey-cause-'+name,inlineTemplate:true}).content.replaceAll('import.meta.env','({DEV:false})')

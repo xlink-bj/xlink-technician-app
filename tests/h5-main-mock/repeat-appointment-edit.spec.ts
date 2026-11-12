@@ -70,10 +70,10 @@ test(`normal repeat appointment ${mode} edits a by real UI and preserves b after
     }
     await page.getByTestId('r1-normal-input-note').locator('input, textarea').fill('normal UI changed note')
     await page.getByTestId('r1-normal-input-modifyReason').locator('input, textarea').fill('synthetic change reason')
-    await expect(page.getByTestId('r1-normal-save')).toHaveAttribute('aria-disabled', 'false'); await page.getByTestId('r1-normal-save').click()
+    await expect(page.getByTestId('normal-appointment-review')).toHaveAttribute('aria-disabled', 'false'); await page.getByTestId('normal-appointment-review').click(); await expect(page.getByTestId('normal-appointment-save')).toHaveAttribute('aria-disabled', 'false'); await page.getByTestId('normal-appointment-save').click()
     if (mode === 'wrong-readback') {
       await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('保存未完成或结果尚未核实，请勿重复提交')
-      await expect(page.getByTestId('r1-normal-save')).toHaveCount(0)
+      await expect(page.getByTestId('normal-appointment-save')).toHaveCount(0)
       await read().click()
       await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(2)
       await expect(page.getByTestId('r1-normal-edit-a')).toHaveCount(0)

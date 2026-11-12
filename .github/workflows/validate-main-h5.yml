@@ -294,6 +294,11 @@ jobs:
           XLINK_H5_REPEAT_APPOINTMENT_EDIT: 'true'
           VITE_XLINK_ENVIRONMENT: 'test'
         run: pnpm exec playwright test --config config/playwright/repeat-appointment-edit.config.ts
+      - name: Verify normal appointment dedicated experience and current edit lifecycle
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/normal-appointment-experience.config.ts
       - name: Verify normal App image picker multipart save and readback
         env:
           XLINK_H5_NORMAL_R1_FILE_UPLOAD: 'true'
@@ -427,6 +432,7 @@ jobs:
             test-results/forms-scalar-subset/
             test-results/generic-map-edit/
             test-results/repeat-appointment-edit/
+            test-results/normal-appointment-experience/
             test-results/normal-r1-file-upload/
             test-results/normal-r1-image-recovery/
             test-results/work-order-detail-lifecycle/

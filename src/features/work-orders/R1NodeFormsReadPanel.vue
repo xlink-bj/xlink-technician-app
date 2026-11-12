@@ -38,6 +38,8 @@
           :disabled="busy || loading" data-testid="r1-normal-append" @tap="beginCreate">新增记录</AppButton>
         <view v-if="editing || (!visibleSnapshot.records.length && !fileEditorClosed)" class="form-read__record" data-testid="r1-normal-create">
           <text class="form-read__title">{{ visibleSnapshot.node.displayName || '新增现场记录' }}</text>
+          <slot v-if="$slots['edit-experience'] && editPresentation" name="edit-experience" :context="editPresentation" />
+          <template v-else>
           <template v-for="field in editableFields" :key="field.fieldId">
             <AppField v-if="field.visible" :label="field.label" :required="field.required" :data-testid="`r1-normal-input-${field.valueKey}`">
               <R1NormalFileField v-if="field.supported && field.type==='file' && actions.fileMedia" :field="field"
@@ -55,6 +57,7 @@
             <text class="form-read__hint">确认保存本条记录并完成当前节点？</text>
             <AppButton :disabled="loading || busy || fileCancelling || draftBlocked || draftWorking || !validDraft" :loading="busy" data-testid="r1-normal-save-complete-confirm" @tap="save(true)">确认保存并完成</AppButton>
             <AppButton variant="text" :disabled="busy" @tap="confirmSaveCompletion = false">返回检查</AppButton>
+          </template>
           </template>
           <AppButton v-if="editing || actions.fileMedia" variant="text" :disabled="busy || fileCancelling" :loading="fileCancelling" data-testid="r1-normal-edit-cancel" @tap="cancelEdit">{{ actions.fileMedia ? '取消本次新增' : '取消编辑' }}</AppButton>
           <text class="form-read__hint">保存仅保存本条记录，不会完成当前节点或进入下一阶段。</text>
@@ -111,6 +114,7 @@ import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-rea
 
 const props = defineProps<{ readonly reader: R1NodeFormsReader; readonly workOrderId: string;
   readonly runtimeNodeId: string; readonly actorScope?: string | null;
+  readonly editExperienceOverride?: (snapshot: R1NodeFormsSnapshot, recordId: string) => boolean;
   readonly readFieldOverride?: (snapshot: R1NodeFormsSnapshot, record: FormDataRead, field: R1RecordReadField) => boolean }>()
 let readerView = claimNormalReader(props.reader)
 let viewReader = readerView.reader
@@ -161,6 +165,19 @@ function editSource(source: R1NodeFormsSnapshot, id: string): string | null {
 const visibleSnapshot = computed(() => props.actorScope && props.actorScope === snapshotActorScope.value && snapshot.value
   && snapshot.value.workOrderId === props.workOrderId && String(snapshot.value.node.id) === props.runtimeNodeId
   && viewReader.isCurrent(snapshot.value) ? snapshot.value : null)
+// Presentation callbacks belong to this exact edit, never to a future record/view.
+const editPresentation = computed(() => {
+  const source=visibleSnapshot.value,id=editingId.value,action=actions.value,identity=editorIdentity,ticket=version
+  if(!source||!id||!editing.value||!identity||!action||action.locked()||!action.canEdit?.(id)
+    ||!props.editExperienceOverride?.(source,id))return null
+  const owns=()=>version===ticket&&visibleSnapshot.value===source&&editingId.value===id&&editorIdentity===identity
+    &&identity.isSameActor()&&actions.value===action&&!action.locked()&&action.canEdit?.(id)===true
+    &&!busy.value&&!loading.value&&!draftBlocked.value&&!draftWorking.value&&!fileCancelling.value
+  return {snapshot:source,recordId:id,fields:editableFields.value,values:Object.freeze({...values.value}),
+    disabled:busy.value||loading.value||draftBlocked.value||draftWorking.value||fileCancelling.value,valid:validDraft.value,
+    updateValue:(key:string,value:R1LocalFieldValue)=>{if(owns())setValue(key,value)},
+    saveOnly:async()=>{if(owns())await save(false)}}
+})
 watch(actions,(next,old)=>{if(old?.fileMedia&&next?.fileMedia!==old.fileMedia)old.fileMedia.dispose()})
 // Share only the exact visible read state, never a save ACK or the stale parent EXTS summary.
 watch(visibleSnapshot, value => emit('snapshot-change', value && snapshotActorScope.value

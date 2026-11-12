@@ -157,7 +157,10 @@ describe('Appointment Action Content presentation boundary', () => {
   it('uses native page navigation and keeps confirmation/success copy bounded', async () => {
     const pages = await readFile(new URL('../../src/pages.json', import.meta.url), 'utf8')
     const action = await readFile(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8')
-    const time = await readFile(new URL('../../src/pages/work-orders/action-time.vue', import.meta.url), 'utf8')
+    const timePage = await readFile(new URL('../../src/pages/work-orders/action-time.vue', import.meta.url), 'utf8')
+    const timeContent = await readFile(new URL('../../src/features/work-orders/components/AppointmentTimeSelectionContent.vue', import.meta.url), 'utf8')
+    const time = [timePage, timeContent].join('\n')
+    expect(timePage).toContain('<AppointmentTimeSelectionContent')
     const confirmation = await readFile(new URL('../../src/pages/work-orders/action-confirmation.vue', import.meta.url), 'utf8')
 
     expect(pages).toContain('"navigationBarTitleText": "预约上门"')
