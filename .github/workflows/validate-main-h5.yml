@@ -184,6 +184,62 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  draft-lifecycle-h5:
+    # Group the 33 existing/new lifecycle cases on their own runner, preserving
+    # all commands and the original scoped job's 15-minute budget.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 10
+    env:
+      VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/check-playwright-runtime.mjs
+      - name: Verify draft identity changes and uncertain-result boundaries (9 cases)
+        run: pnpm exec playwright test --config config/playwright/normal-form-draft-boundaries.config.ts
+      - name: Verify normal first-create draft recovery (10 cases)
+        run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
+      - name: Verify old first-create discard isolates existing edits (2 cases)
+        env:
+          XLINK_DRAFT_EXISTING_EDIT: 'true'
+        run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
+      - name: Verify fresh-original existing editor continuity (2 cases)
+        run: pnpm exec playwright test --config config/playwright/normal-form-fresh-original.config.ts
+      - name: Verify normal forms Action Workspace lifecycle (5 cases)
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/normal-action-workspace.config.ts
+      - name: Verify DEV Mock dynamic form Action Workspace lifecycle (5 cases)
+        run: pnpm exec playwright test --config config/playwright/dev-mock-dynamic-form-workspace.config.ts
+      - name: Preserve draft lifecycle H5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: draft-lifecycle-h5-${{ github.run_id }}
+          path: |
+            test-results/normal-form-draft-boundaries/
+            test-results/normal-form-draft-recovery/normal10/
+            test-results/normal-form-draft-recovery/existing2/
+            test-results/normal-form-fresh-original/
+            test-results/normal-action-workspace/
+            test-results/dev-mock-dynamic-form-workspace/
+          if-no-files-found: warn
+          retention-days: 7
+
   scoped-form-integrations-h5:
     # Independent runner/workspace keeps the original Stage 1B budget intact.
     # Same automatic gate conditions, assertions and synthetic network fences.
@@ -348,28 +404,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/ordinary-create-plan.config.ts
-      - name: Verify normal first-create draft recovery (10 cases)
-        run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
-      - name: Verify draft identity changes and uncertain-result boundaries (9 cases)
-        run: pnpm exec playwright test --config config/playwright/normal-form-draft-boundaries.config.ts
-      - name: Verify old first-create discard isolates existing edits (2 cases)
-        env:
-          XLINK_DRAFT_EXISTING_EDIT: 'true'
-        run: pnpm exec playwright test --config config/playwright/normal-form-draft-recovery.config.ts
-      - name: Verify fresh-original existing editor continuity (2 cases)
-        run: pnpm exec playwright test --config config/playwright/normal-form-fresh-original.config.ts
-      - name: Verify normal forms Action Workspace lifecycle (5 cases)
-        env:
-          VITE_XLINK_ENVIRONMENT: 'test'
-          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
-        run: pnpm exec playwright test --config config/playwright/normal-action-workspace.config.ts
       - name: Verify normal main Repeat Workspace completion and guards
         env:
           VITE_XLINK_ENVIRONMENT: test
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/normal-repeat-workspace.config.ts
-      - name: Verify DEV Mock dynamic form Action Workspace lifecycle (5 cases)
-        run: pnpm exec playwright test --config config/playwright/dev-mock-dynamic-form-workspace.config.ts
       - name: Verify normal Survey cause readonly experience in its Workspace
         env:
           XLINK_H5_NORMAL_SURVEY_CAUSE_READ: 'true'
@@ -407,13 +446,7 @@ jobs:
             test-results/forms-mixed-create/
             test-results/ordinary-create-plan/
             test-results/forms-unified-create/
-            test-results/normal-form-draft-recovery/normal10/
-            test-results/normal-form-draft-boundaries/
-            test-results/normal-form-draft-recovery/existing2/
-            test-results/normal-form-fresh-original/
-            test-results/normal-action-workspace/
             test-results/normal-repeat-workspace/
-            test-results/dev-mock-dynamic-form-workspace/
             test-results/normal-survey-cause-read/
           if-no-files-found: warn
           retention-days: 7
