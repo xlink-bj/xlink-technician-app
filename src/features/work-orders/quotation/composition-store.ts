@@ -532,8 +532,14 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     if (!repository || !identity || localState.value !== expectedState) {
       return failed('validation', '当前没有需要显式处理的旧草稿')
     }
-    const removed = await repository.remove(identity)
+    const currentGeneration = generation
+    const currentIdentity = identity
+    const currentRepository = repository
+    const removed = await currentRepository.remove(currentIdentity)
     if (removed.state !== 'succeeded') return removed
+    if (generation !== currentGeneration || identity !== currentIdentity || repository !== currentRepository || localState.value !== expectedState) {
+      return failed('unsupported_capability', '报价草稿页面已变化，未重置当前草稿。')
+    }
     origin.value = 'new'
     draft.value = createEmptyQuotationDraft(String(identity.workOrderId), String(identity.workflowNodeId))
     quantityTextBySelection.value = {}
