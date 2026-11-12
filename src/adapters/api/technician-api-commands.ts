@@ -24,7 +24,7 @@ import { appointmentFormDefinitionWireId } from './appointment-contract'
 import type { ApiRequestMethod, ApiRequestValue } from './technician-api'
 import { AdapterMappingError, adapterFailure, succeeded, unknownErrorMessage } from '../common/operations'
 import { asRecord, nestedValue, optionalRecord, optionalString, requiredString, type AdapterRecord } from '../common/records'
-import { surveyMediaValueCodec } from './survey-form-codec'
+import { createSurveyReadValueCodec } from './survey-form-codec'
 import { formDataUpsertCommand, workflowCompleteCommand, workflowAcceptCommand } from './action-command-wires'
 
 export interface ApiCommandRequest {
@@ -330,10 +330,17 @@ export class TechnicianApiCommandAdapter implements TechnicianApiCommandPort {
       })
     }
 
+    let valueCodec
+    try {
+      valueCodec = resolvedDefinition.data.purpose === 'survey'
+        ? createSurveyReadValueCodec(resolvedDefinition.data) : undefined
+    } catch (error) {
+      return adapterFailure('unsupported_capability', unknownErrorMessage(error, '勘查字段配置尚未完整核实。'))
+    }
     const data = await this.readPort.getFormData({
       definitionId: input.definitionId,
       dataId: input.formDataId,
-      ...(resolvedDefinition.data.purpose === 'survey' ? { valueCodec: surveyMediaValueCodec } : {}),
+      ...(valueCodec ? { valueCodec } : {}),
     })
     if (data.state !== 'succeeded' || !data.data) return failureFrom(data)
 

@@ -7,6 +7,7 @@ async function fixture(page: Page, baseURL: string, historical = false) {
   const state = { part: ['1', '130'] as unknown, providerFailure: false, foreignRecord: false, invalidPartExts: false,
     cause: undefined as unknown, causeProvided: false, causeExtOverride: false,
     calls: [] as Array<{ path: string; body: Record<string, string> }>, unexpected: [] as string[], errors: [] as string[], writes: 0 }
+  let normalRecordVerified = false
   const fields = survey59Fields.map(field => ({ ...field,
     ...(field.valueOption ? { valueOption: `qa-survey-59-${field.name}` } : {}) }))
   const sa = { _id: 's', tenantId: 't', orderNum: 'SYNTHETIC-59', workflowId: 'w', state: 1, status: 105,
@@ -38,7 +39,7 @@ async function fixture(page: Page, baseURL: string, historical = false) {
     if (['basic/serviceAppointment/query', 'basic/serviceAppointment/querySAWorkflowNode'].includes(path)) return ok({ data: [{ ...node, data: sa }], total: 1, page: 1, rows: 20 })
     if (path === 'basic/serviceAppointment/queryById/s') return ok({ success: true, status: 1, data: { serviceAppointment: sa,
       workflow: { _id: 'w', tenantId: 't', formDataId: 's', state: historical ? 10 : 0 }, workflowNode: [node] } })
-    if (path === 'biz/ext/queryById.do' && body.id === 'e') return ok({ _id: 'e', tenantId: 't', state: 1, type: '1', colName: 'survey' })
+    if (path === 'biz/ext/queryById.do' && body.id === 'e') { normalRecordVerified = false; return ok({ _id: 'e', tenantId: 't', state: 1, type: '1', colName: 'survey' }) }
     if (path === 'biz/extField/query' && body.extId === 'e') {
       const page = Number(body.page), size = Number(body.rows)
       return ok({ data: fields.slice((page - 1) * size, page * size), total: 59, page, size, dataCount: Math.min(size, Math.max(0, 59 - (page - 1) * size)) })
@@ -48,12 +49,26 @@ async function fixture(page: Page, baseURL: string, historical = false) {
     if (path === 'i/code/selectMultistageCode.do' && body.types === 'qa-survey-59-part') {
       return state.providerFailure ? ok({ success: false, code: 'RETRYABLE' }) : ok([{ type: body.types, children: [] }])
     }
+    // Only this normal, identity-checked read may ask the existing label provider.
+    // Historical reads and conflicting/invalid raw slots acquire no such request.
+    if (path === 'biz/extForm/queryByColName/leakageCause' && request.method() === 'POST'
+      && normalRecordVerified && !historical
+      && JSON.stringify(Object.keys(body).sort()) === JSON.stringify(['_all', 'sortField', 'sortOrder'])
+      && body._all === '1' && body.sortField === 'partOrder,leakageCauseOrder' && body.sortOrder === 'asc') {
+      return ok({ data: [] }) // No real labels/options are invented by this structural fixture.
+    }
     if (path === 'biz/extForm/query/e') {
       const data: Record<string, unknown> = { ...survey59Record(state.part), ...(state.foreignRecord ? { tenantId: 'foreign' } : {}) }
       if (state.causeProvided) data.leakageCause = state.cause
       if (state.causeExtOverride) { data.leakageCause = [{ invalid: true }]; (data.exts as Record<string, unknown>).leakageCause = state.cause }
       if (state.invalidPartExts) (data.exts as Record<string, unknown>).part = { broken: true }
       const rows = !body['is:_id|string#and'] || body['is:_id|string#and'] === 'saved' ? [data] : []
+      const cause = data.leakageCause
+      normalRecordVerified = !historical && request.method() === 'POST' && body['is:_id|string#and'] === 'saved' && rows.length === 1
+        && body['is:sid|string#and'] === 's' && body['is:nodeId|string#and'] === 'n' && body['is:workflowId|string#and'] === 'w'
+        && !state.foreignRecord && !state.invalidPartExts && !state.providerFailure && !state.causeExtOverride
+        && (cause == null || (Array.isArray(cause) && cause.every(id => typeof id === 'string' && id.length > 0 && id.trim() === id)
+          && new Set(cause).size === cause.length))
       return ok({ data: rows, total: rows.length, page: Number(body.page), size: Number(body.rows), dataCount: rows.length })
     }
     if (path === 'code/query' && body['is:type|string#and'] === 'STATUS') return ok({ data: [], total: 0, page: Number(body.page), rows: Number(body.rows), dataCount: 0 })
@@ -72,6 +87,16 @@ async function open(page: Page, historical = false) {
   await page.locator('.work-order-card').click();if(!historical)await enterNormalFormWorkspace(page)
   await expect(page.getByTestId(historical ? 'historical-forms-timeline' : 'r1-normal-form-read')).toBeVisible()
 }
+function normalValue(page: Page, key: string) {
+  const generic = page.getByTestId(`r1-normal-value-${key}`)
+  return key === 'leakageCause' ? generic.or(page.getByTestId('survey-leakage-cause-read').locator('.survey-leakage-cause__readonly-summary')) : generic
+}
+function assertCauseReads(calls: Array<{ path: string; body: Record<string, string> }>, historical = false) {
+  const provider = calls.filter(call => call.path === 'biz/extForm/queryByColName/leakageCause')
+  if (historical) expect(provider).toEqual([])
+  else expect(provider.length).toBeGreaterThan(0)
+  for (const call of provider) expect(call.body).toEqual({ _all: '1', sortField: 'partOrder,leakageCauseOrder', sortOrder: 'asc' })
+}
 const read = (page: Page) => page.getByTestId('r1-normal-form-read').locator('.app-button').filter({ hasText: '读取已保存表单' })
 test('normal App reads 59 rows in two pages and projects every captured part path without loading media', async ({ page, baseURL }, info) => {
   const state = await fixture(page, baseURL!)
@@ -80,10 +105,13 @@ test('normal App reads 59 rows in two pages and projects every captured part pat
     state.part = part; await read(page).click()
     await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1)
     const expected = expectedSurvey59VisibleIds(part)
-    await expect(page.getByTestId('r1-normal-form-record').locator('.form-read__value')).toHaveCount(expected.length)
+    await expect(page.getByTestId('r1-normal-form-record').locator('.form-read__value, [data-testid="survey-leakage-cause-read"] .survey-leakage-cause__readonly-summary')).toHaveCount(expected.length)
+    const causeVisible = survey59Fields.some(field => field.name === 'leakageCause' && expected.includes(field._id))
+    await expect(page.getByTestId('survey-leakage-cause-read')).toHaveCount(causeVisible ? 1 : 0)
+    await expect(page.getByTestId('r1-normal-value-leakageCause')).toHaveCount(0)
     for (const key of new Set(survey59Fields.map(f => f.name))) {
       const rows = survey59Fields.filter(f => f.name === key && expected.includes(f._id))
-      await expect(page.getByTestId(`r1-normal-value-${key}`)).toHaveCount(rows.length)
+      await expect(normalValue(page, key)).toHaveCount(rows.length)
       if (rows.some(f => f.type === 'file')) await expect(page.getByTestId(`r1-normal-value-${key}`)).toContainText('PNG')
     }
     await expect(page.getByTestId('r1-normal-value-perimeter')).toHaveCount(0)
@@ -95,6 +123,7 @@ test('normal App reads 59 rows in two pages and projects every captured part pat
   }
   expect(state.calls.filter(c => c.path === 'biz/extField/query').map(c => c.body.page)).toContain('2')
   expect(state.calls.some(c => c.path === 'i/code/selectCode.do')).toBe(false)
+  assertCauseReads(state.calls)
   expect(state.writes).toBe(0); expect(state.unexpected).toEqual([]); expect(state.errors).toEqual([])
   await info.attach('readonly-59-evidence', { body: JSON.stringify({ paths: 13, schemaRows: 59, mobileRows: 40,
     calls: state.calls, writes: state.writes, realProviderOptions: 'UNKNOWN', unexpected: state.unexpected }), contentType: 'application/json' })
@@ -114,6 +143,7 @@ test('normal App refuses provider failure and foreign records, then restores onl
   await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1)
   await expect(page.getByTestId('r1-normal-append')).toHaveCount(0)
   await expect(page.getByTestId('r1-normal-save')).toHaveCount(0)
+  assertCauseReads(state.calls)
   expect(state.writes).toBe(0); expect(state.unexpected).toEqual([]); expect(state.errors).toEqual([])
   await info.attach('readonly-failure-recovery', { body: JSON.stringify({ calls: state.calls, writes: state.writes,
     unexpected: state.unexpected, realBackend: 'NOT_RUN' }), contentType: 'application/json' })
@@ -153,6 +183,7 @@ test('completed Survey history rejects malformed EXTS, clears stale values and r
   await expect(page.getByTestId('historical-form-content').locator('a,img')).toHaveCount(0)
   await expect(page.getByTestId('historical-form-content')).not.toContainText('https://')
   expect(state.writes).toBe(0); expect(state.unexpected).toEqual([]); expect(state.errors).toEqual([])
+  assertCauseReads(state.calls,true)
   await info.attach('historical-invalid-exts-explicit-reread', { body: JSON.stringify({
     calls: state.calls, writes: state.writes, unexpected: state.unexpected, realBackend: 'NOT_RUN',
   }), contentType: 'application/json' })
@@ -173,14 +204,16 @@ for (const historical of [false,true]) {
         return historical&&await page.getByTestId('historical-forms-message').isVisible()
       }).toBe(true)
     }
-    const value=page.getByTestId(historical?'historical-form-value-leakageCause':'r1-normal-value-leakageCause')
+    const value=historical?page.getByTestId('historical-form-value-leakageCause'):normalValue(page,'leakageCause')
     const trigger=page.getByTestId(historical?'historical-form-value-leakageCauseSelect':'r1-normal-value-leakageCauseSelect')
     for(const sample of [{value:undefined,text:'未保存'},{value:null,text:'空值'},{value:[],text:'空值'},
       {value:['cause-a','cause-b'],text:'未解析（cause-a） / 未解析（cause-b）'}]){
       state.cause=sample.value;state.causeProvided=sample.value!==undefined
-      await load();await expect(value).toHaveText(sample.text);await expect(trigger).toHaveCount(0)
+      await load();await expect(value).toHaveText(historical?sample.text:sample.text.replaceAll(' / ','、'));await expect(trigger).toHaveCount(0)
+      if(!historical){await expect(page.getByTestId('survey-leakage-cause-read')).toHaveCount(1);await expect(page.getByTestId('r1-normal-value-leakageCause')).toHaveCount(0)}
     }
     state.causeExtOverride=true;state.cause=['ext-id'];await load();await expect(value).toHaveText('未解析（ext-id）')
+    if(!historical){await expect(page.getByTestId('survey-leakage-cause-read')).toHaveCount(0);await expect(page.getByTestId('r1-normal-value-leakageCause')).toHaveCount(1)}
     state.causeExtOverride=false;state.part=['4'];state.cause=[{invalid:true}]
     await load();await expect(value).toHaveCount(0);await expect(trigger).toHaveCount(0)
     state.part=['1','130']
@@ -196,7 +229,9 @@ for (const historical of [false,true]) {
       if(historical)await page.getByTestId('historical-forms-timeline').locator('.app-button').filter({hasText:'重新读取'}).click()
       await load();await expect(value).toHaveText('未解析（repaired）')
     }
-    expect(state.calls.some(c=>/leakageCause|upsert|process|upload|updateExts/.test(c.path))).toBe(false)
+    assertCauseReads(state.calls,historical)
+    await expect(page.getByTestId('survey-leakage-cause-read-trigger')).toHaveCount(0)
+    expect(state.calls.some(c=>/upsert|process|upload|updateExts/.test(c.path))).toBe(false)
     expect(state.writes).toBe(0);expect(state.unexpected).toEqual([]);expect(state.errors).toEqual([])
     await info.attach('leakage-read-evidence',{body:JSON.stringify({historical,calls:state.calls,writes:state.writes,unexpected:state.unexpected,errors:state.errors}),contentType:'application/json'})
   })

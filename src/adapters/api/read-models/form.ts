@@ -1,3 +1,4 @@
+import { assertSurveyReadRecord } from '../survey-form-codec'
 import { surveyHeightConditionIssue } from './survey-height-condition'
 import { appointmentReplacementContextFromRead } from '@shared/form/appointment-replacement-context'
 import type {
@@ -404,6 +405,7 @@ function formValues(record: AdapterRecord, codec?: FormValueCodec): Readonly<Rec
 
 export function formData(raw: unknown, codec?: FormValueCodec, expectedDefinitionId?: FormDefinitionId): FormDataRead {
   const record = asRecord(raw, 'form data')
+  assertSurveyReadRecord(codec, record, expectedDefinitionId)
   const workflow = nestedRecord(record, ['workflow'])
   const values = formValues(record, codec)
   const dataId = requiredOpaqueId<'FormDataId'>(record, ['id', '_id', 'dataId'], 'form data id')

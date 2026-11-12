@@ -10,7 +10,7 @@ import {
   type AuthWireConfig,
   type AuthBackendDriver,
 } from '@adapters/auth/auth-session-adapter'
-import { surveyMediaValueCodec } from '@adapters/api/survey-form-codec'
+import { createSurveyReadValueCodec } from '@adapters/api/survey-form-codec'
 import {
   createPlatformAdapters,
   createUnsupportedPlatformAdapters,
@@ -351,6 +351,8 @@ describe('G3-C API adapter foundation', () => {
 
   it('normalizes R1 Survey media rows without losing object identity or list shape', async () => {
     const transport = new FixtureApiTransport({
+      'biz/extField/query': { data: [{ _id: 'survey-image-field', extId: 'survey-definition', colName: 'survey',
+        name: 'images1', nameDisp: '合成勘查图片', type: 'file', preset: 0 }] },
       'biz/extForm/query/survey-definition': {
         data: [{
           _id: 'survey-data-001',
@@ -362,10 +364,13 @@ describe('G3-C API adapter foundation', () => {
       },
     })
     const api = createTechnicianApiReadAdapter(transport)
+    const definition = await api.getFormDefinition(asOpaqueId<'FormDefinitionId'>('survey-definition'))
+    expect(definition.state).toBe('succeeded')
+    if (!definition.data) throw new Error('Synthetic Survey declaration was not read')
     const result = await api.getFormData({
       definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
       dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
-      valueCodec: surveyMediaValueCodec,
+      valueCodec: createSurveyReadValueCodec(definition.data),
     })
 
     expect(result).toMatchObject({
@@ -386,6 +391,8 @@ describe('G3-C API adapter foundation', () => {
 
   it('fails closed when a backend Survey media object is malformed', async () => {
     const transport = new FixtureApiTransport({
+      'biz/extField/query': { data: [{ _id: 'survey-image-field', extId: 'survey-definition', colName: 'survey',
+        name: 'images1', nameDisp: '合成勘查图片', type: 'file', preset: 0 }] },
       'biz/extForm/query/survey-definition': {
         data: [{
           _id: 'survey-data-001',
@@ -395,14 +402,18 @@ describe('G3-C API adapter foundation', () => {
       },
     })
     const api = createTechnicianApiReadAdapter(transport)
+    const definition = await api.getFormDefinition(asOpaqueId<'FormDefinitionId'>('survey-definition'))
+    expect(definition.state).toBe('succeeded')
+    if (!definition.data) throw new Error('Synthetic Survey declaration was not read')
     const result = await api.getFormData({
       definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
       dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
-      valueCodec: surveyMediaValueCodec,
+      valueCodec: createSurveyReadValueCodec(definition.data),
     })
 
     expect(result.state).toBe('failed_terminal')
     expect(result.error?.category).toBe('server_terminal')
+    expect(result.error?.message).toContain('missing a usable url')
   })
 
   it.each([
@@ -410,6 +421,8 @@ describe('G3-C API adapter foundation', () => {
     ['primitive list', ['a', 'b']],
   ])('fails closed when a Survey media field is not a media list on read (%s)', async (_label, value) => {
     const transport = new FixtureApiTransport({
+      'biz/extField/query': { data: [{ _id: 'survey-image-field', extId: 'survey-definition', colName: 'survey',
+        name: 'images1', nameDisp: '合成勘查图片', type: 'file', preset: 0 }] },
       'biz/extForm/query/survey-definition': {
         data: [{
           _id: 'survey-data-001',
@@ -419,14 +432,18 @@ describe('G3-C API adapter foundation', () => {
       },
     })
     const api = createTechnicianApiReadAdapter(transport)
+    const definition = await api.getFormDefinition(asOpaqueId<'FormDefinitionId'>('survey-definition'))
+    expect(definition.state).toBe('succeeded')
+    if (!definition.data) throw new Error('Synthetic Survey declaration was not read')
     const result = await api.getFormData({
       definitionId: asOpaqueId<'FormDefinitionId'>('survey-definition'),
       dataId: asOpaqueId<'FormDataId'>('survey-data-001'),
-      valueCodec: surveyMediaValueCodec,
+      valueCodec: createSurveyReadValueCodec(definition.data),
     })
 
     expect(result.state).toBe('failed_terminal')
     expect(result.error?.category).toBe('server_terminal')
+    expect(result.error?.message).toContain('Survey media list is malformed')
   })
 
   it('does not assign Survey media semantics to object-like values in a generic form', async () => {
