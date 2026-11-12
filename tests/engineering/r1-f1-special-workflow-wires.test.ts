@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  r1FormsAfterSaveProcess, r1FormsFinalizeProcess, r1RepeatBatchProcess,
+  r1FormsAfterSaveProcess, r1FormsFinalizeProcess, r1RepeatBatchProcess, r1MainRepeatFinalizeProcess,
 } from '@adapters/api/r1-special-workflow-wires'
 import { asOpaqueId } from '@shared/types'
 const base = {
@@ -33,6 +33,16 @@ describe('F1 source-matched R1 special node workflow/process wire builders (NOT 
     expect(() => r1FormsFinalizeProcess({
       ...base,sourceNodeType:'forms',definitionId:formDef,availableFormDataIds:[],
     })).toThrow('bounded form list')
+  })
+  it('main Repeat finalize differs from child batch even with the same saved records', () => {
+    const input={...base,sourceNodeType:'repeat' as const,definitionId:formDef}
+    expect(r1MainRepeatFinalizeProcess({...input,availableFormDataIds:[a,b]}).body)
+      .toMatchObject({workflowNodeId:base.workflowNodeId,nodeFormDefId:formDef,nodeFormDataId:''})
+    expect(r1RepeatBatchProcess({...input,savedFormDataIds:[a,b]}).body?.nodeFormDataId).toBe('saved-a,saved-b')
+    for(const ids of [[],[a,a],Array.from({length:51},(_,i)=>asOpaqueId<'FormDataId'>(`saved-${i}`))]) {
+      expect(()=>r1MainRepeatFinalizeProcess({...input,availableFormDataIds:ids})).toThrow()
+    }
+    expect(()=>r1MainRepeatFinalizeProcess({...input,sourceNodeType:'forms' as 'repeat',availableFormDataIds:[a]})).toThrow()
   })
   it('repeat requires unique, saved IDs and joins exactly with comma (R1 doProcess)', () => {
     const wire = r1RepeatBatchProcess({

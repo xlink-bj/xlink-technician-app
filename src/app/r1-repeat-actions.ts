@@ -9,7 +9,7 @@ import { evaluateNodeVisibility, isHandlerMatch } from '@runtimes/workflow/polic
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import { normalizeCommandResponse, type ApiCommandTransport } from '@adapters/api/technician-api-commands'
-import { r1SpecialFormUpsert, r1RepeatBatchProcess } from '@adapters/api/r1-special-workflow-wires'
+import { r1SpecialFormUpsert, r1MainRepeatFinalizeProcess } from '@adapters/api/r1-special-workflow-wires'
 import { createLocalFixtureMutationLock } from './local-fixture-mutation-lock'
 
 export interface R1RepeatScope {
@@ -156,8 +156,8 @@ export function createR1RepeatActions(input: {
     complete(scope: R1RepeatScope) {
       return execute(scope, async (s, read, check, mark) => {
         const snapshot = await read(); check()
-        const request = r1RepeatBatchProcess({ sourceNodeType: 'repeat', definitionId: snapshot.definition.id,
-          workOrderId: asOpaqueId<'WorkOrderId'>(s.workOrderId), workflowNodeId: snapshot.node.id, savedFormDataIds: snapshot.records.map(r => r.id) })
+        const request = r1MainRepeatFinalizeProcess({ sourceNodeType: 'repeat', definitionId: snapshot.definition.id,
+          workOrderId: asOpaqueId<'WorkOrderId'>(s.workOrderId), workflowNodeId: snapshot.node.id, availableFormDataIds: snapshot.records.map(r => r.id) })
         check(); mark('uncertain')
         const raw = await input.transport.execute(request); check(); normalizeCommandResponse(raw)
         const ack = raw as Record<string, unknown>

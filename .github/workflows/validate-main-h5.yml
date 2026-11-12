@@ -359,6 +359,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/normal-action-workspace.config.ts
+      - name: Verify normal main Repeat Workspace completion and guards
+        env:
+          VITE_XLINK_ENVIRONMENT: test
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/normal-repeat-workspace.config.ts
       - name: Preserve scoped form integration H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -393,6 +398,7 @@ jobs:
             test-results/normal-form-draft-recovery/normal10/
             test-results/normal-form-draft-recovery/existing2/
             test-results/normal-action-workspace/
+            test-results/normal-repeat-workspace/
           if-no-files-found: warn
           retention-days: 7
 

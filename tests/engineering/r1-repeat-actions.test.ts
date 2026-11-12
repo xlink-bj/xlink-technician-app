@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createR1RepeatActions, normalizeR1RepeatValues, r1RepeatActionsEnabled, type R1RepeatScope } from '@app/r1-repeat-actions'
 import type { AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
+import { asOpaqueId } from '@shared/types'
 import { installLocalFixtureBrowser } from './local-fixture-lock-test-support'
 const scope: R1RepeatScope = { tenantId:'tenant', userId:'user', roleId:'role', workOrderId:'sid', workflowRunId:'run', runtimeNodeId:'node', formDefinitionId:'ext' }
 const origin = 'http://127.0.0.1:5189'
@@ -28,16 +29,43 @@ function setup() {
 beforeEach(() => installLocalFixtureBrowser())
 afterEach(() => vi.unstubAllGlobals())
 describe('normal repeat create and explicit completion', () => {
-  it('creates one, independently verifies fields, then separately processes only fresh saved IDs', async () => {
+  it('creates one, independently verifies fields, then separately completes the main node after a fresh scoped record read', async () => {
     const x=setup(), c=x.make();await c.saveOnly(scope,values)
     expect(x.transport.execute).toHaveBeenCalledTimes(1);expect(x.readLatest).toHaveBeenCalledTimes(2)
     expect(x.transport.execute.mock.calls[0]![0].path).toBe('biz/extForm/upsert/ext')
     expect(c.locked(scope)).toBe(false)
     await expect(c.saveOnly(scope,values)).rejects.toThrow()
     expect(await c.complete(scope)).toEqual({acknowledged:true,transitionVerified:false})
-    expect(x.transport.execute.mock.calls[1]![0].body).toEqual({workflowNodeId:'node',nodeFormDefId:'ext',nodeFormDataId:'saved',smodule:'serviceAppointment',sid:'sid'})
+    expect(x.transport.execute.mock.calls[1]![0].body).toEqual({workflowNodeId:'node',nodeFormDefId:'ext',nodeFormDataId:'',smodule:'serviceAppointment',sid:'sid'})
     expect(c.completed(scope)).toBe(true);await expect(x.make().complete(scope)).rejects.toThrow()
     expect(x.transport.execute).toHaveBeenCalledTimes(2)
+  })
+  it('completes the main runtime Repeat with an empty data slot, never the child batch IDs', async () => {
+    const x=setup()
+    x.snapshot={...x.snapshot,records:['one','two'].map(id=>({id,definitionId:'ext',workflowRunId:'run',values:{...values}}))} as unknown as R1NodeFormsSnapshot
+    const c=x.make()
+    expect(await c.complete(scope)).toEqual({acknowledged:true,transitionVerified:false})
+    expect(x.readLatest).toHaveBeenCalledTimes(1)
+    expect(x.transport.execute).toHaveBeenCalledTimes(1)
+    expect(x.transport.execute.mock.calls[0]![0]).toEqual({method:'POST',path:'workflow/process',r1Special:true,
+      body:{workflowNodeId:'node',nodeFormDefId:'ext',nodeFormDataId:'',smodule:'serviceAppointment',sid:'sid'}})
+  })
+  it.each(['role','session','grant','closed','source','definition','run','duplicates'])('rejects fresh main completion %s before Process',async kind=>{
+    const x=setup(),c=x.make()
+    x.snapshot={...x.snapshot,records:[{id:'saved',definitionId:'ext',workflowRunId:'run',values:{...values}}]} as unknown as R1NodeFormsSnapshot
+    x.readLatest.mockImplementationOnce(async()=>{
+      if(kind==='role')x.changeRole()
+      if(kind==='session')x.changeSession()
+      if(kind==='grant')x.hasExactGrant.mockReturnValue(false)
+      if(kind==='closed')return {...x.snapshot,node:{...x.snapshot.node,lifecycle:'closed'}} as R1NodeFormsSnapshot
+      if(kind==='source')return {...x.snapshot,node:{...x.snapshot.node,sourceNodeType:'forms'}} as R1NodeFormsSnapshot
+      if(kind==='definition')return {...x.snapshot,records:[{...x.snapshot.records[0]!,definitionId:asOpaqueId<'FormDefinitionId'>('foreign')}]} as R1NodeFormsSnapshot
+      if(kind==='run')return {...x.snapshot,records:[{...x.snapshot.records[0]!,workflowRunId:asOpaqueId<'WorkflowRunId'>('child-run')}]} as unknown as R1NodeFormsSnapshot
+      if(kind==='duplicates')return {...x.snapshot,records:[x.snapshot.records[0]!,x.snapshot.records[0]!]} as R1NodeFormsSnapshot
+      return x.snapshot
+    })
+    await expect(c.complete(scope)).rejects.toThrow()
+    expect(x.transport.execute).not.toHaveBeenCalled()
   })
   it.each(['role','session','scope','closed','rawtype','grant'])('rejects stale %s before dispatch', async kind => {
     const x=setup(), c=x.make()

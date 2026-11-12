@@ -75,7 +75,7 @@ describe('generic repeat typed Survey transport contract', () => {
     const start = h.events.length
     expect(await actions.complete(scope)).toEqual({ acknowledged: true, transitionVerified: false })
     expect(h.events.slice(start).filter(e => e.includes('extForm/query') || e === 'workflow/process')).toEqual(['biz/extForm/query/ext-survey', 'biz/extForm/query/ext-survey:exact', 'workflow/process'])
-    expect(h.commands.execute.mock.calls[1]![0].body).toEqual({ workflowNodeId: 'node', nodeFormDefId: 'ext-survey', nodeFormDataId: 'saved-survey', smodule: 'serviceAppointment', sid: 'work' })
+    expect(h.commands.execute.mock.calls[1]![0].body).toEqual({ workflowNodeId: 'node', nodeFormDefId: 'ext-survey', nodeFormDataId: '', smodule: 'serviceAppointment', sid: 'work' })
     expect(actions.completed(scope)).toBe(true)
     await expect(h.make().complete(scope)).rejects.toThrow()
     expect(h.commands.execute).toHaveBeenCalledTimes(2)

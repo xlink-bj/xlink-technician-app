@@ -52,6 +52,22 @@ export function r1FormsFinalizeProcess(input: R1Base & {
   for (const dataId of input.availableFormDataIds) id(dataId, 'saved FormData')
   return wire(input, id(input.definitionId, 'form definition'), '')
 }
+/** Root workflow Repeat uses R1 process('complate'), not child doProcess.
+ * Available IDs prove a nonempty fully read list; they are not sent as data IDs.
+ * Caller must own the authoritative root-node reader and completion grant.
+ */
+export function r1MainRepeatFinalizeProcess(input: R1Base & {
+  readonly sourceNodeType: 'repeat'
+  readonly definitionId: FormDefinitionId
+  readonly availableFormDataIds: readonly FormDataId[]
+}): ApiCommandRequest {
+  if (input.sourceNodeType !== 'repeat' || input.availableFormDataIds.length < 1
+    || input.availableFormDataIds.length > 50)
+    throw new Error('R1 main repeat completion requires an authoritative bounded form list')
+  const identifiers = input.availableFormDataIds.map(value => id(value, 'saved FormData'))
+  if (new Set(identifiers).size !== identifiers.length) throw new Error('Duplicate main repeat FormData ID')
+  return wire(input, id(input.definitionId, 'repeat definition'), '')
+}
 /** R1 doProcess(subNode): Repeat completion with comma-joined saved IDs. */
 export function r1RepeatBatchProcess(input: R1Base & {
   readonly sourceNodeType: 'repeat'
