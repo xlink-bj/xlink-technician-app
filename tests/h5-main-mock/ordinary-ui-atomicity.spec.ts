@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_ORDINARY_UI_ATOMICITY!=='true','Opt-in synthetic ordinary input atomicity and real Uni H5 picker lifecycle')
 async function fixture(page:Page,baseURL:string,mode:string){
@@ -30,7 +31,7 @@ async function fixture(page:Page,baseURL:string,mode:string){
  })
  return{state,fields}
 }
-async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
+async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page);await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
 
 
 async function telemetry(page:Page){
@@ -81,12 +82,12 @@ for(const mode of ['done-hide','time-done-hide','done-back','rapid-reopen','open
  await telemetry(page);const {state}=await fixture(page,baseURL!,'hide-reopen');const follow=page.getByTestId('r1-normal-input-followupAt').locator('.app-date-time-field__picker').nth(mode==='time-done-hide'?1:0)
  try{await open(page);await page.getByTestId('r1-normal-input-mode').getByRole('textbox').fill('on')
   if(mode==='open-back'){
-   await follow.click();await page.goBack();await expect(page.locator('.work-order-card')).toBeVisible()
+   await follow.click();await page.goBack();await expect(page).toHaveURL(/pages\/work-orders\/detail/);await page.goBack();await expect(page.locator('.work-order-card')).toBeVisible()
    await expect.poll(async()=>(await audit(page)).filter((e:any)=>e.kind==='show'&&e.state==='pending').length).toBe(0)
   }else{
    const close=await choose(page,follow,false);expect(close.state).toBe('pending')
    if(mode==='done-hide'||mode==='time-done-hide')await page.getByTestId('r1-normal-input-mode').getByRole('textbox').fill('off')
-   if(mode==='done-back')await page.goBack()
+   if(mode==='done-back'){await page.goBack();await expect(page).toHaveURL(/pages\/work-orders\/detail/);await page.goBack()}
    if(mode==='rapid-reopen'){
     const before=(await audit(page)).length;await follow.click();await expect(page.getByText('Done',{exact:true}).filter({visible:true}).last()).toBeVisible()
     const reopen=(await audit(page)).slice(before).find((e:any)=>e.kind==='show');expect(reopen).toBeTruthy();expect(['pending','cancelled','completed']).toContain(reopen.closes.find((e:any)=>e.id===close.id).state)

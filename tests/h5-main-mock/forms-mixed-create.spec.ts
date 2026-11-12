@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_FORMS_MIXED_CREATE!=='true','Opt-in synthetic ordinary per-field state and Code-array create; synthetic only')
 async function fixture(page:Page,baseURL:string,mode:string){
@@ -31,7 +32,7 @@ async function fixture(page:Page,baseURL:string,mode:string){
  })
  return{state,fields,codes}
 }
-async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
+async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page);await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
 
 
 for(const mode of ['save-double','renamed','optional-clear','wrong-switch-ack','wrong-rate-ack','wrong-array-ack','option-drift','permission-drift'])test(`ordinary per-field mixed create ${mode}`,async({page,baseURL},info)=>{
@@ -43,8 +44,12 @@ for(const mode of ['save-double','renamed','optional-clear','wrong-switch-ack','
   if(mode==='save-double'){
    await field('independentFlag').locator('.app-choice').filter({hasText:'是'}).click();await field('evidenceScore').locator('[aria-label="2 星"]').click()
    await field('reviewedItems').locator('.app-choice--multi').filter({hasText:'合成甲'}).click()
-   await page.locator('.uni-page-head-btn').first().click();await expect(page.locator('.work-order-card')).toBeVisible();await page.locator('.work-order-card').click()
+   await leaveNormalFormForList(page);await expect(page.locator('.work-order-card')).toBeVisible();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page)
    await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click()
+   // Reentry now preserves a local draft; explicitly discard for this reset-path test.
+   await expect(page.getByTestId('r1-normal-draft-restore')).toBeVisible()
+   await page.getByTestId('r1-normal-draft-discard').click();await page.getByTestId('r1-normal-draft-discard-confirm').click()
+   await expect(page.getByTestId('r1-normal-draft-restore')).toHaveCount(0)
    await expect(field('evidenceScore')).toContainText('未评分');await expect(field('reviewedItems').locator('[aria-pressed="true"]')).toHaveCount(0);expect(state.writes).toEqual([])
   }
   await field('note').getByRole('textbox').fill(' mixed preserved ');await field('zeroMeasure').getByRole('textbox').fill('0')

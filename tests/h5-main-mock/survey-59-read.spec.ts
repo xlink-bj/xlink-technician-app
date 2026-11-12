@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { expect, test, type Page } from '@playwright/test'
 import { survey59Fields, survey59Paths, survey59Record, expectedSurvey59VisibleIds } from '../fixtures/survey-59-synthetic'
 
@@ -68,7 +69,7 @@ async function open(page: Page, historical = false) {
   await page.locator('.method-card').filter({ hasText: '快捷登录' }).click()
   await expect(page.locator('.home-page')).toBeVisible()
   await page.locator('.work-orders-entry').click()
-  await page.locator('.work-order-card').click()
+  await page.locator('.work-order-card').click();if(!historical)await enterNormalFormWorkspace(page)
   await expect(page.getByTestId(historical ? 'historical-forms-timeline' : 'r1-normal-form-read')).toBeVisible()
 }
 const read = (page: Page) => page.getByTestId('r1-normal-form-read').locator('.app-button').filter({ hasText: '读取已保存表单' })

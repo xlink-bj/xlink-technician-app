@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { expect, test } from '@playwright/test'
 import { createHash } from 'node:crypto'
 
@@ -87,7 +88,7 @@ for (const scenario of (readOnly ? ['readonly'] as const : ['map-three-mixed','t
     try {
     await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click()
     await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible()
-    await page.locator('.work-orders-entry').click();const card=page.locator('.work-order-card');await expect(card).toHaveAttribute('aria-disabled','false');await card.click()
+    await page.locator('.work-orders-entry').click();const card=page.locator('.work-order-card');await expect(card).toHaveAttribute('aria-disabled','false');await card.click();await enterNormalFormWorkspace(page)
     const read=()=>page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'})
     await read().click()
     if(readOnly){
@@ -102,7 +103,7 @@ for (const scenario of (readOnly ? ['readonly'] as const : ['map-three-mixed','t
         await expect(page.locator('[data-testid^="r1-normal-edit-"]')).toHaveCount(0)
       }
       await assertRead()
-      await page.goto('/#/pages/work-orders/work-orders');await expect(card).toHaveAttribute('aria-disabled','false');await card.click();await read().click();await assertRead()
+      await page.goto('/#/pages/work-orders/work-orders');await expect(card).toHaveAttribute('aria-disabled','false');await card.click();await enterNormalFormWorkspace(page);await read().click();await assertRead()
       expect(tokens).toBe(0);expect(uploads).toBe(0);expect(upserts).toBe(0)
       expect(unexpected).toEqual([]);expect(errors).toEqual([]);return
     }
@@ -126,7 +127,7 @@ for (const scenario of (readOnly ? ['readonly'] as const : ['map-three-mixed','t
     if(badAck){await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('结果尚未核实');expect(upserts).toBe(1)}
     else{
       await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('记录已保存并从后台重新读取')
-      await page.goto('/#/pages/work-orders/work-orders');await expect(card).toHaveAttribute('aria-disabled','false');await card.click();await read().click()
+      await page.goto('/#/pages/work-orders/work-orders');await expect(card).toHaveAttribute('aria-disabled','false');await card.click();await enterNormalFormWorkspace(page);await read().click()
       await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1)
       for(const f of config)if(f.type==='file')await expect(page.getByTestId('r1-normal-form-record').getByTestId('r1-normal-file-preview-'+f.key)).toBeVisible()
       await expect(page.getByTestId('r1-normal-file-add-'+config.find(f=>f.type==='file')!.key)).toHaveCount(0)

@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import{test,expect}from'@playwright/test'
 test.skip(process.env.XLINK_H5_SURVEY_FIRST_MEDIA_SAVE!=='true','Explicit fully intercepted synthetic typed media run only')
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAFUlEQVR4nGOUq7j0nwEJMDGgAcICAJ0wAm/4ZvM3AAAAAElFTkSuQmCC','base64')
@@ -33,7 +34,7 @@ for(const scenario of ['success','ack-conflict']as const)test(`normal App typed 
   unexpected.push(path);return route.abort()
  })
  const read=()=>page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'})
- await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await read().click()
+ await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page);await read().click()
  await expect(page.getByTestId('r1-normal-file-add-infraredImageList')).toBeVisible();await expect(page.getByTestId('r1-normal-complete')).toHaveCount(0)
  await page.screenshot({path:info.outputPath('empty-430x932.png')})
  for(const key of ['infraredImageList','images1']){
@@ -42,7 +43,7 @@ for(const scenario of ['success','ack-conflict']as const)test(`normal App typed 
  await expect(page.getByTestId('r1-normal-save')).toHaveAttribute('aria-disabled','false');await page.screenshot({path:info.outputPath('uploaded-synthetic-430x932.png')});await page.getByTestId('r1-normal-save').click()
  if(scenario==='success'){
   await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('记录已保存并从后台重新读取');await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1)
-  await page.goto('/#/pages/work-orders/work-orders');await page.locator('.work-order-card').click();await read().click();await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1);await expect(page.getByTestId('r1-normal-file-add-images1')).toHaveCount(0);expect(recordReads.length).toBeGreaterThanOrEqual(4)
+  await page.goto('/#/pages/work-orders/work-orders');await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page);await read().click();await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1);await expect(page.getByTestId('r1-normal-file-add-images1')).toHaveCount(0);expect(recordReads.length).toBeGreaterThanOrEqual(4)
  }else{await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('结果尚未核实');expect(writes).toHaveLength(1)}
  await page.screenshot({path:info.outputPath(scenario+'-430x932.png')});expect(writes).toEqual(['biz/extForm/upsert/'+definition]);expect(tokens).toBe(2);expect(uploads).toBe(2);expect(unexpected).toEqual([]);expect(errors).toEqual([])
  await info.attach('scoped-ledger',{body:JSON.stringify({scenario,writes,tokens,syntheticUploadResponses:uploads,externalNetworkFetches:0,recordReads:recordReads.length,realJava:false}),contentType:'application/json'})

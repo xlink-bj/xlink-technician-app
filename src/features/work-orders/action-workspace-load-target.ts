@@ -25,6 +25,7 @@ type Ready = {
   readonly isAppointmentAction: boolean
   readonly isDynamicAction: boolean
   readonly isQuotationAction: boolean
+  readonly isNormalFormAction: boolean
 }
 export type ActionWorkspaceLoadTarget = Blocked | Ready
 function denied(category: Blocked['category'], message: string, keepDetail: boolean): Blocked {
@@ -40,6 +41,8 @@ export function selectActionWorkspaceLoadTarget(input: {
   readonly request: ActionWorkspaceLoadTargetRequest
   /** Must come from the Store's compile-time DEV and explicit Mock E2E gate. */
   readonly devMockE2EBuildEnabled: boolean
+  /** App-owned normal reader availability; never supplied by route metadata. */
+  readonly normalFormContentEnabled?: boolean
 }): ActionWorkspaceLoadTarget {
   const { detail, session, currentTask, request } = input
   if (String(detail.id) !== String(request.workOrderId)) {
@@ -59,10 +62,16 @@ export function selectActionWorkspaceLoadTarget(input: {
         ? 'mock-workflow-node-019-survey' : '')
     && (currentTask?.sourceNodeType === 'forms' || currentTask?.sourceNodeType === 'repeat')
     && currentTask?.execution === 'disabled_read_only'
+  const isNormalFormAction = input.normalFormContentEnabled === true
+    && (currentTask?.actionIntent === 'interact_with_form' || currentTask?.actionIntent === 'set_appointment')
+    && currentTask.execution === 'disabled_read_only'
+    && (node?.sourceNodeType === 'forms' || node?.sourceNodeType === 'repeat')
+    && node.sourceNodeType === currentTask.sourceNodeType && node.lifecycle === 'active'
+    && Boolean(node.formDefinitionId)
   if (!currentTask || !node
     || String(currentTask.nodeId) !== String(request.workflowNodeId)
     || (request.actionIntent && currentTask.actionIntent !== request.actionIntent)
-    || (currentTask.execution !== 'enabled' && !syntheticReadOnlyPreview)) {
+    || (currentTask.execution !== 'enabled' && !syntheticReadOnlyPreview && !isNormalFormAction)) {
     return denied('unsupported_capability', 'This Action is not executable', true)
   }
   const contentKind = actionContentKindForIntent(currentTask.actionIntent)
@@ -76,5 +85,5 @@ export function selectActionWorkspaceLoadTarget(input: {
     return denied('unsupported_capability', 'Dynamic form definition is unavailable', true)
   }
   return { kind: 'ready', roleId: session.currentRole.id, currentTask, node, contentKind,
-    isAppointmentAction, isDynamicAction, isQuotationAction }
+    isAppointmentAction, isDynamicAction, isQuotationAction, isNormalFormAction }
 }

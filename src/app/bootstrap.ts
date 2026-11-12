@@ -169,6 +169,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   )
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
+    normalFormContentEnabled: () => normalNodeFormsReader.enabled(),
     apiRead,
     localQuotationRepairPartsRead: normalQuotationPartsRead,
     quotationCatalogRead,

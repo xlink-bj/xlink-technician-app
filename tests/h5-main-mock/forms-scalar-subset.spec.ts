@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { test,expect,type Page } from '@playwright/test'
 test.skip(process.env.XLINK_H5_FORMS_SCALAR_SUBSET!=='true','Explicit loopback synthetic scalar-subset grant only')
 async function fixture(page:Page,baseURL:string){
@@ -30,7 +31,7 @@ async function fixture(page:Page,baseURL:string){
  })
  return state
 }
-async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-input-area')).toBeVisible()}
+async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page);await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-input-area')).toBeVisible()}
 test('normal App creates from 59 metadata rows and reads the exact server record without Process',async({page,baseURL},info)=>{
  const s=await fixture(page,baseURL!);await open(page)
  await expect(page.getByTestId('r1-normal-input-protected0')).toHaveCount(0)

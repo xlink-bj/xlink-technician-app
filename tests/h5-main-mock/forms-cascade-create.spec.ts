@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_FORMS_CASCADE_CREATE!=='true','Opt-in synthetic ordinary Map single-path Cascade first-create')
 async function fixture(page:Page,baseURL:string,mode:string){
@@ -32,7 +33,7 @@ async function fixture(page:Page,baseURL:string,mode:string){
  })
  return{state,fields,group}
 }
-async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
+async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page);await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
 for(const mode of ['save','renamed-zero','optional','prefix','tree-drift','permission-drift','wrong-ack'])test(`ordinary complete path create ${mode}`,async({page,baseURL},info)=>{
  const {state,fields,group}=await fixture(page,baseURL!,mode)
  try{

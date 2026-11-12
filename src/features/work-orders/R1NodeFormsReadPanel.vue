@@ -69,6 +69,26 @@
   </view>
 </template>
 
+<script lang="ts">
+import { shallowRef as readerOwnerRef } from 'vue'
+import type { R1NodeFormsReader as ReaderPort } from './r1-node-forms-read'
+// View ownership is separate from the reader's private source/command proofs.
+const normalReaderViews = new WeakMap<ReaderPort, ReturnType<typeof readerOwnerRef<object | null>>>()
+function claimNormalReader(reader: ReaderPort) {
+  let current = normalReaderViews.get(reader)
+  if (!current) { current=readerOwnerRef<object|null>(null);normalReaderViews.set(reader,current) }
+  const state=current, owner={}
+  const previous=state.value;state.value=owner
+  if (previous) reader.clear() // Immediately revoke a superseded view's source.
+  const own=()=>state.value===owner
+  return { drop:()=>{if(own())state.value=null}, reader:{...reader,
+    isCurrent:(snapshot: Parameters<ReaderPort['isCurrent']>[0])=>own()&&reader.isCurrent(snapshot),
+    clear:()=>{if(own())reader.clear()},
+    load:async(...args:Parameters<ReaderPort['load']>)=>{if(!own())return null;const value=await reader.load(...args);return own()?value:null},
+  } as ReaderPort }
+}
+</script>
+
 <script setup lang="ts">
 import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -87,6 +107,8 @@ import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-rea
 
 const props = defineProps<{ readonly reader: R1NodeFormsReader; readonly workOrderId: string;
   readonly runtimeNodeId: string; readonly actorScope?: string | null }>()
+let readerView = claimNormalReader(props.reader)
+let viewReader = readerView.reader
 // Preserve the reader's exact identity while keeping the empty→loaded change reactive.
 const snapshot = shallowRef<R1NodeFormsSnapshot | null>(null)
 const snapshotActorScope = ref<string | null>(null)
@@ -99,6 +121,7 @@ const actionProvider = inject(r1RepeatActionsKey,null)
 const draftProvider = inject(r1NormalFormDraftsKey,null)
 let draftSession: R1NormalDraftSession | null = null
 const draftRead = shallowRef<R1NormalDraftRead | null>(null)
+let lastLocalWrite: Promise<boolean> | null = null
 const draftMessage = ref(''), draftWorking = ref(false), confirmDraftDiscard = ref(false)
 const draftBlocked = computed(() => !editingId.value && Boolean(draftRead.value && draftRead.value.state !== 'empty'))
 const emit = defineEmits<{ (event: 'changed'): void;
@@ -117,14 +140,15 @@ let version = 0
 let pendingEditor: { readonly id: string | undefined } | null = null
 const visibleSnapshot = computed(() => props.actorScope && props.actorScope === snapshotActorScope.value && snapshot.value
   && snapshot.value.workOrderId === props.workOrderId && String(snapshot.value.node.id) === props.runtimeNodeId
-  && props.reader.isCurrent(snapshot.value) ? snapshot.value : null)
+  && viewReader.isCurrent(snapshot.value) ? snapshot.value : null)
 watch(actions,(next,old)=>{if(old?.fileMedia&&next?.fileMedia!==old.fileMedia)old.fileMedia.dispose()})
 // Share only the exact visible read state, never a save ACK or the stale parent EXTS summary.
 watch(visibleSnapshot, value => emit('snapshot-change', value && snapshotActorScope.value
   ? { actorScope: snapshotActorScope.value, snapshot: value } : null), { immediate: true, flush: 'sync' })
-function clear() { draftSession=null; draftRead.value=null; draftMessage.value=''; draftWorking.value=false; confirmDraftDiscard.value=false; actions.value?.fileMedia?.dispose(); version++; pendingEditor = null; props.reader.clear(); snapshot.value = null; snapshotActorScope.value = null; loading.value = false; busy.value = false; fileEditorClosed.value=false;fileCancelling.value=false; message.value = ''; values.value = {}; confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined }
+function clear() { lastLocalWrite=null;draftSession=null; draftRead.value=null; draftMessage.value=''; draftWorking.value=false; confirmDraftDiscard.value=false; actions.value?.fileMedia?.dispose(); version++; pendingEditor = null; viewReader.clear(); snapshot.value = null; snapshotActorScope.value = null; loading.value = false; busy.value = false; fileEditorClosed.value=false;fileCancelling.value=false; message.value = ''; values.value = {}; confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined }
 watch(() => [props.workOrderId, props.runtimeNodeId, props.actorScope], clear)
-onBeforeUnmount(clear)
+onBeforeUnmount(()=>{clear();readerView.drop()})
+watch(()=>props.reader,next=>{clear();readerView.drop();readerView=claimNormalReader(next);viewReader=readerView.reader})
 async function load() {
   if (loading.value || busy.value || fileBusy.value || fileCancelling.value || draftWorking.value || !props.actorScope) return
   const ticket = ++version, actorScope = props.actorScope
@@ -133,14 +157,14 @@ async function load() {
   confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined
   snapshot.value = null; message.value = ''; loading.value = true
   try {
-    const value = await props.reader.load(props.workOrderId, props.runtimeNodeId)
-    if (ticket !== version || props.actorScope !== actorScope || !props.reader.isCurrent(value)) return
+    const value = await viewReader.load(props.workOrderId, props.runtimeNodeId)
+    if (ticket !== version || props.actorScope !== actorScope || !viewReader.isCurrent(value)) return
     snapshotActorScope.value = actorScope; snapshot.value = value
     const fresh=actions.value
     if(fresh?.fileMedia){
       fileEditorClosed.value=false
       const media=fresh.fileMedia,inspected=await media.inspect()
-      if(ticket!==version||props.actorScope!==actorScope||!props.reader.isCurrent(value)||actions.value?.fileMedia!==media)return
+      if(ticket!==version||props.actorScope!==actorScope||!viewReader.isCurrent(value)||actions.value?.fileMedia!==media)return
       if(!inspected){message.value=`已从后台读取 ${value.records.length} 条记录；${media.message()||'本地附件队列尚未核实，不能新建或保存。'}`;return}
     }
     if(editor && pendingEditor === editor){
@@ -155,7 +179,7 @@ async function load() {
     draftSession=session; draftRead.value=null; draftMessage.value=''; confirmDraftDiscard.value=false
     if(session){
       const read=await session.read()
-      if(ticket!==version||props.actorScope!==actorScope||!props.reader.isCurrent(value)||draftSession!==session)return
+      if(ticket!==version||props.actorScope!==actorScope||!viewReader.isCurrent(value)||draftSession!==session)return
       if(read.state==='recoverable' && Object.keys(values.value).length){
         try{r1NormalDraftValues(value,fresh!,values.value);draftRead.value={state:'empty'};draftMessage.value='草稿已保存在本机，尚未提交。'}
         catch{draftRead.value={state:'blocked',message:'字段配置或权限已变化，当前内容已保留，不能继续提交。'};draftMessage.value=draftRead.value.message}
@@ -183,12 +207,28 @@ function setValue(key: string,value: R1LocalFieldValue) {
 function persistDraft() {
   const session=draftSession, ticket=version
   if(!session||editingId.value)return
-  void session.save(values.value).then(()=>{
+  lastLocalWrite = session.save(values.value).then(()=>{
     if(ticket===version&&draftSession===session)draftMessage.value='草稿已保存在本机，尚未提交。'
+    return true
   }).catch(()=>{
     if(ticket===version&&draftSession===session){draftMessage.value='本地草稿尚未保存，请保留页面并重新读取后重试。';draftRead.value={state:'failed',message:draftMessage.value}}
+    return false
   })
 }
+async function flushLocalDraft(): Promise<boolean> {
+  const ticket=version, session=draftSession
+  if (busy.value||loading.value||fileBusy.value||fileCancelling.value||draftWorking.value) return false
+  // An edit can enqueue another write while Back is waiting for the first.
+  // Drain this view's latest queue ticket, then recheck its exact ownership.
+  while (lastLocalWrite) {
+    const pending=lastLocalWrite
+    if (!await pending || ticket!==version || session!==draftSession) return false
+    if (pending===lastLocalWrite) break
+  }
+  return ticket===version && session===draftSession && draftRead.value?.state !== 'failed'
+    && !busy.value && !loading.value && !fileBusy.value && !fileCancelling.value && !draftWorking.value
+}
+defineExpose({ flushLocalDraft })
 function restoreDraft(){
   const source=visibleSnapshot.value, action=actions.value, read=draftRead.value
   if(!source||!action||action.locked()||read?.state!=='recoverable'||draftWorking.value)return
@@ -240,7 +280,7 @@ async function cancelEdit() {
   fileCancelling.value=true
   try{
     const cancelled=await media.cancel()
-    if(ticket!==version||props.actorScope!==actorScope||actions.value?.fileMedia!==media||!source||!props.reader.isCurrent(source))return
+    if(ticket!==version||props.actorScope!==actorScope||actions.value?.fileMedia!==media||!source||!viewReader.isCurrent(source))return
     if(!cancelled){message.value=media.message()||'取消结果尚未核实，请保留当前草稿并核对附件状态。';return}
     if(draftSession){try{await draftSession.discard()}catch{message.value='附件已取消，本地草稿尚未清理，请保留页面后重试。';return};if(ticket!==version||props.actorScope!==actorScope)return;draftSession=null;draftRead.value=null;draftMessage.value=''}
     pendingEditor=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;fileEditorClosed.value=true
@@ -293,7 +333,7 @@ async function save(finish=false) {
       snapshot.value=null;values.value={};editing.value=false;editingId.value=undefined;message.value='记录已保存，已重新读取并确认当前节点完成。';emit('changed');return
     }
     const saved = await action.saveOnly(values.value,editingId.value)
-    if (ticket !== version || props.actorScope !== actorScope || !props.reader.isCurrent(saved)) return
+    if (ticket !== version || props.actorScope !== actorScope || !viewReader.isCurrent(saved)) return
     await finalizeLocalDraft(session)
     if(ticket!==version||props.actorScope!==actorScope)return
     draftSession=null;draftRead.value=null;

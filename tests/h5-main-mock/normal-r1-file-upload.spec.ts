@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { test, expect } from '@playwright/test'
 import { createHash } from 'node:crypto'
 
@@ -86,8 +87,9 @@ test('normal R1 forms picker sends actual multipart then saves and exactly rerea
     await page.locator('.launch-cta').click()
     await page.locator('.method-card').filter({ hasText: '快捷登录' }).click()
     await expect(page.locator('.home-page')).toBeVisible()
-    await page.locator('.work-orders-entry').click(); await page.locator('.work-order-card').click()
+    await page.locator('.work-orders-entry').click(); await page.locator('.work-order-card').click();
     await expect(page.getByTestId('task-focus-title')).toHaveText('合成图片表单')
+    await enterNormalFormWorkspace(page)
     await read().click()
     await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('已从后台读取 0 条')
     await expect(page.getByTestId('r1-normal-file-add-photo')).toBeVisible({ timeout: 6000 })
@@ -133,7 +135,7 @@ test('normal R1 forms picker sends actual multipart then saves and exactly rerea
     expect(file).toMatchObject({ url: thumbnailOrigin + '/objects/' + objectKey, name: objectKey, extname: 'png' })
     expect(writes.map(w => w.path)).toEqual(['biz/extForm/upsert/' + node.nodeDef.formDefId, 'workflowNode/updateExts/' + node._id])
     const readsBeforeReentry = recordReads.length
-    await page.goto('/#/pages/work-orders/work-orders'); await page.locator('.work-order-card').click()
+    await page.goto('/#/pages/work-orders/work-orders'); await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page)
     await read().click()
     await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(1)
     await expect(page.getByTestId('r1-normal-file-preview-photo')).toBeVisible()

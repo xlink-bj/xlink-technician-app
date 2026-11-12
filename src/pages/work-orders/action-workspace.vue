@@ -13,6 +13,11 @@
     <AppButton class="workspace-state-action" @tap="exit">返回工单详情</AppButton>
   </view>
 
+  <R1NodeFormsActionContent v-else-if="normalContentForPage && workspace.normalFormNode" ref="normalContent"
+    :visible="normalPageVisible" :customer-name="workspace.detail?.customerName" :display-number="workspace.detail?.displayNumber"
+    :exit-message="normalExitMessage" :work-order-id="String(workspace.descriptor!.workOrderId)" :node="workspace.normalFormNode"
+    :actor-scope="workOrderReadScopeKey(session.session)" @changed="refreshNormalContext" @back="exit" />
+
   <QuotationOrderHub
     v-else-if="quotationHubVisible"
     ref="quotationHubRef"
@@ -275,7 +280,8 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import type { AppActionDraftStatus } from '@shared/ui/types'
-import { onLoad, onShow, onUnload } from '@dcloudio/uni-app'
+import { useNormalFormActionPage } from '@features/work-orders/normal-form-action-page'
+import { onLoad, onShow, onHide, onUnload, onBackPress } from '@dcloudio/uni-app'
 
 import { isBusinessMockQuotationPreview, isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
 import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSyntheticSku } from '@app/quotation-sku-identity-evidence'
@@ -307,6 +313,8 @@ import { isMultilineField } from '@features/work-orders/form-presentation'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
+import R1NodeFormsActionContent from '@features/work-orders/R1NodeFormsActionContent.vue'
+import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyLeakageCauseExperience from '@features/work-orders/components/SurveyLeakageCauseExperience.vue'
 import SurveyCompleteConfirmation from '@features/work-orders/components/SurveyCompleteConfirmation.vue'
@@ -334,6 +342,7 @@ const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
 let mountedWorkspaceAction: typeof workspace.descriptor = null
 const workspacePageLease = {}
+const isNavigating = ref(false)
 const quotationComposition = useQuotationCompositionStore()
 const sameCatalogLineagePreview = computed(() => import.meta.env.DEV && isMockQuotationPreview.value && quotationComposition.draft
   ? compareQuoteWithSameCatalogSyntheticSku(quotationComposition.draft) : null)
@@ -345,6 +354,12 @@ const routeReady = ref(false)
 const routeId = ref<ReturnType<typeof parseActionWorkspaceId>>(null)
 const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
+const normalPage=useNormalFormActionPage({workspace,pageLease:workspacePageLease,isNavigating,
+  getAction:()=>mountedWorkspaceAction,
+  matchesRoute:()=>routeReady.value && String(workspace.descriptor?.workOrderId)===String(routeId.value)
+    && String(workspace.descriptor?.workflowNodeId)===String(routeNodeId.value)})
+const {content:normalContent,visible:normalPageVisible,message:normalExitMessage,
+  isContent:normalContentForPage,changed:refreshNormalContext}=normalPage
 const routeQuotationOrderId = ref<string | undefined>(undefined)
 const routeQuotationEntry = ref<string | undefined>(undefined)
 const routeQuotationVisualSample = ref<'orders' | 'empty' | undefined>()
@@ -419,7 +434,6 @@ async function openExistingQuotationEditor(orderId: string): Promise<void> {
   }
 }
 const routeError = ref('')
-const isNavigating = ref(false)
 const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
 const suggestionFeedback = ref('')
 const journeyFeedback = ref('')
@@ -571,6 +585,7 @@ watch(() => workspace.descriptor, (action) => {
 }, { flush: 'sync' })
 
 onLoad((options) => {
+  normalPage.begin(options?.from==='detail')
   routeId.value = parseActionWorkspaceId(options?.id)
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
   routeAction.value = typeof options?.action === 'string' ? options.action : undefined
@@ -589,7 +604,10 @@ onLoad((options) => {
 // Releasing the navigation lock here preserves the draft without stranding its controls.
 onShow(() => {
   isNavigating.value = false
+  if(normalPage.show()&&routeReady.value&&session.status==='authenticated')void loadWorkspace()
 })
+onHide(normalPage.hide)
+onBackPress(normalPage.backPress)
 
 onUnload(() => {
   workspace.leavePage(mountedWorkspaceAction, workspacePageLease)
@@ -610,6 +628,7 @@ watch(
 )
 
 async function exit(): Promise<void> {
+  if(await normalPage.exit())return
   const result = await workspace.exit()
   if (result.state !== 'succeeded') routeError.value = 'draft-save-failed'
 }

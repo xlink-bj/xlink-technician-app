@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_SWITCH_RATE_CREATE!=='true','Opt-in synthetic ordinary Switch/Rate create; synthetic only')
 async function fixture(page:Page,baseURL:string,mode:string){
@@ -30,7 +31,7 @@ async function fixture(page:Page,baseURL:string,mode:string){
  })
  return{state,fields}
 }
-async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
+async function open(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page);await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click();await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
 
 
 for(const mode of ['save-reopen','renamed','required-score','wrong-ack','permission-drift'])test(`normal configured Switch/Rate ${mode}`,async({page,baseURL},info)=>{
@@ -42,10 +43,10 @@ for(const mode of ['save-reopen','renamed','required-score','wrong-ack','permiss
   if(mode==='save-reopen'){
    await field('arbitraryToggle').locator('.app-choice').filter({hasText:'是'}).click()
    await field('arbitraryScore').locator('[aria-label="2 星"]').click()
-   await page.locator('.uni-page-head-btn').first().click()
-   await expect(page.locator('.work-order-card')).toBeVisible();await page.locator('.work-order-card').click()
+   await leaveNormalFormForList(page)
+   await expect(page.locator('.work-order-card')).toBeVisible();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page)
    await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click()
-   // Reentry retains local work; explicitly discard for this reset-path scenario.
+   // Reentry now preserves a local draft; explicitly discard for this reset-path test.
    await expect(page.getByTestId('r1-normal-draft-restore')).toBeVisible()
    expect(state.writes).toEqual([])
    await page.getByTestId('r1-normal-draft-discard').click();await page.getByTestId('r1-normal-draft-discard-confirm').click()

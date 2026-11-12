@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_GENERIC_MAP_EDIT!=='true','Dedicated fully intercepted generic Map edit only')
 async function fixture(page:Page,baseURL:string){
@@ -27,7 +28,7 @@ async function fixture(page:Page,baseURL:string){
 }
 const read=(p:Page)=>p.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'})
 const input=(p:Page)=>p.getByTestId('r1-normal-input-memo').getByRole('textbox')
-async function open(p:Page){await p.goto('/#/pages/index/index');await p.locator('.launch-cta').click();await p.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(p.locator('.home-page')).toBeVisible();await p.locator('.work-orders-entry').click();await p.locator('.work-order-card').click();await read(p).click();await expect(p.getByTestId('r1-normal-form-record')).toHaveCount(1)}
+async function open(p:Page){await p.goto('/#/pages/index/index');await p.locator('.launch-cta').click();await p.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(p.locator('.home-page')).toBeVisible();await p.locator('.work-orders-entry').click();await p.locator('.work-order-card').click();await enterNormalFormWorkspace(p);await read(p).click();await expect(p.getByTestId('r1-normal-form-record')).toHaveCount(1)}
 const safe=(s:Awaited<ReturnType<typeof fixture>>)=>{expect(s.unexpected).toEqual([]);expect(s.errors).toEqual([]);expect(s.writes.some(p=>/process|upload/.test(p))).toBe(false)}
 test('normal App generic edit preserves the exact JSON original and both independent titles',async({page,baseURL},info)=>{
  const s=await fixture(page,baseURL!);await open(page);const before=structuredClone(s.record)

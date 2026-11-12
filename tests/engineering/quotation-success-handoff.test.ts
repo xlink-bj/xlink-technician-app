@@ -1,3 +1,4 @@
+import { useNormalFormActionPage } from '@features/work-orders/normal-form-action-page'
 import fs from 'node:fs'
 import path from 'node:path'
 import ts from 'typescript'
@@ -218,7 +219,8 @@ async function mountedParent(realStore = false) {
   const Hub = Vue.defineComponent({ props: ['workOrderId'], setup(props) { hubRead(props.workOrderId); return () => Vue.h('view', { 'data-testid': 'real-page-order-hub' }) } })
   const modules: Record<string, unknown> = {
     vue: Vue,
-    '@dcloudio/uni-app': { onLoad: (fn: typeof load) => { load = fn }, onShow: () => {}, onUnload: () => {} },
+    '@dcloudio/uni-app': { onLoad: (fn: typeof load) => { load = fn }, onShow: () => {}, onHide: () => {}, onBackPress: () => {}, onUnload: () => {} },
+    '@features/work-orders/normal-form-action-page': { useNormalFormActionPage },
     '@shared/state': { useSessionStore: () => actor },
     '@shared/config': { isProductionReadOnlyRuntime: () => false },
     '@features/home/access': { hasAuthenticatedSession: (status: string) => status === 'authenticated' },

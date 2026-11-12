@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { test, expect } from '@playwright/test'
 test.skip(process.env.XLINK_H5_REPEAT_APPOINTMENT_EDIT !== 'true', 'Explicit fully intercepted normal repeat appointment edit only')
 const def = '2522989775781119510'
@@ -49,7 +50,7 @@ test(`normal repeat appointment ${mode} edits a by real UI and preserves b after
   const read = () => page.getByTestId('r1-normal-form-read').locator('.app-button').filter({ hasText: '读取已保存表单' })
   try {
     await page.goto('/#/pages/index/index'); await page.locator('.launch-cta').click(); await page.locator('.method-card').filter({ hasText: '快捷登录' }).click()
-    await expect(page.locator('.home-page')).toBeVisible(); await page.locator('.work-orders-entry').click(); await page.locator('.work-order-card').click()
+    await expect(page.locator('.home-page')).toBeVisible(); await page.locator('.work-orders-entry').click(); await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page)
     await read().click(); await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(2)
     await expect(page.getByTestId('r1-normal-edit-b')).toHaveCount(0); await page.getByTestId('r1-normal-edit-a').click()
     if (mode === 'conditions') {
@@ -74,7 +75,7 @@ test(`normal repeat appointment ${mode} edits a by real UI and preserves b after
       await read().click()
       await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(2)
       await expect(page.getByTestId('r1-normal-edit-a')).toHaveCount(0)
-      await page.reload(); await page.goto('/#/pages/index/index'); await page.locator('.launch-cta').click(); await page.locator('.method-card').filter({ hasText: '快捷登录' }).click(); await expect(page.locator('.home-page')).toBeVisible(); await page.locator('.work-orders-entry').click(); await page.locator('.work-order-card').click(); await read().click()
+      await page.reload(); await page.goto('/#/pages/index/index'); await page.locator('.launch-cta').click(); await page.locator('.method-card').filter({ hasText: '快捷登录' }).click(); await expect(page.locator('.home-page')).toBeVisible(); await page.locator('.work-orders-entry').click(); await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page); await read().click()
       await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(2)
       await expect(page.getByTestId('r1-normal-edit-a')).toHaveCount(0)
       expect(writes).toHaveLength(1); expect(b).toEqual(initialB)
@@ -86,7 +87,7 @@ test(`normal repeat appointment ${mode} edits a by real UI and preserves b after
     await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('记录已保存并从后台重新读取')
     expect(a).toMatchObject({ note: 'normal UI changed note', modifyReason: 'synthetic change reason', datetime: '2026-11-12 10:30', orgId: 'o', exts: {} }); expect(b).toEqual(initialB)
     if (mode === 'conditions') expect(a).toMatchObject({ need: '2', reasons1: 'normal', datetime: '2026-11-12 10:30' })
-    const before = reads.length; await page.goto('/#/pages/work-orders/work-orders'); await page.locator('.work-order-card').click(); await read().click()
+    const before = reads.length; await page.goto('/#/pages/work-orders/work-orders'); await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page); await read().click()
     await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(2); expect(reads.length).toBeGreaterThan(before)
     await expect(page.getByTestId('r1-normal-value-note').filter({ hasText: 'normal UI changed note' })).toBeVisible()
     expect(writes).toHaveLength(1); expect(calls.filter(c => /updateExts|process|upToken|upload/.test(c.path))).toEqual([]); expect(errors).toEqual([]); expect(unexpected).toEqual([])

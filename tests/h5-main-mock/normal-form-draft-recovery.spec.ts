@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 // Dedicated synthetic grants/server only; never run under the ordinary broad Mock config.
 test.beforeEach(({},info)=>{test.skip(info.config.metadata.normalFormDraftRecovery!==true,'Use the dedicated normal-form-draft-recovery config')})
@@ -43,8 +44,8 @@ async function fixture(page:Page,baseURL:string,mode:string){
  return{state,fields,node}
 }
 async function read(page:Page){await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click()}
-async function returnToForm(page:Page){await page.goBack();await expect(page).toHaveURL(/pages\/work-orders\/work-orders/);await expect(page.getByTestId('r1-normal-form-read')).toHaveCount(0);await page.locator('.work-order-card').first().click();await read(page)}
-async function enter(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').first().click()}
+async function returnToForm(page:Page){await leaveNormalFormForList(page);await expect(page).toHaveURL(/pages\/work-orders\/work-orders/);await expect(page.getByTestId('r1-normal-form-read')).toHaveCount(0);await page.locator('.work-order-card').first().click();await enterNormalFormWorkspace(page);await read(page)}
+async function enter(page:Page){await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').first().click();await enterNormalFormWorkspace(page)}
 async function open(page:Page){await enter(page);await read(page);await expect(page.getByTestId('r1-normal-create')).toBeVisible()}
 
 test('normal App route restores unsaved ordinary values after back and reopen',async({page,baseURL},info)=>{
@@ -54,10 +55,10 @@ test('normal App route restores unsaved ordinary values after back and reopen',a
  await memo().fill('现场草稿，离开后继续')
  await page.getByTestId('r1-normal-input-renamedChecks').locator('.app-choice--multi').filter({hasText:'合成乙'}).click()
  await page.screenshot({path:info.outputPath('before-leave.png'),fullPage:true})
- await page.goBack()
+ await leaveNormalFormForList(page)
  await expect(page).toHaveURL(/pages\/work-orders\/work-orders/)
  await expect(page.getByTestId('r1-normal-form-read')).toHaveCount(0)
- await page.locator('.work-order-card').first().click()
+ await page.locator('.work-order-card').first().click();await enterNormalFormWorkspace(page)
  await page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click()
  await expect(page.getByTestId('r1-normal-create')).toBeVisible()
  await page.screenshot({path:info.outputPath('after-return.png'),fullPage:true})
@@ -130,7 +131,7 @@ test('same-scope failed reread preserves local values and recovers only after a 
 test('switching actual work orders does not expose or overwrite the first order draft',async({page,baseURL},info)=>{
  const {state}=await fixture(page,baseURL!,'switch-order');await open(page)
  await page.getByTestId('r1-normal-input-memo').getByRole('textbox').fill('只属于第一工单')
- await page.goBack();await expect(page.locator('.work-order-card')).toHaveCount(2);await page.locator('.work-order-card').last().click();await read(page)
+ await leaveNormalFormForList(page);await expect(page.locator('.work-order-card')).toHaveCount(2);await page.locator('.work-order-card').last().click();await enterNormalFormWorkspace(page);await read(page)
  await expect(page.getByTestId('r1-normal-draft-restore')).toHaveCount(0);await expect(page.getByTestId('r1-normal-input-memo')).toHaveCount(0)
  await returnToForm(page);await page.getByTestId('r1-normal-draft-restore').click();await expect(page.getByTestId('r1-normal-input-memo').getByRole('textbox')).toHaveValue('只属于第一工单');expect(state.writes).toEqual([]);expect(state.unexpected).toEqual([])
  await page.screenshot({path:info.outputPath('order-isolation.png'),fullPage:true})

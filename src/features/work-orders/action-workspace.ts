@@ -80,6 +80,7 @@ import type {
   TechnicianApiReadPort,
   UploadPort,
   WorkOrderDetail,
+  WorkflowNodeRead,
 } from '@shared/ports'
 import {
   createOperationError,
@@ -173,6 +174,7 @@ function lifecycleForFailure(state: OperationState): Extract<ActionLifecycle, 'f
 // sole owner of side effects, workflow transitions and persistence.
 export interface ActionWorkspaceDependencies {
   readonly apiRead: TechnicianApiReadPort
+  readonly normalFormContentEnabled?: () => boolean
   readonly commandApi: TechnicianApiCommandPort
   readonly quotationOrderCommand?: QuotationOrderCommandPort
   readonly quotationOrderRead?: QuotationOrderReadPort
@@ -231,6 +233,9 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   const descriptor = ref<ActionDescriptor | null>(null)
   const appointmentForm = ref<AppointmentFormRead | null>(null)
   const dynamicForm = ref<DynamicFormRead | null>(null)
+  const normalFormNode = ref<WorkflowNodeRead | null>(null)
+  let normalHostPageLease: object | undefined
+  let normalRefreshVersion=0
   const quotationContentState = ref<'idle' | 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'>('idle')
   const dynamicFormSaveState = ref<'not_saved' | 'saving' | 'saved' | 'failed'>('not_saved')
   const surveyLeakageCauseRows = ref<readonly SurveyLeakageCauseRow[]>([])
@@ -310,6 +315,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   /** Page lifecycle signal only; never creates replacement provenance from an ACK. */
   function leavePage(expectedAction: ActionDescriptor | null, pageLease?: object): void {
     if (appointmentPageLease && pageLease !== appointmentPageLease) return
+    if (normalHostPageLease === pageLease && pageLease
+      && ((normalFormNode.value && descriptor.value === expectedAction) || loadState.value === 'loading')) {
+      clear();return
+    }
     if (appointmentReentryTransfer) {
       appointmentReentryTransfer.cancelled = true
       if (appointmentReentryTransfer.loading) clear()
@@ -438,6 +447,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     loadVersion += 1
     appointmentPageLeft = false
     appointmentPageLease = undefined
+    normalHostPageLease = undefined
     pendingAppointmentReentry = null
     automaticAppointmentReentry = null
     appointmentReentryTransfer = null
@@ -457,6 +467,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     dynamicForm.value = null
+    normalFormNode.value = null
     quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
@@ -639,6 +650,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     readonly actionIntent?: string
     /** Exact synthetic H5 E2E-only read/edit preview; never grants command permission. */
     readonly localPreviewOnly?: boolean
+    /** Mounted view identity only; never a wire permission. */
+    readonly pageLease?: object
   }, ownedStillCurrent: () => boolean = () => true): Promise<OperationSnapshot<ActionDescriptor>> {
     if (!ownedStillCurrent()) return failure('cancelled', 'Owned appointment load was superseded')
     const configured = dependencies
@@ -692,6 +705,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     descriptor.value = null
     appointmentForm.value = null
     dynamicForm.value = null
+    normalFormNode.value = null
     quotationContentState.value = 'idle'
     dynamicFormSaveState.value = 'not_saved'
     surveyLeakageCauseRows.value = []
@@ -720,6 +734,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       session,
       currentTask: projection.currentTask,
       request: input,
+      normalFormContentEnabled: !isProductionReadOnlyRuntime() && configured.normalFormContentEnabled?.() === true,
       devMockE2EBuildEnabled: import.meta.env.DEV === true
         && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true',
     })
@@ -730,7 +745,21 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       error.value = createOperationError(target.category, target.message)
       return failure(target.category, error.value.message)
     }
-    const { currentTask, node, contentKind, isAppointmentAction, isDynamicAction, isQuotationAction } = target
+    const { currentTask, node, contentKind, isAppointmentAction, isDynamicAction, isQuotationAction, isNormalFormAction } = target
+    if (isNormalFormAction) {
+      // Read-side host only. The original normal provider owns every write,
+      // private source proof, draft fence and command/storage protocol.
+      normalHostPageLease = input.pageLease
+      detail.value = read.data
+      normalFormNode.value = node
+      descriptor.value = { userId: session.user.id, workOrderId: read.data.id,
+        workflowNodeId: currentTask.nodeId, actionIntent: currentTask.actionIntent,
+        contentKind, title: currentTask.title, execution: 'disabled' }
+      loadedSessionScope.value = requestedSessionScope
+      loadState.value = 'succeeded';lifecycle.value = 'available';error.value = null
+      return { state: 'succeeded', data: descriptor.value }
+    }
+    normalHostPageLease = undefined
     if (isQuotationAction) {
       // A quotation draft must have an authenticated role provenance. Without
       // one, do not fall back to the unscoped pre-v3 storage key.
@@ -1183,6 +1212,11 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     /** Unique mounted page instance; never part of API/draft identity. */
     readonly pageLease?: object
   }): Promise<OperationSnapshot<ActionDescriptor>> {
+    const normalReadRequest = !isProductionReadOnlyRuntime()
+      && dependencies?.normalFormContentEnabled?.() === true && (!input.actionIntent || input.actionIntent === 'interact_with_form' || input.actionIntent === 'set_appointment')
+    if (normalHostPageLease && normalHostPageLease !== input.pageLease && loadState.value === 'loading') clear()
+    if (normalReadRequest) normalHostPageLease = input.pageLease
+    else normalHostPageLease = undefined
     const reentryKey = JSON.stringify([input.workOrderId, input.workflowNodeId, input.actionIntent ?? ''])
     const automaticOwner = automaticAppointmentReentry
     const previousTransfer = appointmentReentryTransfer
@@ -1275,6 +1309,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       && String(current.workflowNodeId) === String(input.workflowNodeId)
       && (!input.actionIntent || current.actionIntent === input.actionIntent),
     )
+    if (sameAction && loadState.value === 'succeeded' && normalFormNode.value) return load(input)
     if (sameAction && loadState.value === 'succeeded') {
       const form = dynamicForm.value
       if (appointmentPageLeft && form?.purpose === 'appointment' && !form.dataId
@@ -2396,7 +2431,35 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return finalizeBusinessSuccess(currentDescriptor, commandVersion)
   }
 
+  function ownsPage(expected: ActionDescriptor | null, pageLease: object | undefined): boolean {
+    return Boolean(expected && descriptor.value === expected && appointmentPageLease === pageLease && commandSessionScopeCurrent())
+  }
+  async function refreshNormalContext(expected: ActionDescriptor | null, pageLease: object): Promise<void> {
+    if (!normalFormNode.value || !ownsPage(expected,pageLease) || !dependencies) return
+    const version=loadVersion, refresh=++normalRefreshVersion
+    const result=await dependencies.apiRead.getWorkOrderDetail(expected!.workOrderId)
+    if (version!==loadVersion || refresh!==normalRefreshVersion || !ownsPage(expected,pageLease)) return
+    if (result.state!=='succeeded' || !result.data) { normalFormNode.value=null;loadState.value=result.state;error.value=result.error??null;return }
+    const actor=dependencies.getSession()
+    const target=actor ? selectActionWorkspaceLoadTarget({detail:result.data,session:actor,
+      currentTask:detailWorkflowProjectionFor(result.data,actor).currentTask,
+      request:{workOrderId:expected!.workOrderId,workflowNodeId:expected!.workflowNodeId,actionIntent:expected!.actionIntent},
+      normalFormContentEnabled:!isProductionReadOnlyRuntime() && dependencies.normalFormContentEnabled?.()===true,
+      devMockE2EBuildEnabled:false}) : null
+    if (!target || target.kind!=='ready' || !target.isNormalFormAction) {
+      normalFormNode.value=null;loadState.value='blocked';return
+    }
+    detail.value=result.data
+    normalFormNode.value=target.node
+  }
+  async function leaveNormalContent(expected: ActionDescriptor | null, pageLease: object, fromDetail = false): Promise<OperationSnapshot<void>> {
+    if (!normalFormNode.value || !ownsPage(expected,pageLease) || !dependencies) return failure('session_invalid','当前操作空间已变化。')
+    if (fromDetail && dependencies.navigation.back) await dependencies.navigation.back()
+    else await resetTo(`/pages/work-orders/detail?id=${encodeURIComponent(String(expected!.workOrderId))}`)
+    return {state:'succeeded',data:undefined}
+  }
   async function exit(): Promise<OperationSnapshot<void>> {
+    if (normalFormNode.value) return failure('validation','请先由当前表单确认本地草稿状态再离开。')
     const exitingAction = descriptor.value
     const exitingPageLease = appointmentPageLease
     const exitingVersion = loadVersion
@@ -2429,6 +2492,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
   }
 
   return {
+    normalFormNode, ownsPage, refreshNormalContext, leaveNormalContent,
     leavePage,
     loadState,
     lifecycle,

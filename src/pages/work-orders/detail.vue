@@ -96,9 +96,9 @@
         :title="workflowProjection.currentTask.title"
         :action-label="productionReadOnly
           ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作')
-          : workflowProjection.currentTask.actionLabel"
+          : normalWorkspaceEntry ? '打开表单' : workflowProjection.currentTask.actionLabel"
         :tone="workflowProjection.currentTask.tone"
-        :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview)
+        :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview && !normalWorkspaceEntry)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
         :note="aStageSpecialKind ? '请在下方填写并保存现场情况。' : productionReadOnly ? '当前仅可查看，业务操作暂未开放。' : undefined"
         @action="handleCurrentTaskAction"
@@ -121,6 +121,9 @@
         :kind="completedSpecialReceiptGate.kind" :node="aStageCompletedSpecialNode"
         :work-order-id="String(detail.id)"
         :create-controller="createAStageSpecialControllerForUi" @changed="retry" />
+      <view v-else-if="normalWorkspaceEntry" class="app-surface" data-testid="normal-form-workspace-entry">
+        <AppButton @tap="handleCurrentTaskAction">打开表单工作台</AppButton>
+      </view>
       <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
         :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" @changed="retry" />
       <AppStatus v-if="aStageCompletedSpecialNode && completedSpecialReceiptGate?.status === 'clear'" tone="success" quiet
@@ -339,6 +342,7 @@ import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
+import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
 import HistoricalFormsTimeline from '@features/work-orders/HistoricalFormsTimeline.vue'
 import { historicalFormsReaderKey } from '@features/work-orders/r1-historical-forms-read'
 import R1SpecialMockTransactionPanel from '@features/work-orders/R1SpecialMockTransactionPanel.vue'
@@ -375,6 +379,10 @@ const currentR1FormNode = computed(() => {
   if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined
   return detail.value?.workflowNodes?.find(node => node.id === task.nodeId)
 })
+const normalReader = injectHistoryReader(r1NodeFormsReaderKey,null)
+const normalWorkspaceEntry = computed(() => !productionReadOnly && normalReader?.enabled() === true
+  && Boolean(currentR1FormNode.value?.formDefinitionId) && ['interact_with_form','set_appointment'].includes(workflowProjection.value.currentTask?.actionIntent??'')
+  && workflowProjection.value.currentTask?.execution === 'disabled_read_only' && !aStageSpecialKind.value)
 const aStageSpecialKind = computed<AStageSpecialKind | null>(() => {
   const source = currentR1FormNode.value?.sourceNodeType
   if (source !== 'forms' && source !== 'repeat' || productionReadOnly) return null
@@ -616,7 +624,7 @@ async function dialContact(): Promise<void> {
 
 async function handleCurrentTaskAction(): Promise<void> {
   const currentTask = workflowProjection.value.currentTask
-  if (!currentTask || (currentTask.execution !== 'enabled' && !allowLocalMockPreview.value)) return
+  if (!currentTask || (currentTask.execution !== 'enabled' && !allowLocalMockPreview.value && !normalWorkspaceEntry.value)) return
   if (productionReadOnly && currentTask.actionIntent !== 'place_order') return
   const id = detail.value?.id
   if (!id) return
@@ -624,7 +632,7 @@ async function handleCurrentTaskAction(): Promise<void> {
   // Quotation entry is an Action task, while the archived Order tab remains
   // independent. Production keeps its established read-only entry.
   await workOrder.navigateTo(currentTask.actionIntent === 'place_order' && !productionReadOnly
-    ? `${target}&entry=orders` : target)
+    ? `${target}&entry=orders` : normalWorkspaceEntry.value ? `${target}&from=detail` : target)
 }
 
 async function handleQuickAction(action: QuickActionKey): Promise<void> {

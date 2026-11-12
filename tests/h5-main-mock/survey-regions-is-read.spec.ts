@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { expect,test } from '@playwright/test'
 test.skip(process.env.XLINK_H5_SURVEY_REGIONS_IS_READ!=='true','Opt-in synthetic regions/IS normal-App read contract')
 const def='synthetic-regions-is-survey'
@@ -52,7 +53,7 @@ for(const mode of ['labels','excluded','wrong-provider','foreign-tenant','unknow
   })
   page.on('pageerror',()=>errors.push('pageerror'))
   try{
-   await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click()
+   await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page)
    const read=()=>page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'}).click()
    await read()
    if(fault){await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('暂时无法完整核实');await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(0);fault=false;await read()}

@@ -1,3 +1,4 @@
+import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { test, expect } from '@playwright/test'
 
 test.skip(process.env.XLINK_H5_SURVEY_PART_CREATE !== 'true', 'Opt-in intercepted synthetic canonical Survey')
@@ -77,7 +78,7 @@ for (const mode of ['save', 'provider-drift', 'wrong-readback'] as const) {
       await page.locator('.method-card').filter({ hasText: '快捷登录' }).click()
       await expect(page.locator('.home-page')).toBeVisible()
       await page.locator('.work-orders-entry').click()
-      await page.locator('.work-order-card').click()
+      await page.locator('.work-order-card').click();await enterNormalFormWorkspace(page)
       const read = () => page.getByTestId('r1-normal-form-read').locator('.app-button').filter({ hasText: '读取已保存表单' }).click()
       await read()
       const save = page.getByTestId('r1-normal-save')

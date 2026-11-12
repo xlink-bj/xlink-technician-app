@@ -238,3 +238,18 @@ describe('normal appointment repeat conditional page', () => {
     expect(() => repeatForm.normalizeR1RepeatValues({ ...s, node: { ...s.node, formFieldIdsReadOnly: ['datetime-field'] } }, draft)).toThrow()
   })
 })
+
+
+describe('normal read view ownership',()=>{
+ it('old view late unmount never clears the reader already claimed by a newer view',async()=>{
+  const Component=panel(),s=snapshot();let current=s
+  const reader={enabled:()=>true,load:vi.fn(async()=>current),clear:vi.fn(),isCurrent:(v:R1NodeFormsSnapshot)=>v===current}
+  const mount=()=>{const root=node('root');const app=renderer.createApp(Component,{reader,workOrderId:s.workOrderId,runtimeNodeId:String(s.node.id),actorScope:'actor'});app.provide(actionPort.r1RepeatActionsKey,{forSnapshot:()=>({locked:()=>false,saveOnly:vi.fn(),complete:vi.fn(async()=>({acknowledged:true,transitionVerified:false} as const))})});app.mount(root);return{root,app}}
+  const old=mount();find(old.root,n=>n.type==='button')!.props.onTap();await settle()
+  const fresh=mount();find(fresh.root,n=>n.type==='button')!.props.onTap();await settle()
+  const clears=reader.clear.mock.calls.length;old.app.unmount();await settle()
+  expect(reader.clear).toHaveBeenCalledTimes(clears)
+  expect(find(fresh.root,n=>n.props['data-key']==='need')).toBeDefined();expect(reader.isCurrent(s)).toBe(true)
+  fresh.app.unmount()
+ })
+})
