@@ -49,7 +49,7 @@ function all(root:Host,predicate:(n:Host)=>boolean):Host[]{return[...(predicate(
 function text(root:Host):string{return root.text+root.children.map(text).join('')}
 async function settle(){for(let i=0;i<6;i++){await Promise.resolve();await Vue.nextTick()}}
 function deferred<T>(){let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>resolve=r);return{promise,resolve}}
-async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider){
+async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider, readonly=false){
  let current:R1NodeFormsSnapshot|null=null,next=makeSnapshot('node-a',1)
  const props=Vue.reactive({workOrderId:'work-a',runtimeNodeId:'node-a',actorScope:'actor-a' as string|null})
  // The private complete original is a separate synthetic backend fixture,
@@ -61,14 +61,14 @@ async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider){
   load:vi.fn(async()=>{current=next;return next})}
  let permitEdit=true,permitCreate=true
  const saveOnly=vi.fn(async()=>{current=null;throw Error('pre-dispatch read failed')}),complete=vi.fn(async()=>({acknowledged:true,transitionVerified:true}as const)),saveAndComplete=vi.fn(async()=>({acknowledged:true,transitionVerified:true}as const)),changed=vi.fn()
- const provider={forSnapshot:(s:R1NodeFormsSnapshot)=>s===current?{locked:()=>s!==current,canCreate:()=>permitCreate,canEdit:(id:string)=>permitEdit&&id==='server-0',canComplete:()=>true,canSaveAndComplete:()=>true,
+ const provider={forSnapshot:(s:R1NodeFormsSnapshot)=>!readonly&&s===current?{locked:()=>s!==current,canCreate:()=>permitCreate,canEdit:(id:string)=>permitEdit&&id==='server-0',canComplete:()=>true,canSaveAndComplete:()=>true,
   initialValues:()=>({note:'已保存'}),validateDraft:(v:Record<string,unknown>)=>Boolean(v.note),saveOnly,complete,saveAndComplete}:null}
- const Panel=component('R1NodeFormsReadPanel'),root=node('root'),app=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Panel,{...props,reader,onChanged:changed})}))
+ const panel=Vue.ref<any>(),snapshotChanged=vi.fn(),Panel=component('R1NodeFormsReadPanel'),root=node('root'),app=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Panel,{...props,reader,onChanged:changed,onSnapshotChange:snapshotChanged,ref:panel})}))
  app.provide(actionPort.r1RepeatActionsKey,provider);if(draftProvider)app.provide(normalDraftPort.r1NormalFormDraftsKey,draftProvider);app.mount(root);await settle()
  const get=(id:string)=>find(root,n=>n.props['data-testid']===id),read=()=>find(root,n=>n.type==='button')!
  const tap=async(id:string)=>{get(id)!.props.onTap();await settle()},load=async()=>{read().props.onTap();await settle()},input=()=>find(root,n=>n.props['data-key']==='note')!
  const fill=async(value:string)=>{input().props.onInput(value);await settle()}
- return{app,root,props,reader,get,read,tap,load,input,fill,setOriginalRevision:(n:number)=>{originalRecord={...originalRecord,serverRevision:n}},saveOnly,complete,saveAndComplete,changed,setNext:(s:R1NodeFormsSnapshot)=>next=s,revoke:()=>{permitEdit=false;permitCreate=false},permit:()=>{permitEdit=true;permitCreate=true},setCurrent:(s:R1NodeFormsSnapshot)=>current=s}
+ return{app,panel,snapshotChanged,root,props,reader,get,read,tap,load,input,fill,setOriginalRevision:(n:number)=>{originalRecord={...originalRecord,serverRevision:n}},saveOnly,complete,saveAndComplete,changed,setNext:(s:R1NodeFormsSnapshot)=>next=s,revoke:()=>{permitEdit=false;permitCreate=false},permit:()=>{permitEdit=true;permitCreate=true},setCurrent:(s:R1NodeFormsSnapshot)=>current=s}
 }
 describe('normal forms existing-record panel capability and recovery',()=>{
  it('restores an append draft only after fresh authorized reread following pre-dispatch failure',async()=>{
@@ -239,4 +239,43 @@ it.each(['actor-change','unmount'] as const)('a delayed pre-dispatch local fence
   expect(h.saveOnly).not.toHaveBeenCalled();expect(session.complete).not.toHaveBeenCalled()
   if(!unmounted){expect(h.get('r1-normal-save')).toBeUndefined();expect(h.get('r1-normal-draft-restore')).toBeUndefined()}
  }finally{if(!unmounted)h.app.unmount()}
+})
+
+it('allows Back to cancel a pending readonly reread without publishing its late snapshot',async()=>{
+ const h=await mounted(undefined,true),gate=deferred<R1NodeFormsSnapshot>();let unmounted=false
+ try{
+  await h.load();h.snapshotChanged.mockClear()
+  h.reader.load.mockImplementationOnce(async()=>{const s=await gate.promise;h.setCurrent(s);return s})
+  await h.load();expect(text(h.root)).toContain('正在读取')
+  expect(await h.panel.value.flushLocalDraft()).toBe(true)
+  h.app.unmount();unmounted=true;const late=makeSnapshot('node-a',1);gate.resolve(late);await settle()
+  expect(h.snapshotChanged.mock.calls.filter(([s])=>s!==null)).toEqual([])
+  expect(h.saveOnly).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled();expect(h.saveAndComplete).not.toHaveBeenCalled()
+ }finally{if(!unmounted)h.app.unmount();gate.resolve(makeSnapshot());await settle()}
+})
+
+it('still blocks a pending reread retaining an existing editor and its values',async()=>{
+ const h=await mounted(),gate=deferred<R1NodeFormsSnapshot>()
+ try{await h.load();await h.tap('r1-normal-edit-server-0');await h.fill('preserve my edit')
+  h.reader.load.mockImplementationOnce(async()=>{const s=await gate.promise;h.setCurrent(s);return s});await h.load()
+  expect(await h.panel.value.flushLocalDraft()).toBe(false)
+  gate.resolve(makeSnapshot('node-a',1));await settle();expect(h.input().props.value).toBe('preserve my edit');expect(h.saveOnly).not.toHaveBeenCalled()
+ }finally{h.app.unmount();gate.resolve(makeSnapshot());await settle()}
+})
+
+it('does not turn an uncertain local draft into a cancellable pure read',async()=>{
+ const session={read:vi.fn(async()=>({state:'uncertain',message:'Uncertain remains'}as const)),save:vi.fn(async()=>{}),discard:vi.fn(async()=>{}),markUncertain:vi.fn(async()=>{}),complete:vi.fn(async()=>{})}
+ const h=await mounted({open:()=>session},true),gate=deferred<R1NodeFormsSnapshot>()
+ try{await h.load();h.reader.load.mockImplementationOnce(async()=>{const s=await gate.promise;h.setCurrent(s);return s});await h.load()
+  expect(await h.panel.value.flushLocalDraft()).toBe(false);expect(session.discard).not.toHaveBeenCalled();expect(session.complete).not.toHaveBeenCalled();expect(h.saveOnly).not.toHaveBeenCalled()
+ }finally{h.app.unmount();gate.resolve(makeSnapshot());await settle()}
+})
+
+it('retains the Back fence while a local draft write is pending during reread',async()=>{
+ const write=deferred<void>(),read=deferred<R1NodeFormsSnapshot>(),session={read:vi.fn(async()=>({state:'empty'}as const)),save:vi.fn(()=>write.promise),discard:vi.fn(async()=>{}),markUncertain:vi.fn(async()=>{}),complete:vi.fn(async()=>{})}
+ const h=await mounted({open:()=>session})
+ try{h.setNext(makeSnapshot('node-a',0));await h.load();await h.fill('must reach disk first');expect(session.save).toHaveBeenCalled()
+  h.reader.load.mockImplementationOnce(async()=>{const s=await read.promise;h.setCurrent(s);return s});await h.load()
+  expect(await h.panel.value.flushLocalDraft()).toBe(false);expect(h.saveOnly).not.toHaveBeenCalled()
+ }finally{h.app.unmount();write.resolve();read.resolve(makeSnapshot());await settle()}
 })

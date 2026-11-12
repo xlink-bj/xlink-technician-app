@@ -278,6 +278,12 @@ function persistDraft() {
 }
 async function flushLocalDraft(): Promise<boolean> {
   const ticket=version, session=draftSession
+  // A pending pure read owns no mutable editor, draft or receipt. Back may
+  // cancel it; the existing view/version checks reject its late response.
+  if (loading.value && !busy.value && !fileBusy.value && !fileCancelling.value && !draftWorking.value
+    && !editing.value && !pendingEditor && !editorIdentity && !actions.value
+    && !draftSession && !lastLocalWrite && Object.keys(values.value).length===0
+    && (!draftRead.value || draftRead.value.state==='empty')) return true
   if (busy.value||loading.value||fileBusy.value||fileCancelling.value||draftWorking.value) return false
   // An edit can enqueue another write while Back is waiting for the first.
   // Drain this view's latest queue ticket, then recheck its exact ownership.
