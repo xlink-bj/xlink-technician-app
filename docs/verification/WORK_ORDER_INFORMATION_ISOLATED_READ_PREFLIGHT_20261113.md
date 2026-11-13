@@ -56,3 +56,21 @@
 执行时只允许固定登录/菜单、角色内工单列表/对应详情、`colName=serviceAppointment` 的有界配置及必要有界 Code 读取；具体 allowlist 必须按实际隔离 composition 核实。未知请求和所有业务保存、Workflow、上传、签署、通知、PDF 继续拒绝；不重放历史已消费对象。配置变化仅发生在全新隔离 seed，绝不写生产。
 
 Production/Beta 新资料读取仍关闭。当前用户生产有效配置、线上权限与独立 Contacts 读取均不由本文件证明。
+
+## 5. 后续 Mac 独立隔离验收回报（非本云亲读原件）
+
+本节是上文云端预检/复核之后的状态更新：Mac 线现已回报完成下述有限真实窗口，不能继续把该窗口写为“尚未执行”；上文 NOT_RUN、等待或尝试中的描述仅保留为当时检查点。本云没有这些本机原始文件，以下全部明确归属为 Mac 线经协调回报，未伪称亲读或独立复核原件。
+
+Mac 回报的精确 App 源码为 `2b0064a36ea4c33756fdf787c993811dac84a72f`，使用独立 Java/Mongo/Redis 与虚构身份、数据，执行正常登录后读取真实 ExtField API：返回 7 条配置，H5 资料展示 6 行。该窗口验证 root/EXTS 同 name、0/false 原值展示、当前单角色 showType 4 显示而 5 隐藏，以及电话只显示 `139****9901` 脱敏值；业务保存 0、外部请求 0。
+
+范围限制必须保留：不属本窗口范围的 biz/action 旁路请求被隔离代理拒绝，未到达 Java。故上述成功只归属于资料读取/展示窗口，不表示整张工单的全部请求成功，也不把被拒绝请求计作 Java API 通过。
+
+Mac 回报数据库前后审计计数 34→34，业务、metadata、node、workflow 无变化，仅虚构账号登录审计变化；旧数据 A/B/C 保全，独立服务已停止。这些都是 Mac 回报状态；本条不扩写为 Redis 或文件全部无变化的独立结论，本云未重放历史保存或重复启动后台。
+
+原始证据定位（Mac 本机，未复制或提交到本云仓库）：
+
+- `.review/work-order-information-real-20261113/REPORT.md`
+- `.review/work-order-information-real-20261113/h5-result.json`
+- `.review/bizselect-provider-real-20261113/information-read/FINAL_RESULT.json`
+
+当前生产用户有效 API、线上权限仍未验证，Production/Beta 新资料读取仍关闭。该 Mac 虚构数据窗口不替代生产验收，也不证明所有角色切换、配置失败或安全回退场景均已在真实后台执行。
