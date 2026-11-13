@@ -4,7 +4,7 @@
       <image v-if="safeImage(file)" :src="file.url" mode="aspectFill"
         :data-testid="`r1-normal-file-preview-${field.valueKey}`" class="r1-file-preview" />
       <text v-else class="r1-file-name">{{ file.name }}</text>
-      <AppButton v-if="media" variant="text" size="compact" :disabled="disabled || pending"
+      <AppButton v-if="media || allowRetainedRemoval" variant="text" size="compact" :disabled="disabled || pending"
         :data-testid="`r1-normal-file-remove-${field.valueKey}-${index}`" @tap="change('remove',index)">移除</AppButton>
     </view>
     <template v-if="media">
@@ -25,14 +25,19 @@
 import { computed, ref } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import type { R1FileWireValue } from '@shared/types'
+import { isR1RetainedFileArray } from '@shared/form/r1-retained-file-values'
 import { isR1NormalImageWireArray } from '@shared/form/r1-normal-image-contract'
 import type { R1LocalField } from './r1-local-form-fields'
 import type { R1NormalFormFileSessionView } from './r1-normal-form-media-port'
 const props=defineProps<{readonly field:Pick<R1LocalField,'fieldId'|'valueKey'>;readonly modelValue?:unknown;
-  readonly draft?:Readonly<Record<string,unknown>>;readonly media?:R1NormalFormFileSessionView;readonly disabled?:boolean}>()
+  readonly draft?:Readonly<Record<string,unknown>>;readonly media?:R1NormalFormFileSessionView;readonly disabled?:boolean;readonly retained?:boolean;readonly allowRetainedRemoval?:boolean}>()
 const emit=defineEmits<{(event:'update:modelValue',value:readonly R1FileWireValue[]):void}>()
 const localError=ref('')
-const files=computed(()=>isR1NormalImageWireArray(props.modelValue)?props.modelValue:[])
+const files=computed<readonly R1FileWireValue[]>(()=>{
+  const value=props.modelValue
+  if(props.retained)return isR1RetainedFileArray(value)?value:[]
+  return isR1NormalImageWireArray(value)?value:[]
+})
 const pending=computed(()=>{void props.media?.revision.value;return props.media?.busy()??false})
 const hint=computed(()=>{void props.media?.revision.value;return props.media?.message()??''})
 const canPick=computed(()=>{void props.media?.revision.value;return props.media?.canPick(props.field.fieldId,props.draft??{})??false})
@@ -44,7 +49,12 @@ function safeImage(file:R1FileWireValue):boolean{
   }catch{return false}
 }
 async function change(kind:'pick'|'retry'|'remove'|'discardFailed',index=0){
-  const media=props.media;if(!media||props.disabled||pending.value)return
+  if(props.disabled||pending.value)return
+  if(props.retained&&props.allowRetainedRemoval&&kind==='remove'){
+    if(!Number.isSafeInteger(index)||index<0||index>=files.value.length)return
+    emit('update:modelValue',files.value.filter((_file,i)=>i!==index));return
+  }
+  const media=props.media;if(!media)return
   localError.value=''
   try{const value=kind==='remove'?await media.remove(props.field.fieldId,index,props.draft??{})
     :await media[kind](props.field.fieldId,props.draft??{})

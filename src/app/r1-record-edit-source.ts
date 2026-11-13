@@ -3,6 +3,8 @@ import { decodeR1ScopedJson } from '@adapters/api/r1-scoped-json'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
 import type { R1FileCreateStorage } from '@shared/form/r1-file-create-storage'
 import { R1_LOCAL_FORM_MAX_ROWS } from '@features/work-orders/r1-local-form-fields'
+import { configuredFileStorage } from '@adapters/api/r1-configured-file-storage'
+import { isR1DefaultImageFieldConfig } from '@shared/form/r1-normal-image-contract'
 import { classifyFieldType } from '@runtimes/dynamic-form'
 import { hasR1DefaultControlOverrides } from '@shared/form/r1-default-controls'
 
@@ -45,6 +47,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
   const conditions:NonNullable<R1FileCreateStorage['conditions']>[number][]=[]
   for (const field of fields) {
     const raw = rawFields.find(f => f._id === field.fieldId)
+    const retainedFile=field.type==='file'&&isR1DefaultImageFieldConfig(raw)
     const mapCheckbox=ext.type==='0'&&field.type==='checkbox'
     const mapChoice=ext.type==='0'&&['radio','checkbox','select'].includes(field.type)
     const mapScalar=ext.type==='0'&&['phone','IDNumber','date','time','datetime'].includes(field.type)
@@ -68,7 +71,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     const preserveOnly=ext.type==='0'&&ro.includes(field.fieldId)
       &&classifyFieldType(field.type).capability==='SUPPORTED_GENERIC'
     if (!raw || raw.extId !== ext._id || raw.tenantId !== tenantId || raw.state !== 1 || raw.colName !== ext.colName
-      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapScalar||mapDefault||mapCascade||preserveOnly)
+      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapScalar||mapDefault||mapCascade||retainedFile||preserveOnly)
       || ![0, 1].includes(raw.preset as number) || field.preset !== (raw.preset === 1)
       || !['0', '1'].includes(String(raw.required)) || field.required !== (String(raw.required) === '1')
       || raw.operationType !== '1' || (preserveOnly||mapCheckbox
@@ -119,7 +122,8 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
       // Explicit presentation mapping only; arbitrary validation/actions are
       // not ignored merely because the read mapper accepts their JSON.
       if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)
-        || Object.keys(cfg).some(key=>key!=='placeholder')
+        || Object.keys(cfg).some(key=>key!=='placeholder'&&!(retainedFile&&key==='max'))
+        || retainedFile&&Object.hasOwn(cfg,'max')&&(!(typeof (cfg as Record<string,unknown>).max==='number')||!Number.isSafeInteger((cfg as Record<string,unknown>).max)||(cfg as Record<string,number>).max<0||(cfg as Record<string,number>).max>10)
         || Object.hasOwn(cfg,'placeholder') && typeof (cfg as Record<string,unknown>).placeholder!=='string') return
     } catch { return }
   }
@@ -130,6 +134,11 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
   const kind=ext.type==='1'?'survey-dto':'generic-map'
   const storageFields=[]
   for(const f of fields){
+    if(f.type==='file'){
+      const file=configuredFileStorage({...snapshot.definition,fields:[f]},ext)?.fields[0]
+      if(!file)return
+      storageFields.push(file);continue
+    }
     const property=kind==='survey-dto'?typedSurveyPropertyKind(f.valueKey):undefined
     if(kind==='survey-dto'&&(f.preset||property)&&!(['number','digit'].includes(f.type)
       ?property==='double'||property==='integer':property==='string'))return

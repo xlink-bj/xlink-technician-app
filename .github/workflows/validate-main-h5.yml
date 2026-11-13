@@ -309,6 +309,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/map-choice-datetime-edit.config.ts
+      - name: Verify existing attachment identity removal cancellation and readback
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/retained-attachment-edit.config.ts
       - name: Verify normal App image picker multipart save and readback
         env:
           XLINK_H5_NORMAL_R1_FILE_UPLOAD: 'true'
@@ -445,6 +450,7 @@ jobs:
             test-results/normal-appointment-experience/
             test-results/configured-record-edit/
             test-results/map-choice-datetime-edit/
+            test-results/retained-attachment-edit/
             test-results/normal-r1-file-upload/
             test-results/normal-r1-image-recovery/
             test-results/work-order-detail-lifecycle/

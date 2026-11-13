@@ -1,8 +1,9 @@
+import { isR1RetainedFileArray } from './r1-retained-file-values'
 import type { FormDataRead, FormDefinitionRead, FormFieldRead } from '../ports'
 import type { R1FileCreateStorage } from './r1-file-create-storage'
 import { isR1NormalImageWireArray } from './r1-normal-image-contract'
 
-type State = 'absent' | 'files' | 'null' | 'unavailable'
+type State = 'absent' | 'files' | 'retained-files' | 'null' | 'unavailable'
 const reads = new WeakMap<object, { definition: FormDefinitionRead; seal: string; current: () => boolean; fields: ReadonlyMap<string, { key: string; state: State }> }>()
 const revoked = new WeakSet<object>()
 const seal = (definition: FormDefinitionRead, record: FormDataRead) => JSON.stringify([definition, record])
@@ -10,7 +11,7 @@ const seal = (definition: FormDefinitionRead, record: FormDataRead) => JSON.stri
 /** Display provenance only, after the reader validated raw canonical slots.
  * No command/grant code consumes this evidence. Copies cannot acquire it. */
 export function bindR1ConfiguredFileReadDisplay(definition: FormDefinitionRead, record: FormDataRead,
-  storage: R1FileCreateStorage, original: Readonly<Record<string, unknown>>, current: () => boolean, legacy = false): void {
+  storage: R1FileCreateStorage, original: Readonly<Record<string, unknown>>, current: () => boolean, legacy = false, retained = false): void {
   if (reads.has(record) || revoked.has(record)) throw Error('Read display evidence cannot be rebound')
   const ext = original.exts as Readonly<Record<string, unknown>> | undefined
   const fields = new Map<string, { key: string; state: State }>()
@@ -18,16 +19,18 @@ export function bindR1ConfiguredFileReadDisplay(definition: FormDefinitionRead, 
     if (!definition.fields?.some(row => row.fieldId === f.fieldId && row.valueKey === f.valueKey && row.type === 'file')) throw Error('Read display schema differs from storage')
     const present = f.slots.some(slot => Object.hasOwn(slot === 'root' ? original : ext ?? {}, f.valueKey))
     const value = record.values?.[f.valueKey]
-    if (!legacy && (present ? !isR1NormalImageWireArray(value) : Object.hasOwn(record.values ?? {}, f.valueKey))) throw Error('Read display differs from original slots')
+    if (!retained && !legacy && (present ? !isR1NormalImageWireArray(value) : Object.hasOwn(record.values ?? {}, f.valueKey))) throw Error('Read display differs from original slots')
     let state: State = present ? 'files' : 'absent'
-    if (legacy) {
+    if (legacy || retained) {
       const rootOwn = Object.hasOwn(original, f.valueKey), extOwn = Object.hasOwn(ext ?? {}, f.valueKey)
       const root = original[f.valueKey], extension = ext?.[f.valueKey]
       // Legacy codecs validated their values; do not promote conflicting slots
       // or historical extra-key arrays to a current preview contract.
       const slotsAgree = (!rootOwn || f.slots.includes('root')) && (!extOwn || f.slots.includes('exts'))
-        && (f.slots.length !== 2 || rootOwn === extOwn && JSON.stringify(root) === JSON.stringify(extension))
+        && (f.slots.length !== 2 || (retained? !rootOwn||!extOwn||JSON.stringify(root)===JSON.stringify(extension)
+          :rootOwn===extOwn&&JSON.stringify(root)===JSON.stringify(extension)))
       state = !slotsAgree ? 'unavailable' : !present ? 'absent' : value === null ? 'null'
+        : retained ? isR1RetainedFileArray(value) ? 'retained-files' : 'unavailable'
         : isR1NormalImageWireArray(value) ? 'files' : 'unavailable'
     }
     fields.set(f.fieldId, { key: f.valueKey, state })

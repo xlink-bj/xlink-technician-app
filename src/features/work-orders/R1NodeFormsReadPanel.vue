@@ -27,7 +27,7 @@
             <text class="form-read__label">{{ field.label }}</text>
             <text v-if="!readFiles(record,field)" class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
             <R1NormalFileField v-if="readFiles(record,field)" :field="field"
-              :model-value="record.values?.[field.valueKey]" />
+              :model-value="record.values?.[field.valueKey]" :retained="retainedReadFiles(record,field)" />
           </template>
         </view>
         <text v-if="actions?.editProblem?.(String(record.id))" class="form-read__hint"
@@ -44,8 +44,8 @@
           <template v-else>
           <template v-for="field in editableFields" :key="field.fieldId">
             <AppField v-if="field.visible" :label="field.label" :required="field.required" :data-testid="`r1-normal-input-${field.valueKey}`">
-              <R1NormalFileField v-if="field.supported && field.type==='file' && actions.fileMedia" :field="field"
-                :model-value="values[field.valueKey]" :draft="values" :media="actions.fileMedia" :disabled="busy || loading || fileCancelling || draftBlocked || draftWorking"
+              <R1NormalFileField v-if="field.supported && field.type==='file' && (actions.fileMedia || actions.retainedFiles)" :field="field"
+                :model-value="values[field.valueKey]" :draft="values" :media="actions.fileMedia" :retained="actions.retainedFiles" :allow-retained-removal="actions.retainedFiles" :disabled="busy || loading || fileCancelling || draftBlocked || draftWorking"
                 @update:model-value="setFileValue(field.fieldId,field.valueKey,$event)" />
               <R1FormFieldControl v-else-if="field.supported" :field="field" :model-value="scalarValueFor(field.valueKey)"
                 :disabled="busy || loading || fileCancelling || draftBlocked || draftWorking" @update:model-value="setValue(field.valueKey, $event)" />
@@ -99,6 +99,8 @@ function claimNormalReader(reader: ReaderPort) {
 </script>
 
 <script setup lang="ts">
+import { isR1RetainedFileArray, isR1RetainedFileSubset } from '@shared/form/r1-retained-file-values'
+import { r1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-read-evidence'
 import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -320,10 +322,15 @@ async function discardDraft(){
   finally{if(ticket===version)draftWorking.value=false}
 }
 function setFileValue(fieldId:string,key:string,value:readonly R1FileWireValue[]){
-  const s=visibleSnapshot.value,media=actions.value?.fileMedia
-  if(busy.value||loading.value||draftBlocked.value||draftWorking.value||fileCancelling.value||!s||!media||!editableFields.value.some(f=>f.fieldId===fieldId&&f.valueKey===key&&f.type==='file'&&f.supported)
-    ||!sameR1NormalFileValues(value,media.values(fieldId)))return
+  const s=visibleSnapshot.value,media=actions.value?.fileMedia,retained=actions.value?.retainedFiles
+  if(busy.value||loading.value||draftBlocked.value||draftWorking.value||fileCancelling.value||!s||(!media&&!retained)||!editableFields.value.some(f=>f.fieldId===fieldId&&f.valueKey===key&&f.type==='file'&&f.supported)
+    ||(retained?!editingId.value||!actions.value?.canEdit?.(editingId.value)||!isR1RetainedFileSubset(values.value[key],value)
+      :!media||!sameR1NormalFileValues(value,media.values(fieldId))))return
   values.value={...values.value,[key]:value.map(file=>({...file}))}
+}
+function retainedReadFiles(record:FormDataRead,field:R1RecordReadField){
+  const s=visibleSnapshot.value,metadata=s?.definition.fields?.find(f=>f.fieldId===field.fieldId)
+  return Boolean(s&&metadata&&r1ConfiguredFileReadDisplay(s.definition,record,metadata)==='retained-files')
 }
 function readFiles(record:FormDataRead,projected:R1RecordReadField){
   const source=visibleSnapshot.value
@@ -332,7 +339,8 @@ function readFiles(record:FormDataRead,projected:R1RecordReadField){
   const field=source.definition.fields?.find(f=>f.fieldId===projected.fieldId&&f.valueKey===projected.valueKey)
   return current?.unavailable===false&&field?.type==='file'&&!field.unsupportedReason&&!field.presentationOnly
     &&Array.isArray(record.values?.[field.valueKey])&&(record.values![field.valueKey] as readonly unknown[]).length>0
-    &&sameR1NormalFileValues(record.values?.[field.valueKey],record.values?.[field.valueKey])
+    &&(retainedReadFiles(record,projected)?isR1RetainedFileArray(record.values?.[field.valueKey])
+      :sameR1NormalFileValues(record.values?.[field.valueKey],record.values?.[field.valueKey]))
 }
 function scalarValueFor(key:string):R1LocalFieldValue|undefined{
   const value=values.value[key]

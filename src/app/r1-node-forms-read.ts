@@ -1,3 +1,4 @@
+import { isR1RetainedFileArray } from '@shared/form/r1-retained-file-values'
 import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {bindR1ConfiguredFileReadDisplay} from '@shared/form/r1-configured-file-read-evidence'
 import type {R1FileCreateStorage} from '@shared/form/r1-file-create-storage'
@@ -558,6 +559,13 @@ export function createNormalNodeFormsReader(input: {
       const writeMedia=input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true'&&input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
       const configuredGrant=parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)?.version===4
       const sourceSnapshot={workOrderId,node,definition:{...definition,fields:hydrated},records:[],fillableFieldIds}
+      const requestedEdit = parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)
+      const editStorage = configuredRecordEditStorage(sourceSnapshot,ext,fields,input.tenantId,appointmentSubmitAtRead&&appointmentSubmitAllowed)
+      const retainedStorage=requestedEdit?.version===6&&editStorage?.fields.some(f=>f.type==='file')?editStorage:undefined
+      const retainedCodec:import('@shared/ports').FormValueCodec|undefined=retainedStorage?{
+        decode(value,context){return retainedStorage.fields.some(f=>f.type==='file'&&f.valueKey===context.valueKey)&&isR1RetainedFileArray(value)
+          ?JSON.parse(JSON.stringify(value)):undefined},encode(){return deny()}
+      }:undefined
       const configuredSource=writeMedia&&configuredGrant?configuredFileSource(sourceSnapshot,ext,fields,input.tenantId):undefined
       const configuredReadSource=input.env.VITE_XLINK_ENABLE_REAL_WRITES==='false'&&input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='false'
         ?configuredFileSource(sourceSnapshot,ext,fields,input.tenantId,'read'):undefined
@@ -571,8 +579,8 @@ export function createNormalNodeFormsReader(input: {
       const readOnlySurveyMedia = input.env.VITE_XLINK_ENABLE_REAL_WRITES === 'false'
         && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
         ? createSurveyReadOnlyMediaCodec(definition, ext.colName, fields) : undefined
-      const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia:normalFileCodec||surveyMediaCodec?undefined:readOnlySurveyMedia,
-        ...(normalFileCodec||surveyMediaCodec?{valueCodec:normalFileCodec??surveyMediaCodec}:{}), scope: {
+      const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia:retainedCodec||normalFileCodec||surveyMediaCodec?undefined:readOnlySurveyMedia,
+        ...(retainedCodec||normalFileCodec||surveyMediaCodec?{valueCodec:retainedCodec??normalFileCodec??surveyMediaCodec}:{}), scope: {
         tenantId: input.tenantId, workOrderId, runtimeNodeId, workflowRunId: id(node.runId),
         formDefinitionId: definitionId, sourceNodeType: node.sourceNodeType as 'forms' | 'repeat',
       }, isCurrent: () => ticket === generation && fingerprint() === identity,
@@ -581,8 +589,6 @@ export function createNormalNodeFormsReader(input: {
       // List rows are discovery, not the detail read used to display a record.
       const records = []
       const originals = new Map<string,string>()
-      const requestedEdit = parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)
-      const editStorage = configuredRecordEditStorage(sourceSnapshot,ext,fields,input.tenantId,appointmentSubmitAtRead&&appointmentSubmitAllowed)
       const editGrant = requestedEdit?.version===6 && requestedEdit.synthetic===true && editStorage
         && input.env.VITE_XLINK_R1_REPEAT_ACTIONS==='true'
         && input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true' && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
@@ -624,8 +630,8 @@ export function createNormalNodeFormsReader(input: {
           }
         }
         if(configuredGrant&&!fileDecodeSource&&hydrated.some(field=>field.type==='file'))throw Error('当前附件配置的存储位置无法核实，不能把原文投影成未保存。')
-        if(fileDecodeSource)assertConfiguredFileOriginal(fileDecodeSource.storage,original)
-        else if(surveyMediaSeal)assertSurveyMediaOriginal(original)
+        if(fileDecodeSource&&!retainedStorage)assertConfiguredFileOriginal(fileDecodeSource.storage,original)
+        else if(!retainedStorage&&surveyMediaSeal)assertSurveyMediaOriginal(original)
         assertSurveyReadExtsValues(definition, original)
         records.push(selected.data)
         originals.set(String(selected.data.id),formsExtsJson(original))
@@ -657,7 +663,7 @@ export function createNormalNodeFormsReader(input: {
       // array shape by itself never does. This is not a new write capability.
       const legacyDisplayFields=snapshot.definition.fields?.filter(f=>f.type==='file'&&(surveyMediaSeal
         ||fillableFieldIds?.includes(f.fieldId)&&!node.formFieldIdsReadOnly?.includes(f.fieldId)))
-      const displayStorage=fileDecodeSource?.storage??((normalFileCodec||surveyMediaSeal)
+      const displayStorage=retainedStorage??fileDecodeSource?.storage??((normalFileCodec||surveyMediaSeal)
         ?configuredFileStorage({...snapshot.definition,fields:legacyDisplayFields},ext):undefined)
       if(displayStorage){
         let displayRevoked=false
@@ -675,7 +681,7 @@ export function createNormalNodeFormsReader(input: {
         fileDisplayChecks.set(snapshot,displayCurrent)
         for(const record of records){
           const raw=originals.get(String(record.id));if(!raw)return deny()
-          bindR1ConfiguredFileReadDisplay(snapshot.definition,record,displayStorage,JSON.parse(raw),displayCurrent,!fileDecodeSource)
+          bindR1ConfiguredFileReadDisplay(snapshot.definition,record,displayStorage,JSON.parse(raw),displayCurrent,!fileDecodeSource,Boolean(retainedStorage))
         }
       }
       return snapshot

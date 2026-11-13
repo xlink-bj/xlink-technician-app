@@ -1,3 +1,4 @@
+import { isR1RetainedFileArray, isR1RetainedFileSubset, type R1RetainedFileValue } from '@shared/form/r1-retained-file-values'
 import type { AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RecordEditRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-actions-port'
@@ -130,6 +131,10 @@ export function createConfiguredRecordEditActions(input: {
       const root=Object.hasOwn(e.original,f.valueKey),ext=object(ex)&&Object.hasOwn(ex,f.valueKey)
       if(root&&!f.slots.includes('root')||ext&&!f.slots.includes('exts')
         ||root&&ext&&stable(e.original[f.valueKey])!==stable(ex![f.valueKey]))refuse('字段 root/EXTS 存储位置或副本冲突。')
+      if(f.type==='file'&&grant.fieldIds.includes(f.fieldId)){
+        const files=ext?ex![f.valueKey]:root?e.original[f.valueKey]:undefined
+        if(!isR1RetainedFileArray(files)||files.length>f.max)refuse('已有附件原文不是可核实的文件数组。')
+      }
     }
     const conditions:Record<string,unknown>={},dependencies=conditionDependencies(s),bindings=e.storage.conditions??[]
     if(bindings.length!==(s.definition.fields??[]).filter(f=>f.visibility).length)refuse('条件来源绑定不完整。')
@@ -155,7 +160,7 @@ export function createConfiguredRecordEditActions(input: {
     const initial=initialValues(id),fields=lease.definition.fields!,merged={...initial,...values}
     if(Object.keys(values).some(key=>!fields.some(f=>f.valueKey===key)))refuse()
     verifyConditionValues(lease,merged)
-    const writable=fields.filter(f=>grant.fieldIds.includes(f.fieldId)),schemas=writable.map(f=>actionFormSchemaFor(f))
+    const writable=fields.filter(f=>grant.fieldIds.includes(f.fieldId)),schemas=writable.filter(f=>f.type!=='file').map(f=>actionFormSchemaFor(f))
     for(const f of fields){
       if(!grant.fieldIds.includes(f.fieldId)&&Object.hasOwn(values,f.valueKey)&&stable(values[f.valueKey])!==stable(initial[f.valueKey]))refuse()
     }
@@ -164,6 +169,10 @@ export function createConfiguredRecordEditActions(input: {
       if(state.capability!=='SUPPORTED_GENERIC')refuse()
       if(!state.visible){
         if(Object.hasOwn(values,f.valueKey)&&stable(v)!==stable(initial[f.valueKey]))refuse('隐藏字段不能在本次编辑中修改。')
+        continue
+      }
+      if(f.type==='file'){
+        if(!isR1RetainedFileSubset(initial[f.valueKey],v)||state.required&&v.length===0)refuse('附件只能保留或移除当前记录的原始引用。')
         continue
       }
       if(f.type==='checkbox'||f.type==='cascade'){
@@ -178,12 +187,17 @@ export function createConfiguredRecordEditActions(input: {
       if(f.type==='rate'&&v!==undefined&&v!==''&&!isR1DefaultRateValue(v))refuse('请使用1至5的整数评分。')
       if(['number','digit'].includes(f.type)&&v==='')refuse()}
     const result=normalizeSubmission({fields:schemas,values:merged,surface:ACTION_FORM_SURFACE});if(!result.ok)refuse()
-    const patch:Record<string,string|number|boolean|readonly string[]>={}
+    const patch:Record<string,string|number|boolean|readonly string[]|readonly R1RetainedFileValue[]>={}
     for(const f of writable){const key=f.valueKey;if(!Object.hasOwn(values,key))continue
       // Hidden values remain in the complete authoritative original. Even an
       // optional []/empty-string sentinel must not accidentally clear them.
       if(!evaluateFieldState(actionFormSchemaFor(f),{values:merged as never,surface:ACTION_FORM_SURFACE}).visible)continue
       const supplied=values[key]
+      if(f.type==='file'){
+        if(!isR1RetainedFileArray(supplied))refuse()
+        if(stable(supplied)!==stable(initial[key]))patch[key]=copy(supplied)
+        continue
+      }
       // Retain an already-empty optional switch verbatim; do not invent a new
       // clear operation or an EXTS mirror for an unchanged legacy empty slot.
       if(f.type==='switch'&&supplied===''&&initial[key]==='')continue
@@ -210,6 +224,7 @@ export function createConfiguredRecordEditActions(input: {
       if(lock.locked)return lock.completed?'本次编辑已保存并核实。':'上次保存结果尚未核实，请勿重复提交。'
       try{source(lease,id);return null}catch{return '记录的完整信息尚未核实，暂不能编辑。'}
     },
+    ...(lease.definition.fields?.some(f=>f.type==='file')?{retainedFiles:true as const}:{}),
     initialValues(id){try{return canEdit(id)?initialValues(id):null}catch{return null}},
     // Existing editing has a reader-issued storage policy. Reuse the shared
     // runtime projection directly rather than a create-specific codec list.
@@ -238,15 +253,24 @@ export function createConfiguredRecordEditActions(input: {
         if(e.storage.kind==='survey-dto'){
           expected=copy(e.original)
           for(const f of e.storage.fields)if(Object.hasOwn(patch,f.valueKey))for(const slot of f.slots){
-            if(slot==='root')expected[f.valueKey]=patch[f.valueKey]
-            else (expected.exts as Record<string,unknown>)[f.valueKey]=patch[f.valueKey]
+            const target=slot==='root'?expected:expected.exts as Record<string,unknown>
+            if(f.type!=='file'||Object.hasOwn(target,f.valueKey))target[f.valueKey]=copy(patch[f.valueKey])
           }
           const problem=surveyExistingOriginalProblem(expected);if(problem)refuse(problem)
           request={method:'POST' as const,path:`biz/extForm/upsert/${encodeURIComponent(scope.formDefinitionId)}`,r1Special:true,body:{dataStr:JSON.stringify(expected)}}
         }else{
-          request=r1SpecialFormUpsert({sourceNodeType:'repeat',definitionId:lease.definition.id,formData:patch,fieldStorage:lease.definition.fields,
+          // Keep the shared Map serializer's upload/first-create contracts strict.
+          // Only this reader-backed controller applies validated old file subsets.
+          const fileKeys=new Set(e.storage.fields.filter(f=>f.type==='file').map(f=>f.valueKey))
+          const scalarPatch=Object.fromEntries(Object.entries(patch).filter(([key])=>!fileKeys.has(key)))
+          request=r1SpecialFormUpsert({sourceNodeType:'repeat',definitionId:lease.definition.id,formData:scalarPatch,fieldStorage:lease.definition.fields,
             authoritativeOriginal:e.wireOriginal,existingFormDataId:asOpaqueId<'FormDataId'>(id),workOrderId:asOpaqueId<'WorkOrderId'>(scope.workOrderId),workflowNodeId:lease.node.id,workflowRunId:lease.node.runId,state:1})
           expected=JSON.parse(String(request.body?.dataStr)) as Record<string,unknown>
+          for(const f of e.storage.fields)if(f.type==='file'&&Object.hasOwn(patch,f.valueKey))for(const slot of f.slots){
+            const target=slot==='root'?expected:expected.exts as Record<string,unknown>
+            if(target&&Object.hasOwn(target,f.valueKey))target[f.valueKey]=copy(patch[f.valueKey])
+          }
+          request={...request,body:{...request.body,dataStr:JSON.stringify(expected)}}
         }
         if(!current()||!input.reader.isCurrentRecordEdit?.(lease,id,e))refuse()
         mark('uncertain') // Durable before dispatch; never cleared by a read.
