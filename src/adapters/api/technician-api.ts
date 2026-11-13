@@ -54,6 +54,7 @@ import { workOrderCategoryStatusFilter } from './work-order-category'
 import { isMockOwnedRead } from './mock/ownership'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { requiredOpaqueId } from './read-models/ids'
+import { projectWorkOrderInformation, workOrderInformationFields, workOrderInformationRequest } from './read-models/work-order-information'
 import { formData, formDefinition } from './read-models/form'
 import { dynamicCodeOptions, cascadeCodeOptions, flattenCodeOptions } from './read-models/code-options'
 import { readCompleteCodeOptions } from './code-query-options'
@@ -572,7 +573,36 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         assertDetailCurrent()
         const partLabels = await this.partLabelsFor(servicePartCodesFromDetail(raw))
         assertDetailCurrent()
-        const detail = workOrderDetail(raw, id, statusLabels, partLabels, !productionReadOnly)
+        let detail = workOrderDetail(raw, id, statusLabels, partLabels, !productionReadOnly)
+        // Configuration is optional, but authentication failures and obsolete
+        // detail reads must never silently downgrade to the fallback.
+        // Production ServiceAppointment metadata is not yet an approved live
+        // read contract. Keep its existing transport gate and verified fallback.
+        if (!productionReadOnly && detailTenant && record.tenantId === detailTenant
+          && !detail.workflowNodes?.some(node => node.category === 'accept' && node.lifecycle === 'active')
+          && (!scopedDetail || detailCurrent())) {
+          try {
+            const rawFields = await this.transport.execute(workOrderInformationRequest)
+            assertDetailCurrent()
+            const fields = [...workOrderInformationFields(rawFields, detailTenant)]
+            for (let index = 0; index < fields.length; index++) {
+              const field = fields[index]!
+              if (['select', 'radio', 'checkbox'].includes(field.type) && field.valueOption && !field.options?.length) {
+                const options = await this.readCodeOptions({ valueOption: field.valueOption }, assertDetailCurrent)
+                if (options.state === 'succeeded' && options.data) fields[index] = { ...field,
+                  options: options.data.items.map(option => ({ value: option.value, label: option.label })) }
+                else if (options.error?.category === 'session_invalid' || options.error?.category === 'authorization_denied') {
+                  throw new ApiReadTransportError('Work Order information dictionary authorization failed', options.error.category)
+                }
+              }
+            }
+            assertDetailCurrent()
+            detail = { ...detail, informationFields: projectWorkOrderInformation(record, fields, !productionReadOnly) }
+          } catch (error) {
+            assertDetailCurrent()
+            if (error instanceof ApiReadTransportError && ['session_invalid', 'authorization_denied'].includes(error.category)) throw error
+          }
+        }
         if (productionReadOnly) return detail
         const activities = await this.readWorkOrderActivities(id)
         assertDetailCurrent()

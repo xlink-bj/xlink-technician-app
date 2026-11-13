@@ -41,6 +41,7 @@ export type {
   WorkOrderActivityIcon,
   WorkOrderContact,
   WorkOrderDetail,
+  WorkOrderInformationFieldRead,
   WorkOrderListQuery,
   WorkOrderCategory,
   WorkOrderSummary,
