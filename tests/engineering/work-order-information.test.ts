@@ -1,3 +1,5 @@
+import { onSelectedRoleVisibilityRevoked } from '@shared/form/selected-role-visibility'
+import { evaluateVisibility } from '@runtimes/dynamic-form'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { projectWorkOrderInformation, workOrderInformationFields, workOrderInformationRequest } from '@adapters/api/read-models/work-order-information'
 import { ApiReadTransportError, createRoleScopedTechnicianApiReadAdapter, type ApiReadRequest } from '@adapters/api/technician-api'
@@ -106,7 +108,8 @@ describe('ServiceAppointment configured information is a bounded read projection
   it('allows a complete empty configuration to hide all generic information',()=>expect(display({phone:'PRIVATE'},[])).toEqual([]))
 })
 
-function harness() {
+function harness(liveTenant = true) {
+  let tenant: string | null = 'tenant'
   let actor: any = { sessionRef:'session',userId:'user',roleId:'role',roleVersion:null }
   let config: unknown=page([row('memo')]), hook=async()=>{}, dictionary: unknown = {data:[{_id:'option',type:'information-choice',value:'A value',name:'已核实选项',order:0}],total:1,page:1,rows:50}
   const execute=vi.fn(async (request: ApiReadRequest): Promise<unknown> => {
@@ -118,8 +121,8 @@ function harness() {
     if(request.path==='biz/action/query.do')return{data:[]}
     throw Error('Unexpected read '+request.path)
   })
-  const api=createRoleScopedTechnicianApiReadAdapter({execute},()=>actor?.roleId??null,{codeTenantId:'tenant',getReadAuthorizationScope:()=>actor})
-  return {api,execute, config:(raw:unknown)=>{config=raw},dictionary:(raw:unknown)=>{dictionary=raw},hook:(fn:()=>Promise<void>)=>{hook=fn},revoke:()=>{actor=null},switchRole:()=>{actor={...actor,roleId:'other',roleIds:['role','other']}},
+  const api=createRoleScopedTechnicianApiReadAdapter({execute},()=>actor?.roleId??null,{codeTenantId:'tenant',getReadTenantId:liveTenant?()=>tenant:undefined,getReadAuthorizationScope:()=>actor})
+  return {api,execute,setTenant:(next:string|null)=>{tenant=next}, config:(raw:unknown)=>{config=raw},dictionary:(raw:unknown)=>{dictionary=raw},hook:(fn:()=>Promise<void>)=>{hook=fn},revoke:()=>{actor=null},switchRole:()=>{actor={...actor,roleId:'other',roleIds:['role','other']}},
     list:()=>api.listWorkOrders({page:1,pageSize:20,category:'all'}),read:(id='A')=>api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(id))}
 }
 
@@ -214,5 +217,57 @@ describe('metadata request cannot broaden the object, method or read budget', ()
       getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session'), request })
     await expect(transport.execute(input as ApiReadRequest)).rejects.toMatchObject({ category: 'unsupported_capability' })
     expect(request).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('trusted information role contexts expire independently of saved field values', () => {
+  it.each([['4',['role'],true],['4',['other'],false],['5',['role'],false],['5',['other'],true]] as const)('current role: %s list %j visible %s',async(showType,roleIds,visible)=>{
+    const h=harness();h.config(page([row('memo',{showType,roleIds})]));await h.list()
+    const result=await h.read();expect(result.state).toBe('succeeded')
+    expect(result.data?.informationFields?.map(r=>r.value)).toEqual(visible?['A value']:[])
+    if(visible)expect(result.data!.informationFields![0]!.field.readOnly).toBe(true)
+    expect(h.execute.mock.calls.some(([r])=>/upsert|process|upload/.test(r.path))).toBe(false)
+  })
+  it('does not sign a role context without a live App tenant source',async()=>{
+    const h=harness(false);h.config(page([row('memo',{showType:'5',roleIds:['excluded']})]));await h.list()
+    expect((await h.read()).data?.informationFields).toEqual([])
+  })
+  it.each(['logout','role','tenant','missing-tenant','same-object-reread','other-object','list-reread'] as const)('invalidates a cached exclude-rule context after %s',async change=>{
+    const h=harness();h.config(page([row('memo',{showType:'5',roleIds:['excluded']})]));await h.list()
+    const r=(await h.read()).data!.informationFields![0]!,evaluate=()=>evaluateVisibility(r.field.visibility,{},r.field.roleVisibilityContext)
+    expect(evaluate().state).toBe('visible')
+    if(change==='logout')h.revoke()
+    else if(change==='role')h.switchRole()
+    else if(change==='tenant')h.setTenant('different-tenant')
+    else if(change==='missing-tenant')h.setTenant(null)
+    else if(change==='same-object-reread')await h.read()
+    else if(change==='other-object')await h.read('B')
+    else await h.list()
+    expect(evaluate().state).toBe('unsupported')
+  })
+  it('notifies a mounted consumer immediately when a newer authorized read starts, before the response',async()=>{
+    const h=harness();h.config(page([row('memo',{showType:'4',roleIds:['role']})]));await h.list()
+    const old=(await h.read()).data!.informationFields![0]!,withdrawn=vi.fn()
+    const stop=onSelectedRoleVisibilityRevoked(old.field.roleVisibilityContext,withdrawn)
+    let release!:()=>void;h.hook(()=>new Promise<void>(resolve=>{release=resolve}))
+    const pending=h.read('B');expect(withdrawn).toHaveBeenCalledTimes(1)
+    expect(evaluateVisibility(old.field.visibility,{},old.field.roleVisibilityContext).state).toBe('unsupported')
+    await vi.waitFor(()=>expect(release).toBeTypeOf('function'));release();await pending;stop()
+  })
+  it('rejects old A metadata after a newer B read and leaves B context valid',async()=>{
+    const h=harness();h.config(page([row('memo',{showType:'4',roleIds:['role']})]));await h.list()
+    let release!:()=>void;h.hook(()=>new Promise<void>(resolve=>{release=resolve}))
+    const old=h.read('A');await vi.waitFor(()=>expect(release).toBeTypeOf('function'));h.hook(async()=>{})
+    const latest=(await h.read('B')).data!.informationFields![0]!
+    release();expect((await old).error?.category).toBe('authorization_denied')
+    expect(latest.value).toBe('B value')
+    expect(evaluateVisibility(latest.field.visibility,{},latest.field.roleVisibilityContext).state).toBe('visible')
+  })
+  it('rejects tenant withdrawal while metadata is in flight',async()=>{
+    const h=harness();h.config(page([row('memo',{showType:'5',roleIds:['excluded']})]));await h.list()
+    let release!:()=>void;h.hook(()=>new Promise<void>(resolve=>{release=resolve}))
+    const pending=h.read();await vi.waitFor(()=>expect(release).toBeTypeOf('function'));h.setTenant('other');release()
+    expect((await pending).error?.category).toBe('authorization_denied')
   })
 })

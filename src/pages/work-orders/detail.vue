@@ -193,11 +193,11 @@
 
         <view v-else-if="activeTab === 'customer'" class="tab-panel customer-info-panel">
           <template v-if="detail.informationFields !== undefined">
-            <view v-for="row in detail.informationFields" :key="row.field.fieldId" class="detail-row customer-info-row" data-testid="configured-information-row">
+            <view v-for="row in informationRows" :key="row.field.fieldId" class="detail-row customer-info-row" data-testid="configured-information-row">
               <text class="row-label">{{ row.field.label }}</text>
               <text class="row-value customer-info-value customer-info-value--address">{{ row.field.unsupportedReason ? '该内容暂不支持展示' : r1ReadFieldDisplayValue(row.field, row.value) }}</text>
             </view>
-            <text v-if="!detail.informationFields.length" class="tab-empty-copy">暂无可展示资料</text>
+            <text v-if="!informationRows.length" class="tab-empty-copy">暂无可展示资料</text>
           </template>
           <template v-else>
             <view class="detail-row customer-info-row">
@@ -321,7 +321,9 @@
 </template>
 
 <script setup lang="ts">
+import { evaluateVisibility } from '@runtimes/dynamic-form'
 import { r1ReadFieldDisplayValue } from '@features/work-orders/r1-record-read-fields'
+import { onSelectedRoleVisibilityRevoked } from '@shared/form/selected-role-visibility'
 import { computed, inject as injectHistoryReader, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 
@@ -370,6 +372,18 @@ const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const detail = computed(() => workOrder.detail)
+const informationRoleRevision = ref(0)
+watch(() => detail.value?.informationFields, (rows, _, onCleanup) => {
+  const contexts = new Set(rows?.filter(row => row.field.visibility?.kind === 'role').map(row => row.field.roleVisibilityContext))
+  const stops = [...contexts].map(context => onSelectedRoleVisibilityRevoked(context, () => { informationRoleRevision.value++ }))
+  onCleanup(() => stops.forEach(stop => stop()))
+}, { immediate: true, flush: 'sync' })
+const informationRows = computed(() => {
+  void informationRoleRevision.value
+  void workOrderReadScopeKey(session.session)
+  return detail.value?.informationFields?.filter(row => row.field.visibility?.kind !== 'role'
+    || evaluateVisibility(row.field.visibility, {}, row.field.roleVisibilityContext).state === 'visible') ?? []
+})
 const displayUnit = useLocalUnitDisplay(() => String(detail.value?.id ?? ''))
 const activities = computed(() => detail.value?.activities ?? [])
 const hasHistoricalForms = computed(() => detail.value?.workflowNodes?.some(node =>

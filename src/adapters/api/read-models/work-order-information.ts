@@ -1,3 +1,4 @@
+import type { SelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import type { FormFieldRead, FormFieldValue, WorkOrderInformationFieldRead } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 import { evaluateVisibility, isFieldApplicable } from '@runtimes/dynamic-form'
@@ -41,8 +42,8 @@ export function workOrderInformationFields(raw: unknown, tenantId: string): read
   // Reuse the existing ExtField mapper for labels, scalar/choice types,
   // frontend configuration, conditions and inline dictionary options.
   return rows.flatMap(row => {
-    // Role predicates are not proven by ordinary field edit modes. Unknown
-    // modes stay closed; known edit modes grant no writing in this reader.
+    // Edit modes never grant writes here. Only the shared root role subset
+    // may carry a nonempty root roleIds list; frontend role lists stay closed.
     const config = typeof row.frontEndConfig === 'string' ? (() => { try { return optionalRecord(JSON.parse(row.frontEndConfig)) } catch { return undefined } })() : optionalRecord(row.frontEndConfig)
     // Custom provider/script/permission configuration needs its own evidence;
     // a recognized scalar type alone cannot authorize those extra rules.
@@ -50,13 +51,15 @@ export function workOrderInformationFields(raw: unknown, tenantId: string): read
     if (config?.exts !== undefined && (!optionalRecord(config.exts)
       || Object.keys(config.exts as Record<string, unknown>).some(key => key !== 'showValue'))) return []
     if ((config?.roleIds !== undefined && (!Array.isArray(config.roleIds) || config.roleIds.length > 0))
-      || (row.roleIds !== undefined && (!Array.isArray(row.roleIds) || row.roleIds.length > 0))
+      || (!['4', '5', 4, 5].includes(row.showType as string | number)
+        && row.roleIds !== undefined && (!Array.isArray(row.roleIds) || row.roleIds.length > 0))
       || (row.operationType !== undefined && row.operationType !== null && !['', 'editable', 'readonly', 'creatable'].includes(String(row.operationType)))) return []
     const definition = formDefinition({ data: [row] }, asOpaqueId<'FormDefinitionId'>(typeof row.extId === 'string' ? row.extId : 'serviceAppointment-information'))
     const field = definition.fields?.[0]
     if (!field || !field.showList || !isFieldApplicable(field, 'mobile_detail') || field.presentationOnly
       || field.unsupportedReason) return []
     // Conditions select root or EXTS precisely. Never flatten colliding keys.
+    if (field.visibility?.kind === 'role') return [field]
     if (field.visibility) {
       const conditionKey = config?.showField ?? row.showField
       if (!keyAllowed(conditionKey) || ![0, 1, false, true].includes(row.showFieldPreset as number)) return []
@@ -83,14 +86,17 @@ function areaReadLabel(value: unknown): string | undefined {
 
 export function projectWorkOrderInformation(
   record: Record<string, unknown>, fields: readonly FormFieldRead[], includePhone: boolean,
+  roleContext?: SelectedRoleVisibilityContext,
 ): readonly WorkOrderInformationFieldRead[] {
   const exts = optionalRecord(record.exts)
   const result: WorkOrderInformationFieldRead[] = []
   const ids = new Set<string>()
-  for (const field of fields) {
+  for (const source of fields) {
+    // Never trust a token carried by raw metadata or a saved field value.
+    const field = source.visibility?.kind === 'role' ? { ...source, readOnly: true, roleVisibilityContext: roleContext } : source
     if (ids.has(field.fieldId)) throw new AdapterMappingError('Duplicate Work Order information field identity')
     ids.add(field.fieldId)
-    if (evaluateVisibility(field.visibility, record).state !== 'visible') continue
+    if (evaluateVisibility(field.visibility, record, roleContext).state !== 'visible') continue
     if (!supportedTypes.has(field.type)) {
       result.push({ field: { ...field, unsupportedReason: 'Unsupported read type' } }); continue
     }

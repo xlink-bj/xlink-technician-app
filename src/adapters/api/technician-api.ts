@@ -1,3 +1,4 @@
+import { createSelectedRoleVisibilityContext, revokeSelectedRoleVisibilityContext, type SelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import type {
   CascadeCodeOptionsQuery,
   CodeOptionRead,
@@ -323,6 +324,8 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   private readonly authorizedChildWorkflowParentIds = new Set<string>()
   private readonly authorizedRepeatFormContexts = new Set<string>()
   private listReadVersion = 0
+  private informationReadVersion = 0
+  private informationRoleContext?: SelectedRoleVisibilityContext
   private listMenuFingerprint: string | null = null
   private listQueryScope: { key: string; protocol: string } | null = null
   private listRequiresRefresh = false
@@ -349,6 +352,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
     }
     const nextScope = sessionAuthorizationFingerprint(identityScope)
     if (nextScope !== this.currentReadScope) {
+      revokeSelectedRoleVisibilityContext(this.informationRoleContext)
       this.currentReadScope = nextScope
       this.listReadVersion++
       this.clearListedAuthority()
@@ -442,6 +446,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
   }
 
   async listWorkOrders(query: WorkOrderListQuery) {
+    revokeSelectedRoleVisibilityContext(this.informationRoleContext)
     try { workOrderCategoryStatusFilter(query.category) } catch (error) {
       this.listReadVersion++
       this.invalidateListRead()
@@ -542,10 +547,20 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         )
       }
     }
+    if (realDev) revokeSelectedRoleVisibilityContext(this.informationRoleContext)
+    const informationVersion = realDev ? ++this.informationReadVersion : this.informationReadVersion
+    const currentInformationTenant = () => {
+      try { return this.options.getReadTenantId?.() ?? null } catch { return null }
+    }
+    const informationCurrent = () => informationVersion === this.informationReadVersion
+      && (!this.options.getReadTenantId || currentInformationTenant() === detailTenant) && detailCurrent()
+    const assertInformationCurrent = () => {
+      if (!informationCurrent()) throw new ApiReadTransportError('Work Order information read context changed', 'authorization_denied')
+    }
     const detailCurrent = () => this.synchronizeReadScope() === scopeAtStart
       && this.listReadVersion === listVersionAtStart && this.listedWorkOrderIds.has(String(id))
     const assertDetailCurrent = () => {
-      if (scopedDetail && !detailCurrent()) {
+      if (scopedDetail && (!detailCurrent() || realDev && !informationCurrent())) {
         throw new ApiReadTransportError('Work Order detail authorization changed during read', 'authorization_denied')
       }
     }
@@ -584,7 +599,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           && (!scopedDetail || detailCurrent())) {
           try {
             const rawFields = await this.transport.execute(workOrderInformationRequest)
-            assertDetailCurrent()
+            assertDetailCurrent(); assertInformationCurrent()
             const fields = [...workOrderInformationFields(rawFields, detailTenant)]
             // Four distinct dictionaries per detail, each using the existing
             // 10-page reader: at most 1 schema + 40 Code requests. No retries.
@@ -594,7 +609,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
               if (['select', 'radio', 'checkbox'].includes(field.type) && field.valueOption && !field.options?.length) {
                 if (!dictionaries.has(field.valueOption) && dictionaries.size < 4) {
                   dictionaries.set(field.valueOption, [])
-                  const options = await this.readCodeOptions({ valueOption: field.valueOption }, assertDetailCurrent)
+                  const options = await this.readCodeOptions({ valueOption: field.valueOption }, assertInformationCurrent)
                   if (options.state === 'succeeded' && options.data) dictionaries.set(field.valueOption,
                     options.data.items.map(option => ({ value: option.value, label: option.label })))
                   else if (options.error?.category === 'session_invalid' || options.error?.category === 'authorization_denied') {
@@ -605,7 +620,16 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
               }
             }
             assertDetailCurrent()
-            detail = { ...detail, informationFields: projectWorkOrderInformation(record, fields, !productionReadOnly) }
+            assertInformationCurrent()
+            const roleContext = createSelectedRoleVisibilityContext(() => {
+              if (!this.options.getReadTenantId || !informationCurrent() || this.isProductionReadOnly()
+                || import.meta.env.VITE_XLINK_ENVIRONMENT !== 'dev') return null
+              const actor = this.options.getReadAuthorizationScope?.()
+              return actor && sessionAuthorizationFingerprint(actor) === scopeAtStart && typeof actor.roleId === 'string'
+                ? { sessionKey: JSON.stringify([scopeAtStart, detailTenant, String(id), informationVersion]), roleId: actor.roleId } : null
+            })
+            this.informationRoleContext = roleContext
+            detail = { ...detail, informationFields: projectWorkOrderInformation(record, fields, !productionReadOnly, roleContext) }
           } catch (error) {
             assertDetailCurrent()
             if (error instanceof ApiReadTransportError && ['session_invalid', 'authorization_denied'].includes(error.category)) throw error
@@ -619,7 +643,7 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
           : detail
       },
     )
-    if (scopedDetail && !detailCurrent()) {
+    if (scopedDetail && (!detailCurrent() || realDev && !informationCurrent())) {
       return adapterFailure<WorkOrderDetail>(
         'authorization_denied', 'Scoped Work Order detail authorization changed during read',
       )
@@ -1061,6 +1085,8 @@ export interface TechnicianApiReadAdapterOptions {
   readonly cascadeTenantId?: string
   /** Current authenticated tenant used by R1's batch dynamic code endpoint. */
   readonly codeTenantId?: string
+  /** Live App-owned tenant for selected-role information contexts; absence cannot reveal role rows. */
+  readonly getReadTenantId?: () => string | null
   /** Current principal/role identity for ephemeral Work Order scope and in-flight Code page invalidation. */
   readonly getReadAuthorizationScope?: () => {
     readonly sessionRef: string | null

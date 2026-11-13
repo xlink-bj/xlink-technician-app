@@ -156,6 +156,10 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
     {
       cascadeTenantId: config.value.authWireConfig.tenant,
       codeTenantId: config.value.authWireConfig.tenant,
+      getReadTenantId: () => {
+        const current = loadApplicationRuntimeConfig()
+        return current.ok ? current.value.authWireConfig.tenant : null
+      },
       getReadAuthorizationScope: () => {
         const session = authSession.getCurrentSession()
         if (!session) return null
