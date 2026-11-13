@@ -1,54 +1,75 @@
 # M1-I8｜前端架构基线（工程候选，非 Owner 冻结）
 
-**审计基线**：`xlink-bj/xlink-technician-app@df9021cd3f10dbf22fff7fa94b0602c013fb9a33`（I6/I7 工程候选）；业务依据 `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`。当前 I8 属工程准备阶段，不意味着产品体验已签收、真机/真实签约已通过。
+Status: SNAPSHOT（显式修订）
+Reviewed at: 2026-11-13
+Code baseline: `main@bd22b42d8e970c885bc6237b89c1c8ddd1e1ff6d`
+Decision authority: Owner 决策、[AGENTS.md](../../AGENTS.md)、[Target Architecture](TARGET_ARCHITECTURE.md)
+Scope: 当前前端结构及验证边界；不改变后台协议、生产授权或产品验收。
 
-## 1. 已确认的执行模型
+原 I6/I7 审计基线 `df9021cd3f10dbf22fff7fa94b0602c013fb9a33` 及 [I8 验收清单](../verification/M1_I8_ACCEPTANCE_MANIFEST.json)保留其历史范围；本次源码核对不重写历史 CI 或验收结论。R1 固定业务参照仍为 `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`。
+
+## 1. 执行模型：数据适配与体验选择相互独立
 
 ```text
-WorkOrder Detail（信息与当前动作）
-  → Workflow Runtime（节点与执行资格）
-  → Current Action Projection（当前动作及所属者）
-  → Action Workspace（独立整页执行/草稿/状态）
-  → Action Content
-       ├─ Appointment（领域专用预约交互）
-       ├─ Dynamic Form（有限配置的标准字段）
-       │     └─ Survey（普通动态字段 + 渗漏原因/照片等固定体验）
-       ├─ Quotation（分组/目录/规格/套餐的领域编辑器）
-       └─ Signing（当前仅正式 Order→合同元数据只读/DEV 意图审查）
-  → Typed Ports → Auth/Read/Command/Upload/Platform Adapters → 已有后台
+WorkOrder Detail → Workflow Runtime → Current Action → Action Workspace
+  → Action Content（通用字段 / 专用体验 / 领域编辑器）
+  → Application controller → Typed Ports → Adapters → 既有 R1 后台
 ```
 
-本节是针对当下源代码的**工程快照**：长期目标以 `docs/architecture/TARGET_ARCHITECTURE.md` 为准；其中仍将 Quotation/Contract 标作“future”的历史段落，不能代替现在分支上已存在的报价组件及签约前只读功能。R1 是**业务功能、API 和副作用的唯一参照**，不是需要复制的前端框架。当前项目不新增后台接口或后台授权机制。
-
-## 2. 四条 UI/Runtime 边界
-
-| 关注点 | 当前代码/规范 | 工程约束 |
+| 维度 | 责任与当前例子 | 不可推导的能力 |
 | --- | --- | --- |
-| 信息与动作 | `src/pages/work-orders/detail.vue`；`src/pages/work-orders/action-workspace.vue` | 详情呈现工单上下文与可用动作；实际编辑/提交在完整 Action Workspace，不把可写逻辑混入信息 Tab |
-| 有限动态表单 | `GenericDynamicFormActionContent.vue`、`src/features/work-orders/dynamic-form-action.ts` | 标准文本、数字、单/多选、层级等交给受限 Form Runtime；字段可见性、必填和保存由 Runtime 驱动 |
-| 特殊领域体验 | `SurveyActionContent.vue`、`SurveyLeakageCauseExperience.vue`、`QuotationActionWorkspace.vue` | 预约直观时间选择、勘察渗漏原因/媒体、报价维修分组/套餐/SKU 等复杂交互使用专用领域组件，**不**强塞进动态表单 |
-| Shell 与设计系统 | `docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md`；`src/shared/ui/*` | Workspace 统一页面框架、草稿反馈、常驻底部 Action Bar、安全区；字段/特定体验不能重复拥有提交动作 |
+| 数据适配策略 | 普通 type0 Map；精确 type1/survey 的预置 DTO + 扩展字段；Order 独立领域协议 | 预置对象不能自动当任意 Map；节点 `forms/repeat` 也不是存储类型 |
+| 视图选择 | 通用 Panel/共享字段；预约专用时间体验；Survey 渗漏原因/媒体体验；报价领域编辑器 | 专用体验不要求固定 DTO，通用字段不要求 Map |
 
-架构约束引用：`docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md`、`LOCAL_DRAFT_AND_WEAK_NETWORK_ARCHITECTURE.md`、`docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md`。共同 TypeScript 业务代码目标为 H5 开发验证 + MP-WEIXIN、Android/iOS 编译；原生真机属于另一个验收层。
+预约可以是 **动态 Map + 专用时间体验**；当前三字段预约也能走已证明的配置编辑子集，不伪造六字段。Survey 是 **预置 DTO + 可扩展字段**，可以复用共享字段并组合专用体验，不再作为 Dynamic Form 的子模型描述。Order 的目录、金额、产品快照、保存与签约前只读有独立领域处理。
 
-## 3. 状态、数据与权限所有权
+正常入口是 [action-workspace.vue](../../src/pages/work-orders/action-workspace.vue) → [normal-form-action-page.ts](../../src/features/work-orders/normal-form-action-page.ts) → [R1FormActionContentHost.vue](../../src/features/work-orders/R1FormActionContentHost.vue) → [R1NodeFormsActionContent.vue](../../src/features/work-orders/R1NodeFormsActionContent.vue)。同页保留的 `GenericDynamicFormActionContent` / `SurveyLeakageCauseExperience` 是其他已有路径，不能代表正常 Reader/Provider 主链。[QuotationActionWorkspace.vue](../../src/features/work-orders/quotation/QuotationActionWorkspace.vue) 已存在，签约前只读也已存在；二者不能再统称 future。
 
-1. **Session/Role**：`src/app/composition.ts` 注入带当前账号/角色上下文的端口；工作空间异步回调需复查身份与工单可见列表。角色切换、登出和工单撤权后丢弃旧视图。
-2. **业务草稿**：本机报价草稿有自己的标识/版本/恢复逻辑，不是后台正式 `Order.type=1`。动态表单的本地草稿、“保存表单”、Workflow Complete 与业务提交须分离；任何本地演示进度不更新真实 Workflow。
-3. **正式订单只读**：`quotation-order-api.ts` 和 `signing-review-read-store.ts` 使用受当前 WorkOrder 限制的两次 Order 列表/身份核验，不能把传入 URL 或 `queryById` 的返回直接当签约权限。
-4. **合同元数据只读**：`listR1ContractsForSigningReview` 默认拒绝，只有 DEV + H5 E2E + Mock data 的特定合成 WorkOrder 可演示；读取只投影脱敏元数据。R1 技术员主 `serviceAppointment.vue:9215–9229` 使用 `serviceAppointmentId`，与固定后台 `ContractServiceImpl.query` 及模型源码一致（**SOURCE_VERIFIED**）；历史 WorkOrder 页的 `workOrderId` 属另一页面。`_all=1` 会被后台解释为获取全部，因此正式 Order/Contract 有界只读改为省略 `_all`，`page=1, rows=3`；真实租户读取仍默认阻断、NOT_RUN。
-5. **签约角色资格**：主 R1 页的 `isHandler` 源自当前 `WorkflowNode.handlerIds` 与用户/角色/组织角色组合，不能从工单可见性推导。真实签约前置审查的 `currentNodeHandlerVerified` 在当前 App 未取得独立可信节点证据时明确为 `false`。
-6. **命令绝对隔离**：`uni-api-command-transport.ts` 对签名命令、合同变更/签名 URL 做独立硬拦截，通用写开关无权解除；`r1-signing-command-intents.ts` 提供条件审查，但 `mayDispatch=false`。`r1-signing-command-readback.ts` 严格区分“请求已受理”与“真实签署成功”。
-7. **环境与设备**：现有 Production 只读范围与 mock ownership 由 Infrastructure 层控制；H5 合成验证不会成为生产或 Beta 操作授权。MP/App 构建成功不能称实际设备通过。
+## 2. 职责与源码入口
 
-## 4. 导航、失败、重试与回滚
+| 关注点 | 当前所有者 | 边界 |
+| --- | --- | --- |
+| 信息与动作 | [detail.vue](../../src/pages/work-orders/detail.vue)、[action-workspace.vue](../../src/pages/work-orders/action-workspace.vue) | 详情提供上下文；Workspace 组织执行，不在信息 Tab 推断写权限 |
+| Workflow / 权限 | [workflow policy](../../src/runtimes/workflow/policy.ts)、[normal reader](../../src/app/r1-node-forms-read.ts)、[配置编辑 controller](../../src/app/r1-configured-record-edit.ts) | 会话/角色列表、当前节点、handler、grant、reader lease 各自核验；可见性、控件支持和服务器授权不能互相替代 |
+| 共享字段语义 | [action-form-schema.ts](../../src/features/work-orders/action-form-schema.ts)、[repeat projection](../../src/features/work-orders/r1-repeat-form.ts)、`src/runtimes/dynamic-form/`、`src/shared/ui/` | 解释已支持类型、选项、可见/必填/只读及校验；保留有限动态机制，未知配置显式拒绝，不新造低代码引擎 |
+| 存储 codec | [reader-issued storage 策略](../../src/app/r1-record-edit-source.ts)、[Map root/EXTS](../../src/adapters/api/r1-field-storage.ts)、[Survey codec](../../src/adapters/api/survey-form-codec.ts)、[typed 原文保全](../../src/adapters/api/r1-typed-survey-preservation.ts) | 从可信完整原文应用已验证补丁；不授予编辑资格，不由显示值重建整份 DTO |
+| 本地草稿 | [normal drafts](../../src/app/r1-normal-form-drafts.ts)、[草稿专题](LOCAL_DRAFT_AND_WEAK_NETWORK_ARCHITECTURE.md) | 身份、内容版本、恢复及存储；首次新增草稿已验证不代表所有已有编辑和媒体跨重启恢复已完成 |
+| 保存与回读 | [配置编辑 controller](../../src/app/r1-configured-record-edit.ts)、[R1 wire adapter](../../src/adapters/api/r1-special-workflow-wires.ts) | fresh read → 完整原文/配置复查 → 持久 uncertain fence → 同 ID upsert → 完整 ACK → 权威回读 → completed；未知结果不重放 |
+| Order | [order-submission.ts](../../src/features/work-orders/quotation/order-submission.ts)、[quotation-order-api.ts](../../src/adapters/api/quotation-order-api.ts) | 独立产品/价格快照及 Order 协议；不接入 Survey 保存策略，历史价格不被当前目录价覆盖 |
 
-- `src/pages/work-orders/action-workspace.vue` 在实际描述符加载与 Vue 更新后同步页头，角色/工单/节点与加载版本变化时拒绝旧页响应；修复有主 App H5 现场证据。
-- 编辑器可恢复草稿，但操作提交、短信、签章、合同取消均不能自动重试。失败/未知与受理中不能由前端推断成成功。
-- I7 候选保留已核对的 main 与交叉 PR 祖先历史；从正式主干集成必须有新的 exact-HEAD CI、明确审批与可回滚提交，禁止 force-push 或未经授权 merge。
+Shell 统一页头、草稿反馈、底部 Action Bar 与安全区，参见 [Action Workspace](ACTION_WORKSPACE_ARCHITECTURE.md) 和 [UX Standard](../design-system/ACTION_WORKSPACE_UX_STANDARD.md)。实现仍由多个有界 controller 组成，不宣称全部动作已统一成一个万能执行器。
 
-## 5. 当前冻结边界
+## 3. 当前 v6 编辑是隔离验证能力
 
-**工程基线可候选冻结**：模块分层、标准/定制表单边界、Action 与 Info 分离、共享 UI、身份撤权、只读/命令隔离、错误/草稿/回读原则。**未冻结**：Owner 报价四屏 V2 与视觉细节、真实 SKU/金额与报价提交、签约角色/合同接口等价及实签副作用、微信/Android/iOS 实机交互。
+[src/app/r1-configured-record-edit.ts](../../src/app/r1-configured-record-edit.ts) 的入口要求 `version===6`、`synthetic===true`、非空 `recordIds`，并绑定 tenant/user/role/workOrder/run/node/FormDef/field IDs。节点必须为有明确来源的 **active repeat**；当前记录集合、完整原文、存储来源、schema 及 reader 私有代次均须一致。依赖 [r1RepeatActionsEnabled](../../src/app/r1-repeat-actions.ts) 的 DEV loopback、非 Mock、双写开关及同源 API 限制。它不是全生产编辑开通。
 
-完成本文件与自动守卫，仅提供 **I8 DoD #2 的审阅依据**；未经 Owner 决策不能把 I8 标记 ACCEPTED。最新可执行核查：`pnpm run check:m1-i8-baseline`，完整检验：`pnpm verify`。
+当前已有编辑字段预算最多 200，记录最多 50，缺页/重复身份/未知配置仍拒绝。已支持条件限于 type0 Map 的 root 元数据 showType=3、单已声明依赖、非空字符串 equals；级联为单路径，尚未核实的显式清空仍拒绝，见[条件/级联证据](../verification/R1_MAP_CONDITION_CASCADE_INTEGRATION_20261113.md)。Map 的已证实 choice、日期时间、条件/级联、checkbox、其他 scalar、默认 switch/rate、精确 bizSelect 与附件能力各有有界实现及对应证据；不能用某类型控件存在推导所有 provider、条件、清空或媒体路径已验收。初始 text/number 子集报告是历史，不是今天的完整支持清单，见[有限动态纠偏](../verification/R1_CONFIGURED_EDIT_BOUNDED_DYNAMIC_CORRECTION_20261113.md)、[Map scalar](../verification/R1_MAP_REMAINING_SCALARS_INTEGRATION_20261113.md)、[switch/rate](../verification/R1_MAP_DEFAULT_SWITCH_RATE_INTEGRATION_20261113.md)、[bizSelect](../verification/R1_MAP_BIZSELECT_SCALAR_EDIT_20261113.md)。
+
+此 controller 仅已有记录 save-only，不创建或删除记录、不 Process、不 save-and-complete；附件引用保留/删除及上传仅按当前记录会话和回执证明启用，见[当前 controller](../../src/app/r1-configured-record-edit.ts) 与[媒体会话](../../src/app/r1-normal-form-media.ts)。独立 create/complete/预约能力不能借此扩大权限。保存前撤权、配置漂移或原文变化拒绝；丢响应、错误 ACK/回读会保留持久不确定状态。它不提供服务器 CAS 或跨运行时原子事务。
+
+## 4. R1 存储及日期兼容
+
+- **Map**：在可信完整原文上保留 root，明确 `preset=false` 的已修改字段按 R1 规则同时镜像 EXTS；未知/隐藏原值保留，冲突或不完整来源不能静默覆盖。读投影不决定可写槽位。
+- **Survey DTO**：明确类型/collection 后才用 typed 策略，保留完整原文、继承字段、数组和未知扩展；按 reader 证明的槽位写补丁。未知 typed root、无法保全的显式 null、不安全整数和 root/EXTS 冲突拒绝。其他预置 DTO 需单独适配证明。
+- **日期**：业务 datetime 使用共享本地日历规则，未完成的日期/时间选择不能提交，不猜时区、epoch 或丢失毫秒。Map 分开保留 raw 与 query wire，仅允许已观察的继承审计 Date→秒级字符串兼容；不将此例外扩大到业务日期或其他字段，也不宣称 BSON 无损。Survey 精确 raw 日期与 ACK/回读比较另有规则，不能套用 Map 转换。
+
+[三模型实证](../verification/R1_CONFIGURED_MODEL_REAL_INTEGRATION_20261113.md)记录：预约 N03 的创建审计 Date `.251` 经 R1 查询/整 Map 替换成为秒级 String；Survey N05 创建时间 `.624` 保留；Order 创建时间 `.296` 截至秒且已有 getter 默认值落盘。这些是各样本的兼容限制，不能泛称所有 typed 对象无损，也不能推测后台丢失的精度。
+
+## 5. 扩展工作量边界
+
+| 变更 | 所需工作 | 不可省略 |
+| --- | --- | --- |
+| 已支持字段的新配置 | 当前 FormDef/ExtField/provider、顺序及已支持规则可直接复用投影和控件 | 仍需真实来源、完整分页、权限、槽位和 ACK/回读验证；未知配置不能当作无配置 |
+| 新字段类型或新行为 | 补 adapter 解析、能力声明、runtime 校验、共享控件、存储编码及必要平台能力 | 条件/隐藏值、清空、草稿、媒体归属、错误回执和负例；不是只加 Vue 控件 |
+| 新预置 DTO | 核实类型/collection、完整原文、字段槽位、继承/null/日期语义和保存/回读协议 | 专用 preservation/codec 及有界 controller 接入证明；不能通过强转 Map 自动开放 |
+| 新领域体验 | 组合共享字段、Shell/草稿及专用内容，保留领域协议和状态机 | 独立核实领域命令与副作用；Order/签约等不归通用表单自动承接 |
+
+## 6. 已验证与未验证
+
+[三模型实证](../verification/R1_CONFIGURED_MODEL_REAL_INTEGRATION_20261113.md)分别证明预约 Map、Survey DTO、已有正式 Order 各一次隔离 Java 正常 App 保存；预算均已消费，不重放。Survey 保存结果与后续只读重进已核实，但原 driver 的 HMR 检查失败保留，不称整份脚本全绿。[实证对账](../verification/R1_LOCAL_REAL_INTEGRATION_EVIDENCE_20261113.md)另保留历史隔离 Survey create/显式 Process、type1 Order 创建等独立成果，不能因本次 save-only 抹去，也不能拼成完整连续签约闭环。
+
+[签约前只读核验](../verification/R1_NORMAL_SIGNING_READONLY_ELIGIBILITY_20261113.md)已在正常页面组装当前节点/handler、正式 Order 与独立合同范围；Production 禁用新增资格核验动作。`mayDispatch`、`backendPermissionProven`、`actualBusinessOutcomeKnown` 始终 false；入口条件不是完整签署权限。短信、签名 URL、合同变更等命令仍独立阻断。
+
+Production 只读，Issue #201 HOLD 不变。真实 Qiniu、真实签署、短信、付款与完整签约链路未通过；真实 Java token + 合成存储不能称 Qiniu 上传通过。H5/MP/App 构建不等于原生真机通过，`CODE_PASS` 不等于 `COMMERCIAL_UI_ACCEPTED`。本文件不授予部署或发布授权。
+
+当前工程候选原则包括模块分层、数据/体验分离、有限字段能力、共享 UI、身份撤权、草稿/保存/Workflow 分离及回读/不确定保护。I8 未经 Owner 决策不得标记 ACCEPTED。静态核查：`pnpm run check:m1-i8-baseline`（仍检查其历史 manifest）；完整工程核查：`pnpm verify`，均不能替代真实业务验收。

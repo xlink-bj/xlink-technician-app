@@ -1,9 +1,15 @@
 # Action Workspace Architecture
 
-Status: G4-D UX engineering architecture  
-Program: New Technician / Field Service App  
-Baseline: `2ab3190e1d480612001786fbd29d5e56b6771ee2`  
-Branch: `rebuild/g4d-action-workspace`
+Status: ACTIVE — shared execution principles, with historical G4-D examples
+Reviewed at: 2026-11-13
+Code baseline: `main@bd22b42d8e970c885bc6237b89c1c8ddd1e1ff6d`
+Decision authority: Owner / [Target Architecture](TARGET_ARCHITECTURE.md)
+Scope: frontend responsibilities; no backend, business-write or release authorization changes.
+Program: New Technician / Field Service App
+Historical G4-D baseline: `2ab3190e1d480612001786fbd29d5e56b6771ee2`
+Historical branch: `rebuild/g4d-action-workspace`
+
+Current implementation: [2026-11-13 source snapshot](M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md). Normal forms use Reader/Provider → Host/Panel; Appointment, typed Survey, Quotation/Order and signing review have existing implementations with separate verification limits. G4-D-only statements below describe the original consumer, not current main coverage. Shared runtime responsibilities are a target contract; current controllers remain bounded implementations.
 
 Related focused architecture:
 
@@ -27,11 +33,9 @@ Workflow Runtime
 - **Action Workspace** answers: where and how is the action executed?
 - **Action Content** answers: what business-specific editor/component is required to complete the action?
 
-This architecture is the shared foundation for Appointment and later actions
-such as Inspection, Quotation, Contract, Construction and Acceptance, so each
-action does not invent a different execution pattern.
+This architecture provides shared execution principles for Appointment, Survey and Quotation/Order, and for later verified actions such as Construction and Acceptance. Existing signing review is read-only; it does not establish executable signing.
 
-The first consumer is Appointment. Appointment is not the architecture itself; it is one Action Content implementation.
+Historically, the first consumer was Appointment. Appointment is not the architecture itself; it is one Action Content implementation.
 
 ### Action Workspace invariants
 
@@ -58,8 +62,7 @@ Work Order Detail
   -> user taps CTA
   -> dedicated Action Workspace page
   -> edit / autosave / leave / resume
-  -> single-datetime selection
-  -> explicit confirmation
+  -> content-specific review / explicit confirmation when required
   -> submit business action
   -> dedicated success/failure feedback
   -> authoritative backend/workflow reread
@@ -109,9 +112,9 @@ flowchart TD
 
     DRAFT --> REGISTRY[Draft Registry / derived metadata - implemented V1]
 
-    CONTENT --> FORM[Dynamic Form Runtime]
-    CONTENT --> QUOTE[Quotation Content - future]
-    CONTENT --> CONTRACT[Contract Content - future]
+    CONTENT --> FORM[Shared bounded fields / generic or dedicated experience]
+    CONTENT --> QUOTE[Quotation / Order domain editor]
+    CONTENT --> CONTRACT[Signing review - read-only]
     CONTENT --> MEDIA[Media / Signature Content - future]
     CONTENT --> COMPOSITE[Composite Content - future]
 
@@ -209,7 +212,9 @@ composite
 
 Only content kinds with verified implementation are executable. Unknown kinds fail explicitly or remain unavailable.
 
-For G4-D, only Appointment through `dynamic_form` is implemented.
+**Historical G4-D scope:** only Appointment through `dynamic_form` was implemented at that baseline. Current main also has normal forms/repeat Host/Panel, typed Survey, Quotation/Order and signing review; see the linked source snapshot for exact limits.
+
+Data adaptation and view selection are independent. A dynamic Map can use a dedicated appointment time experience; a preset Survey DTO with extensible fields can reuse generic controls and dedicated cause/media experiences. Order retains its own domain handling. `forms/repeat` describes node provenance, not a storage strategy. No arbitrary preset DTO becomes a Map merely because its fields can be displayed.
 
 Future Action Content implementations must reuse the shared draft identity,
 lifecycle, recovery and storage boundaries while serializing only their own
@@ -217,7 +222,7 @@ semantic editor state.
 
 ### 4.5 Dynamic Form Runtime
 
-Dynamic Form Runtime remains responsible for schema interpretation and field semantics:
+The bounded shared field runtime remains responsible for supported schema interpretation and field semantics:
 
 - supported field types;
 - visibility;
@@ -226,7 +231,7 @@ Dynamic Form Runtime remains responsible for schema interpretation and field sem
 - field normalization;
 - submission validation.
 
-It is one Action Content engine, not the top-level action architecture.
+It is a reusable field/content capability, not the top-level action architecture. Storage codecs separately preserve Map root/EXTS or typed originals; they grant no workflow or editing permission. New types require parsing, runtime/control/codec and failure-path verification; a new preset DTO additionally needs an explicit preservation contract. See [current extension boundaries](M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md#5-扩展工作量边界).
 
 Appointment presentation assigns the verified `need`, `datetime`, and `note`
 field identities to their dedicated roles. Other normalized fields remain
@@ -259,7 +264,7 @@ model is one latest unfinished draft per exact Action Identity, not one global
 
 ## 6. Action Lifecycle
 
-All editable actions share one semantic lifecycle rather than creating page-specific submit state machines.
+Target contract: editable actions share these semantic lifecycle principles. Existing controllers implement bounded subsets; this does not assert a single universal state machine or full draft recovery for every editor.
 
 Minimum lifecycle:
 
@@ -396,7 +401,7 @@ is not an acceptable implementation.
 
 ## 8. Autosave and Resume
 
-Editable actions use debounced local autosave.
+Target contract: editable actions use debounced local autosave where the verified content lifecycle supports it. First-create draft verification does not certify existing-record or durable-media restoration for every path.
 
 Expected behavior:
 
@@ -473,7 +478,7 @@ The Action Workspace does not own endpoint paths or raw mutation envelopes.
 Submission must use the current effective business state, not blindly reuse a
 raw stored draft object when inactive conditional values are present.
 
-On successful mutation:
+For a command whose business success has been authoritatively established:
 
 1. mark the business operation succeeded;
 2. best-effort clear/finalize the unfinished local draft;
@@ -483,7 +488,7 @@ On successful mutation:
 6. show explicit success feedback and any separate cleanup/refresh warning;
 7. return to Work Order Detail only when the post-success context is ready.
 
-Business success is terminal once the mutation returns success. Draft cleanup or
+Business success is terminal once the command-specific success contract is satisfied. In the current v6 existing-record controller, a success-shaped response alone is insufficient: complete same-ID ACK and authoritative readback must match before the durable receipt becomes completed. Missing or conflicting evidence retains uncertainty and prohibits replay. Draft cleanup or
 authoritative refresh failure is represented as a separate pending state; it
 must not convert the mutation into a submit failure or invite resubmission.
 The frontend must not guess the next business status or workflow node.
@@ -597,8 +602,8 @@ src/
   features/
     work-orders/
     appointment/
-    quotation/           future
-    contract/            future
+    quotation/           existing domain editor and Order flows
+    signing/             existing read-only review
 
   shared/
     ports/
@@ -616,7 +621,7 @@ src/
 
 This is a responsibility map, not a requirement to create empty future modules.
 
-The Action Runtime should be introduced only to the degree needed by current functionality. Do not scaffold quotation, contract or inspection implementations before their business slices are active.
+Shared Action Runtime abstractions should be introduced only to the degree needed by verified functionality. The map above is conceptual; current Survey and signing code also resides under `features/work-orders`. Do not scaffold inactive modules or infer live mutation support from an existing component.
 
 The shared local-draft architecture is intentionally established ahead of those
 slices so later Action Content implementations do not create incompatible
@@ -624,7 +629,7 @@ feature-local persistence mechanisms.
 
 ## 15. Appointment as the First Consumer
 
-G4-D Appointment validates the pattern:
+**Historical G4-D example:** Appointment first validated the pattern:
 
 ```text
 Work Order Detail
@@ -648,19 +653,16 @@ Appointment is also the first consumer used to prove autosave, restore, draft
 identity, branch-safe stored/effective state separation and terminal draft
 cleanup. These capabilities belong to Action Runtime, not Appointment itself.
 
-Detailed Appointment field layout, date/time control, copy, spacing, visual hierarchy and success presentation are a separate Product Owner UX/UI task after this architecture is established.
+The original G4-D follow-up called for separate Appointment UX review. Current dedicated time experience is implemented; exact capability and visual acceptance remain governed by current evidence and Owner review, not this historical task description.
 
 ## 16. Non-Goals
 
-This architecture does not authorize or implement:
+This shared architecture document does not itself authorize business side effects. Its original G4-D implementation scope excluded quotation, contract/signing and Survey; those historical exclusions are superseded by the bounded implementations documented in the current snapshot. Continuing non-goals are:
 
 - general offline-first behavior;
 - queued offline business mutations;
 - automatic background replay of failed workflow/form/quotation commands;
 - a user-facing Draft Center in G4-D;
-- quotation business logic;
-- contract/signing business logic;
-- inspection/G4-E;
 - reschedule/cancel/reminder/calendar behavior;
 - arbitrary low-code widgets;
 - backend redesign;

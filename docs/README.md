@@ -19,6 +19,11 @@
 | 测试、环境和发布证据 | [Quality & Environment Gates](engineering/QUALITY_AND_ENVIRONMENT_GATES.md) | **ACTIVE — 证据规范** |
 | 文档状态、归档与更新 | [Documentation Governance](engineering/DOCUMENTATION_GOVERNANCE.md) | **ACTIVE — 文档约定** |
 
+## 当前实现核对
+
+- [前端架构源码快照（2026-11-13）](architecture/M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md)：数据适配与体验选择、正常 Reader/Provider/Host 主链、共享字段/codec/权限/草稿/回读职责、扩展边界及 v6 隔离编辑限制；不是全生产开放或 I8 验收。
+- [三模型隔离保存实证](verification/R1_CONFIGURED_MODEL_REAL_INTEGRATION_20261113.md)与[本地真实集成对账](verification/R1_LOCAL_REAL_INTEGRATION_EVIDENCE_20261113.md)：各窗口、历史成果及日期/媒体限制；已消费预算不重放，不拼成完整连续签约通过。
+
 ## 专题权威文件（保留，按需阅读）
 
 - [Action Workspace Architecture](architecture/ACTION_WORKSPACE_ARCHITECTURE.md)：动作身份、Shell、草稿/提交职责的长期设计依据；其中最早的 G4-D 阶段叙述是历史上下文。

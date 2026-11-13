@@ -1,17 +1,20 @@
 # Target Architecture — Living Architecture Record
 
-> **Mainline context update (2026-10-30):** The G2/G4-D architecture invariants below remain the long-term decision authority. The original `Working branch`, `Implementation baseline reviewed`, and older descriptions of Quotation/Contract as `future` are **historical stage metadata**, not the implementation status of today's main. Read the [main implementation snapshot](IMPLEMENTATION_BASELINE_20261030.md), [documentation index](../README.md), and [mainline policy](../../AGENTS.md) before using those passages for work planning. This notice changes no approved business or API semantics.
+> **Mainline context update (2026-11-13):** The G2/G4-D architecture invariants below remain the long-term decision authority. The original `Working branch`, `Implementation baseline reviewed`, and older descriptions of Quotation/Contract as `future` are **historical stage metadata**, not the implementation status of today's main. Read the [current source snapshot](M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md) (reviewed at `main@bd22b42d8e970c885bc6237b89c1c8ddd1e1ff6d`), the historical [2026-10-30 implementation snapshot](IMPLEMENTATION_BASELINE_20261030.md), [documentation index](../README.md), and [mainline policy](../../AGENTS.md) before using those passages for work planning. This notice changes no approved business or API semantics.
 
-Status: Living target architecture  
-Program: New Technician / Field Service App  
-Original architecture decision: G2  
-Current revision: G4-D / Action Workspace architecture review  
-Implementation baseline reviewed: `2ab3190e1d480612001786fbd29d5e56b6771ee2`  
-Working branch: `rebuild/g4d-action-workspace`
+Status: ACTIVE — living target architecture
+Reviewed at: 2026-11-13
+Decision authority: Owner architecture decisions; this update clarifies implementation boundaries only.
+Historical review metadata follows:
+Program: New Technician / Field Service App
+Original architecture decision: G2
+Original focused revision: G4-D / Action Workspace architecture review
+Implementation baseline reviewed: `2ab3190e1d480612001786fbd29d5e56b6771ee2`
+Historical working branch: `rebuild/g4d-action-workspace`
 
 This document is the current high-level architecture authority for the new Technician App.
 
-The original G2 architecture direction remains valid unless explicitly revised below. The purpose of this revision is not to replace that architecture, but to incorporate what G3, G4-UX, and G4-D have proven in implementation and to make the frontend execution model explicit before later workflow slices such as Inspection, Quotation, Contract, Construction, and Acceptance.
+The original G2 architecture direction remains valid unless explicitly revised below. The purpose of this revision is not to replace that architecture, but to incorporate what G3, G4-UX, and G4-D have proven in implementation and to make the frontend execution model explicit across verified business slices and future actions. Current coverage is recorded separately from these lasting principles.
 
 Architecture is treated as a living program artifact. Material implementation evidence may refine this document, but foundational changes require explicit architecture review rather than silent drift inside a feature branch.
 
@@ -56,9 +59,9 @@ Workflow Runtime
   -> Current Action Projection
   -> Action Runtime / Action Workspace
   -> Action Content Runtime
-       -> Dynamic Form Runtime
-       -> Quotation Content     (future)
-       -> Contract Content      (future)
+       -> Shared bounded fields / dedicated experiences
+       -> Quotation / Order domain content
+       -> Signing review        (read-only)
        -> Media / Signature     (future)
        -> Composite Content     (future)
 ```
@@ -139,9 +142,9 @@ flowchart TD
     ACTIONPROJ --> ACTION[Action Runtime / Workspace]
 
     ACTION --> CONTENT[Action Content Boundary]
-    CONTENT --> FORM[Dynamic Form Runtime]
-    CONTENT --> QUOTE[Quotation Content - future]
-    CONTENT --> CONTRACT[Contract Content - future]
+    CONTENT --> FORM[Shared bounded fields / dedicated experiences]
+    CONTENT --> QUOTE[Quotation / Order domain content]
+    CONTENT --> CONTRACT[Signing review - read-only]
     CONTENT --> OTHER[Other verified content runtimes - future]
 
     ACTION --> DRAFT[Action Draft / Recovery]
@@ -349,7 +352,7 @@ It owns:
 
 It is an **Action Content Runtime**, not the top-level business-action architecture.
 
-Appointment is the first Action Workspace consumer and uses Dynamic Form Runtime as its content engine.
+Appointment was the first Action Workspace consumer. Data strategy and experience are independent: dynamic Map plus dedicated time selection, preset Survey DTO plus extensible fields and dedicated experiences, and separate Order domain handling are all valid combinations. Shared field interpretation does not grant storage or mutation authority. A new preset DTO needs its own full-original preservation/codec proof; it is not automatically an arbitrary Map. The current normal Reader/Provider/Host path, v6 synthetic active-repeat edit limits, root/EXTS and date compatibility rules, and extension costs are specified in the [current source snapshot](M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md). This remains a bounded field mechanism, not a new low-code engine.
 
 ---
 
@@ -809,7 +812,7 @@ The following remain outside current V1 architecture unless explicitly reopened:
 
 ## 18. Evolution of the Original G2 Deferred UNKNOWNs
 
-The original G2 document recorded ten deferred architecture unknowns. G3/G4 implementation has resolved or narrowed several of them. They are now tracked by status instead of a static G2 count.
+Historical G4-D tracker: the original G2 document recorded ten deferred architecture unknowns. The statuses below preserve that review, rather than claiming current verification coverage. For current bounded implementations and remaining evidence, use the linked 2026-11-13 source snapshot.
 
 | ID | Original concern | Current status | Current owner / next evidence |
 | --- | --- | --- | --- |
@@ -832,7 +835,7 @@ These are not blockers for introducing the pattern but must remain explicit:
 | --- | --- | --- | --- |
 | AU-11 | Draft retention/expiry and explicit user cleanup policy | scope strictly by session/user + action identity; fail conservatively; no cross-action reuse | Action Runtime implementation / UX |
 | AU-12 | Local draft vs server-edited conflict semantics | no automatic merge; restore only exact compatible action identity; later conflict policy requires evidence | future multi-device/conflict need |
-| AU-13 | Future Quotation/Contract/Composite content contracts | Action Content boundary exists; do not scaffold or infer business semantics early | corresponding future G4 slices |
+| AU-13 | Quotation/Contract/Composite content contracts | Quotation/Order and signing review now have bounded implementations; signing commands and unverified composite content remain evidence-gated | current domain owners / separate business gates |
 
 An unresolved item is not permission to infer behavior. It remains blocked, unsupported, or conservatively under-displayed until evidence exists.
 
