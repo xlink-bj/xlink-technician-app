@@ -128,6 +128,7 @@ export function createConfiguredRecordEditActions(input: {
       if(!grant.fieldIds.includes(f.fieldId)&&Object.hasOwn(values,f.valueKey)&&stable(values[f.valueKey])!==stable(initial[f.valueKey]))refuse()
     }
     for(const f of writable){const v=merged[f.valueKey];if(v!==undefined&&!(typeof v==='string'||typeof v==='number'&&Number.isFinite(v)))refuse()
+      if(f.type==='radio'&&v!==undefined&&typeof v!=='string')refuse()
       if(['number','digit'].includes(f.type)&&v==='')refuse()}
     const result=normalizeSubmission({fields:schemas,values:merged,surface:ACTION_FORM_SURFACE});if(!result.ok)refuse()
     const patch:Record<string,string|number|boolean>={}

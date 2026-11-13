@@ -581,7 +581,7 @@ export function createNormalNodeFormsReader(input: {
       const records = []
       const originals = new Map<string,string>()
       const requestedEdit = parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)
-      const editStorage = configuredRecordEditStorage(sourceSnapshot,ext,fields,input.tenantId)
+      const editStorage = configuredRecordEditStorage(sourceSnapshot,ext,fields,input.tenantId,appointmentSubmitAtRead&&appointmentSubmitAllowed)
       const editGrant = requestedEdit?.version===6 && requestedEdit.synthetic===true && editStorage
         && input.env.VITE_XLINK_R1_REPEAT_ACTIONS==='true'
         && input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true' && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
@@ -631,7 +631,7 @@ export function createNormalNodeFormsReader(input: {
       }
       const after = await readNode()
       if (JSON.stringify(after) !== JSON.stringify(node) || JSON.stringify(rawFill) !== JSON.stringify(fillableFieldIds)
-        || rawFormsExts !== formsExts) deny()
+        || rawFormsExts !== formsExts || editStorage&&ext.colName==='appointment'&&!appointmentSubmitAllowed) deny()
       check()
       const snapshot: R1NodeFormsSnapshot = { workOrderId, node, definition: { ...definition, fields: hydrated } as FormDefinitionRead, records,
         ...(fillableFieldIds ? { fillableFieldIds } : {}) }
