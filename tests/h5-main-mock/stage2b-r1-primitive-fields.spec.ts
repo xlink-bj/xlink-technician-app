@@ -59,6 +59,12 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     await field('inspectionConfirmed').locator('.app-choice').filter({ hasText: '是' }).click()
     await field('inspectionCategory').locator('.app-choice').filter({ hasText: '外墙' }).click()
     await page.getByTestId('a-special-save').click()
+    // This case checks a completed save surviving reload. A click only starts
+    // the async transaction; reloading before its cleanup finishes correctly
+    // leaves the durable uncertain fence and cannot permit another edit.
+    await expect(page.getByTestId('a-special-save')).toHaveText('保存记录')
+    await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
+    await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(row).toContainText('Stage2B 现场类型验证')
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
