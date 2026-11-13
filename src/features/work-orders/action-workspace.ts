@@ -2049,7 +2049,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       return failure('network_retryable', 'Please refresh the current Action state before retrying')
     }
 
-    const validation = normalizeDynamicForm(form)
+    const validation = normalizeDynamicForm(form, { intent: 'complete' })
     if (validation.state !== 'succeeded') {
       error.value = validation.error ?? null
       lifecycle.value = 'in_progress'

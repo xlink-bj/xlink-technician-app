@@ -1,3 +1,4 @@
+import { actionIdentityFormatIssue } from './action-identity-validation'
 import { appointmentReplacementValues } from './appointment-replacement-values'
 import { hasNonStringAppointmentNeed, appointmentNeedReselectionMessage } from '@shared/form/appointment-need'
 import {
@@ -112,6 +113,7 @@ export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readon
 
 export function normalizeDynamicForm(
   form: DynamicFormRead,
+  options: { readonly intent?: 'complete' } = {},
 ): OperationSnapshot<Readonly<Record<string, FormFieldValue>>> {
   if (form.purpose === 'appointment' && form.fields.some(field => field.valueKey === 'need')
     && hasNonStringAppointmentNeed(form.values.need)) {
@@ -123,10 +125,10 @@ export function normalizeDynamicForm(
       ? [leakageExperience.triggerField.fieldId, leakageExperience.valueField.fieldId]
       : [],
   )
-  const fields = form.fields
+  const participatingFields = form.fields
     .filter((field) => !controlledFieldIds.has(field.fieldId))
     .filter((field) => !isDeferredSurveyField(form.purpose, field))
-    .map((field) => {
+  const fields = participatingFields.map((field) => {
     const schema = schemaFor(field, form.values, form.purpose)
     return isWorkflowFieldReadOnly(form, field)
       ? { ...schema, readOnly: true }
@@ -147,6 +149,11 @@ export function normalizeDynamicForm(
         { reason: result.fieldId ?? result.valueKey },
       ),
     }
+  }
+
+  if (options.intent === 'complete') {
+    const issue = actionIdentityFormatIssue({ ...form, fields: participatingFields, conditionValues: actionFormConditionValues(form) })
+    if (issue) return { state: 'failed_terminal', error: createOperationError('validation', issue.message, { reason: issue.fieldId }) }
   }
 
   const values: Record<string, FormFieldValue> = {}
@@ -268,6 +275,9 @@ export function normalizeDynamicFieldValue(
     || (field.valueKey === 'planeArea' && r1SurveyPlaneAreaAfterChange(form, 'length', form.values)?.value === ''))) {
     return { state: 'succeeded', data: '' }
   }
+  // R1 onInput retains unfinished phone/ID strings. Validate explicit submit,
+  // rather than trimming an invalid value into an accepted one while typing.
+  if (['phone', 'IDNumber'].includes(field.type) && typeof value === 'string') return { state: 'succeeded', data: value }
   const normalized = normalizeFieldValue(field.type, value, field.options, field.multiple)
   if (!normalized.ok) {
     return {
