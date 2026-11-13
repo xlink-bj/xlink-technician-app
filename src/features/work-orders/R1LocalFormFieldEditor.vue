@@ -14,7 +14,7 @@
     <text class="r1-field-editor__hint" data-testid="r1-local-field-result">请确认填写内容准确，完成操作前可继续修改。</text>
     <text v-if="error" class="r1-field-editor__hint" data-testid="r1-field-local-validation">{{ error }}</text>
     <view class="r1-field-editor__buttons">
-      <AppButton variant="secondary" size="compact" :disabled="saving" :loading="saving"
+      <AppButton variant="secondary" size="compact" :disabled="saving || !inputsValid" :loading="saving"
         @tap="save">保存草稿</AppButton>
       <AppButton variant="text" size="compact" :disabled="saving" @tap="emit('close')">取消</AppButton>
     </view>
@@ -22,6 +22,8 @@
 </template>
 
 <script setup lang="ts">
+import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
+
 import { computed, ref } from 'vue'
 import type { FormDefinitionRead, FormFieldValue } from '@shared/ports'
 import AppField from '@shared/ui/AppField.vue'
@@ -37,6 +39,7 @@ const draft=useR1LocalFormDraftStore()
 const values=ref<Readonly<Record<string,R1LocalFieldValue>>>({...props.initialValues??props.intent.values})
 const error=ref('')
 const saving=ref(false)
+const inputsValid=useFormInputValidityScope()
 const fields=computed(()=>projectR1LocalFields(props.definition,values.value))
 function set(key:string,value:FormFieldValue){
   if(saving.value)return
@@ -46,7 +49,7 @@ function set(key:string,value:FormFieldValue){
   values.value=next
 }
 async function save(){
-  if(saving.value)return
+  if(saving.value || !inputsValid.value)return
   saving.value=true
   try {
     const saved=await draft.saveDraftValues(props.intent.localId,props.definition,values.value)

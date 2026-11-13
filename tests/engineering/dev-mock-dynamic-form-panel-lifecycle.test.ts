@@ -1,3 +1,4 @@
+import * as inputValidity from '@shared/ui/form-input-validity'
 import fs from 'node:fs'
 import ts from 'typescript'
 import { compileScript, parse } from '@vue/compiler-sfc'
@@ -21,7 +22,7 @@ async function fixture(){
  const actor=Vue.reactive({session:{sessionRef:'session',user:{id:'synthetic-user'},currentRole:{id:'synthetic-role'},roleVersion:'1'}})
  const source=compileScript(parse(fs.readFileSync('src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue','utf8')).descriptor,{id:'special-host-lifecycle',inlineTemplate:true}).content
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
- const modules:Record<string,any>={vue:Vue,'@shared/state':{useSessionStore:()=>actor},'./r1-local-form-fields':localFields,'./r1-special-mock-form-fields':validation,'@shared/types':sharedTypes,'@shared/ui/ux-state-language':{uxStateLanguage}}
+ const modules:Record<string,any>={vue:Vue,'@shared/ui/form-input-validity':inputValidity,'@shared/state':{useSessionStore:()=>actor},'./r1-local-form-fields':localFields,'./r1-special-mock-form-fields':validation,'@shared/types':sharedTypes,'@shared/ui/ux-state-language':{uxStateLanguage}}
  const module={exports:{} as any};new Function('require','exports','module',js)((name:string)=>name.endsWith('.vue')?{__esModule:true,default:name.includes('R1FormFieldControl')?Control:Primitive}:modules[name],module.exports,module)
  const definition={id:'def',fields:[{fieldId:'memo',valueKey:'memo',label:'Memo',type:'text',required:false,readOnly:false}]}
  const view={kind:'forms',definition,definitions:[{id:'def',label:'Form',definition}],nodeActive:true,entries:[],receiptPending:false,pendingRecoverable:false,pendingNeedsOriginalFields:false}

@@ -50,7 +50,7 @@ for(const mode of ['save-double','renamed','optional-file','wrong-ack','permissi
  const {state,fields,codes,group}=await fixture(page,baseURL!,mode),key=(name:string)=>mixedKey(fields,name),field=(name:string)=>page.getByTestId('r1-normal-input-'+key(name))
  try{
   await open(page)
-  await field('note').getByRole('textbox').fill(mode==='hide-owned-file'?'on':' configured form ');await field('zero').getByRole('textbox').fill('0')
+  await field('note').getByRole('textbox').fill(mode==='hide-owned-file'?'on':' configured form ');await field('zero').getByRole('spinbutton').fill('0')
   await field('flag').locator('.app-choice').filter({hasText:'否'}).click();await field('score').locator('[aria-label="4 星"]').click()
   await field('checks').locator('.app-choice--multi').filter({hasText:'合成乙'}).click();await field('checks').locator('.app-choice--multi').filter({hasText:'合成甲'}).click()
   await field('multi').locator('.app-choice--multi').filter({hasText:'合成甲'}).click();await field('multi').locator('.app-choice--multi').filter({hasText:'合成丙'}).click()

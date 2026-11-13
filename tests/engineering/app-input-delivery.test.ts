@@ -5,6 +5,7 @@ import ts from 'typescript'
 import { compileScript, parse } from '@vue/compiler-sfc'
 import * as Vue from 'vue'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import * as inputValidity from '@shared/ui/form-input-validity'
 import { bindH5InputDelivery } from '@shared/ui/h5-input-delivery'
 
 class Field extends EventTarget {
@@ -24,6 +25,16 @@ describe('H5 native input delivery after uni normalization', () => {
     bindH5InputDelivery(field, { initialValue: '', isDisabled: () => false, emit })
     for (const value of ['19.25', '27.75', '0001234567890123456789', '']) send(field, value)
     expect(emit.mock.calls.map(call => call[0])).toEqual(['19.25', '27.75', '0001234567890123456789', ''])
+  })
+  it('keeps native incomplete numbers out of business values and reports recovery and disposal', () => {
+    const field = Object.assign(new Field(), { type: 'number', validity: { badInput: false } }), emit = vi.fn(), valid = vi.fn()
+    const binding = bindH5InputDelivery(field, { initialValue: '12', isDisabled: () => false, emit, onValidityChange: valid })!
+    field.validity.badInput = true; send(field, '')
+    expect(emit).not.toHaveBeenCalled(); expect(valid.mock.calls).toEqual([[true], [false]])
+    field.validity.badInput = false; send(field, '-1'); send(field, '')
+    expect(emit.mock.calls).toEqual([['-1'], ['']]); expect(valid.mock.calls).toEqual([[true], [false], [true]])
+    field.validity.badInput = true; send(field, ''); binding.dispose()
+    expect(valid.mock.calls.at(-1)).toEqual([true]); expect(emit).toHaveBeenCalledTimes(2)
   })
   it('recognizes a textarea and preserves multiline strings and a final clear', () => {
     const field = new Field(), emit = vi.fn(); field.tagName = 'TEXTAREA'
@@ -116,6 +127,7 @@ function component(platform: 'h5' | 'mp-weixin' | 'app', name: 'AppInput' | 'App
   const module = { exports: {} as { default: Vue.Component } }
   new Function('require', 'module', 'exports', js)((name: string) => {
     if (name === 'vue') return Vue
+    if (name === './form-input-validity') return inputValidity
     if (name === './h5-input-delivery') return { bindH5InputDelivery }
     throw Error(`Unexpected import ${name}`)
   }, module, module.exports)
@@ -191,4 +203,19 @@ describe.each(['AppInput','AppTextarea'] as const)('IME and reconciliation in ac
 it.each(['AppInput','AppTextarea'] as const)('leaves opt-out %s behavior unchanged',async name=>{
  vi.useFakeTimers();const root=host('root'),emit=vi.fn(),app=renderer.createApp(component('h5',name),{modelValue:'on','onUpdate:modelValue':emit})
  app.mount(root);await Vue.nextTick();const field=root.children[0]!;send(field,'draft');await Vue.nextTick();expect(field.value).toBe('draft');expect(emit.mock.calls).toEqual([['draft']]);app.unmount();await vi.runAllTimersAsync()
+})
+
+it('aggregates native validity across actual inputs and releases a removed field without changing its business model', async () => {
+  const root = host('root'), emit = vi.fn(), show = Vue.ref(true)
+  let valid!: Vue.ComputedRef<boolean>
+  const Actual = component('h5', 'AppInput')
+  const app = renderer.createApp(Vue.defineComponent({setup() {
+    valid = inputValidity.useFormInputValidityScope()
+    return () => show.value ? Vue.h(Actual, { modelValue: '12', 'onUpdate:modelValue': emit }) : null
+  }}))
+  app.mount(root); await Vue.nextTick()
+  const field = Object.assign(root.children[0]!, { type: 'number', validity: { badInput: true } })
+  send(field, ''); expect(valid.value).toBe(false); expect(emit).not.toHaveBeenCalled()
+  show.value = false; await Vue.nextTick(); expect(valid.value).toBe(true); expect(emit).not.toHaveBeenCalled()
+  app.unmount()
 })

@@ -16,7 +16,7 @@ for(const mode of ['normal','wrong-ack','revoked'] as const){
    await open(page)
    await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
    await page.getByTestId('r1-normal-input-fieldMemo').getByRole('textbox').fill('Repeat retained in original controller')
-   await page.getByTestId('r1-normal-input-fieldZero').getByRole('textbox').fill('0')
+   await page.getByTestId('r1-normal-input-fieldZero').getByRole('spinbutton').fill('0')
    await expect(page.getByTestId('r1-normal-save')).toHaveAttribute('aria-disabled','false')
    await page.getByTestId('r1-normal-save').click()
    await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('记录已保存并从后台重新读取')

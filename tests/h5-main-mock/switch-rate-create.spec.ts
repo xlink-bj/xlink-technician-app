@@ -56,7 +56,7 @@ for(const mode of ['save-reopen','renamed','required-score','wrong-ack','permiss
    expect(state.writes).toEqual([])
   }
   await field('memo').getByRole('textbox').fill(' synthetic preserved ')
-  await field('zeroProof').getByRole('textbox').fill('0')
+  await field('zeroProof').getByRole('spinbutton').fill('0')
   if(mode==='required-score'){
    await expect(page.getByTestId('r1-normal-save')).toHaveAttribute('aria-disabled','true')
    await page.getByTestId('r1-normal-save').click({force:true});expect(state.writes).toEqual([])
@@ -70,6 +70,13 @@ for(const mode of ['save-reopen','renamed','required-score','wrong-ack','permiss
    await field('arbitraryScore').locator('[aria-label="5 星"]').click()
   }
   await field('codeProof').locator('.app-choice').filter({hasText:'合成甲'}).click()
+  const zero = field('zeroProof').getByRole('spinbutton')
+  await zero.fill(''); await zero.press('-')
+  expect(await zero.evaluate(input => (input as HTMLInputElement).validity.badInput)).toBe(true)
+  await expect(page.getByTestId('r1-normal-save')).toHaveAttribute('aria-disabled','true')
+  await page.getByTestId('r1-normal-save').click({force:true}); expect(state.writes).toEqual([])
+  await zero.fill('0')
+  await expect(page.getByTestId('r1-normal-save')).toHaveAttribute('aria-disabled','false')
   await page.getByTestId('r1-normal-save').click()
   if(mode==='wrong-ack'||mode==='permission-drift'){
    await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('保存未完成或结果尚未核实')

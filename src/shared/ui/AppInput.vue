@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFormInputValidityReporter } from './form-input-validity'
 import { computed, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch } from 'vue'
 // #ifdef H5
 import { bindH5InputDelivery } from './h5-input-delivery'
@@ -57,6 +58,7 @@ const props = withDefaults(
   },
 )
 
+const reportInputValidity = useFormInputValidityReporter()
 const focused = ref(false)
 const nativeDisabled = computed(() => props.disabled || props.readOnly)
 const inputRoot = ref<unknown>(null)
@@ -78,6 +80,7 @@ async function refreshDelivery() {
   delivery?.dispose()
   delivery = bindH5InputDelivery(inputRoot.value, {
     initialValue: props.modelValue,
+    onValidityChange: reportInputValidity,
     isDisabled: () => nativeDisabled.value || disposed,
     emit: value => emit('update:modelValue', value),
     afterCommit: () => {

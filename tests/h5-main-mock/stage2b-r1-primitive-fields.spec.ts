@@ -36,9 +36,17 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     await count.fill('9007199254740993')
     await expect(page.getByTestId('a-special-save')).toHaveAttribute('aria-disabled', 'true')
     await count.fill('12')
-    await area.fill('-')
-    await expect(area).toHaveValue('-')
+    await expect(area).toHaveAttribute('type', 'number')
+    // Native numeric inputs expose an unfinished '-' as value='' + badInput;
+    // Playwright fill('-') cannot represent that real keyboard intermediate.
+    await area.press('-')
+    const partial = await area.evaluate(input => ({ value: (input as HTMLInputElement).value,
+      badInput: (input as HTMLInputElement).validity.badInput }))
+    await info.attach('native-numeric-intermediate', { body: JSON.stringify(partial), contentType: 'application/json' })
+    expect(partial).toEqual({ value: '', badInput: true })
     await expect(page.getByTestId('a-special-save')).toHaveAttribute('aria-disabled', 'true')
+    await area.press('1')
+    await expect(area).toHaveValue('-1')
     await area.fill('12.50')
     await field('inspectionConfirmed').locator('.app-choice').filter({ hasText: '否' }).click()
     await field('inspectionCategory').locator('.app-choice').filter({ hasText: '屋面' }).click()
@@ -62,6 +70,7 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     // This case checks a completed save surviving reload. A click only starts
     // the async transaction; reloading before its cleanup finishes correctly
     // leaves the durable uncertain fence and cannot permit another edit.
+    await expect(count).toHaveValue('')
     await expect(page.getByTestId('a-special-save')).toHaveText('保存记录')
     await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
     await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
