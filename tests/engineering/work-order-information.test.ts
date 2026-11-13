@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { projectWorkOrderInformation, workOrderInformationFields, workOrderInformationRequest } from '@adapters/api/read-models/work-order-information'
 import { ApiReadTransportError, createRoleScopedTechnicianApiReadAdapter, type ApiReadRequest } from '@adapters/api/technician-api'
 import { r1ReadFieldDisplayValue } from '@features/work-orders/r1-record-read-fields'
+import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { asOpaqueId } from '@shared/types'
 
 const row = (name: string, extra: Record<string, unknown> = {}) => ({ _id: 'field-' + name, name, nameDisp: name,
@@ -32,6 +33,22 @@ describe('ServiceAppointment configured information is a bounded read projection
       row('role', {roleIds:['role']}), row('configRole', {frontEndConfig:'{"roleIds":["role"]}'}), row('unknownConfig', {frontEndConfig:{customPermission:'PRIVATE'}}), row('operation', {operationType:1}), row('malformed', {frontEndConfig:'{broken'}),
       row('condition', {showType:3, showField:'source', showValue:'yes'}), row('unsupportedRole', {showType:4, showField:'role', showValue:'role'})]
     expect(display({exts: Object.fromEntries(config.map(r=>[r.name,'PRIVATE']))}, config)).toEqual([])
+  })
+  it.each([4,5])('does not expose role visibility mode %s without verified context', showType => {
+    expect(display({role:'matching-role',exts:{memo:'PRIVATE'}},[row('memo',{showType,showField:'role',showFieldPreset:1,showValue:'matching-role'})])).toEqual([])
+  })
+  it.each([4,5])('keeps actual roleIds-only mode %s closed without a verified role context', showType => {
+    expect(display({role:'matching-role',exts:{memo:'PRIVATE'}},[row('memo',{showType,roleIds:['matching-role']})])).toEqual([])
+  })
+  it('does not union all user roles to expose role rules for a different current role', () => {
+    const record={user:{roleIds:['matching-role','other']},currentRole:{_id:'other'},exts:{memo:'PRIVATE'}}
+    expect(display(record,[row('memo',{showType:4,roleIds:['matching-role']}),row('memo',{_id:'field-role5',showType:5,roleIds:['matching-role']})])).toEqual([])
+  })
+  it.each(['area','map'])('never infers a %s codec from an unsupported field name',type=>{
+    expect(display({exts:{memo:{coordinate:'PRIVATE'}}},[row('memo',{type})])).toEqual([['memo','unsupported']])
+  })
+  it('rejects Contacts configuration even when supplied as an empty-mobile-detail historical object', () => {
+    expect(()=>fields([row('phone',{colName:'contacts',preset:1,showList:['1','2','3']})])).toThrow()
   })
   it.each([0,1])('evaluates showFieldPreset=%s against its precise condition source', preset => {
     const config = [row('answer', {showType:3, showField:'source', showFieldPreset:preset, showValue:'yes'})]
@@ -73,7 +90,7 @@ function harness() {
     throw Error('Unexpected read '+request.path)
   })
   const api=createRoleScopedTechnicianApiReadAdapter({execute},()=>actor?.roleId??null,{codeTenantId:'tenant',getReadAuthorizationScope:()=>actor})
-  return {api,execute, config:(raw:unknown)=>{config=raw},dictionary:(raw:unknown)=>{dictionary=raw},hook:(fn:()=>Promise<void>)=>{hook=fn},revoke:()=>{actor=null},
+  return {api,execute, config:(raw:unknown)=>{config=raw},dictionary:(raw:unknown)=>{dictionary=raw},hook:(fn:()=>Promise<void>)=>{hook=fn},revoke:()=>{actor=null},switchRole:()=>{actor={...actor,roleId:'other',roleIds:['role','other']}},
     list:()=>api.listWorkOrders({page:1,pageSize:20,category:'all'}),read:(id='A')=>api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(id))}
 }
 
@@ -89,11 +106,17 @@ describe('information read integration preserves detail authority and fallback',
     const h=harness();h.config(page([row('memo',{type:'radio',valueOption:'information-choice'})]));await h.list()
     const value=(await h.read()).data?.informationFields?.[0];expect(value&&r1ReadFieldDisplayValue(value.field,value.value)).toBe('已核实选项')
   })
+  it('deduplicates dictionaries within a detail and stops after four distinct providers',async()=>{
+    const h=harness();h.config(page(Array.from({length:12},(_,index)=>row('choice'+index,{type:'radio',valueOption:'dictionary-'+Math.floor(index/2)}))));h.dictionary(new Error('unavailable'));await h.list()
+    expect((await h.read()).state).toBe('succeeded')
+    const reads=h.execute.mock.calls.filter(([r])=>r.path==='code/query').map(([r])=>r.body?.['is:type|string#and'])
+    expect(reads).toEqual(['dictionary-0','dictionary-1','dictionary-2','dictionary-3'])
+  })
   it('retains clearly unverified choice display when its dictionary fails',async()=>{
     const h=harness();h.config(page([row('memo',{type:'radio',valueOption:'information-choice'})]));h.dictionary(new Error('offline'));await h.list()
     const value=(await h.read()).data?.informationFields?.[0];expect(value&&r1ReadFieldDisplayValue(value.field,value.value)).toBe('A value（选项未核实）')
   })
-  it.each([new Error('offline'), {data:[]}, page([row('memo',{tenantId:'other'})])])('keeps verified fallback on failed/incomplete configuration',async config=>{
+  it.each([new Error('offline'), {data:[]}, page([row('memo',{tenantId:'other'})]), page([row('phone',{colName:'contacts',preset:1,showList:['1','2','3']})])])('keeps verified fallback on failed/incomplete configuration',async config=>{
     const h=harness();h.config(config);await h.list();const result=await h.read()
     expect(result.state).toBe('succeeded');expect(result.data?.customerName).toBe('Verified customer');expect(result.data?.informationFields).toBeUndefined()
   })
@@ -106,9 +129,57 @@ describe('information read integration preserves detail authority and fallback',
     const pending=h.read();await vi.waitFor(()=>expect(release).toBeTypeOf('function'));h.revoke();release()
     expect((await pending).error?.category).toBe('authorization_denied')
   })
+  it('discards metadata after current-role switch even if the old role remains in user roles',async()=>{
+    const h=harness();await h.list();let release!:()=>void;h.hook(()=>new Promise<void>(resolve=>{release=resolve}))
+    const pending=h.read();await vi.waitFor(()=>expect(release).toBeTypeOf('function'));h.switchRole();release()
+    expect((await pending).error?.category).toBe('authorization_denied')
+    expect((await h.read()).error?.category).toBe('authorization_denied')
+    await h.list();h.hook(async()=>{});h.config(page([row('memo',{nameDisp:'新角色配置'})]))
+    expect((await h.read()).data?.informationFields?.[0]?.field.label).toBe('新角色配置')
+  })
+  it.each(['beta','unknown'])('keeps the new reader closed outside actual guarded DEV (%s)',async environment=>{
+    const h=harness();vi.stubEnv('VITE_XLINK_ENVIRONMENT',environment);await h.list()
+    expect((await h.read()).data?.informationFields).toBeUndefined();expect(h.execute.mock.calls.some(([r])=>r.path==='biz/extField/query')).toBe(false)
+  })
   it('does not read metadata for an unlisted ID or enable the unverified Production configuration route',async()=>{
     const h=harness();expect((await h.read()).error?.category).toBe('authorization_denied');expect(h.execute).not.toHaveBeenCalled()
     vi.stubEnv('VITE_XLINK_ENVIRONMENT','prod');await h.list();expect((await h.read()).data?.informationFields).toBeUndefined()
     expect(h.execute.mock.calls.some(([r])=>r.path==='biz/extField/query')).toBe(false)
+  })
+})
+
+
+describe('metadata request cannot broaden the object, method or read budget', () => {
+  it('resists mutation of the fixed request by another consumer', () => {
+    expect(Reflect.set(workOrderInformationRequest.body, 'colName', 'contacts')).toBe(false)
+    expect(Reflect.set(workOrderInformationRequest.body, 'size', 99999)).toBe(false)
+    expect(Reflect.set(workOrderInformationRequest, 'method', 'DELETE')).toBe(false)
+    expect(workOrderInformationRequest.body.colName).toBe('serviceAppointment')
+    expect(workOrderInformationRequest.body.size).toBe(200)
+    expect(workOrderInformationRequest.method).toBe('POST')
+  })
+  it.each(['contacts', 'order', 'material', 'ServiceAppointment', 'serviceAppointment/../contacts', 'serviceAppointment%00'])('rejects response object substitution %s', colName => {
+    expect(() => fields([row('memo', { colName })])).toThrow()
+  })
+  it('rejects 201 returned rows even when the server count agrees', () => {
+    expect(() => fields(Array.from({ length: 201 }, (_, index) => row('field' + index)))).toThrow()
+  })
+  it.each([
+    workOrderInformationRequest,
+    { ...workOrderInformationRequest, method: 'GET' },
+    { ...workOrderInformationRequest, method: 'PUT' },
+    { ...workOrderInformationRequest, method: 'DELETE' },
+    { ...workOrderInformationRequest, body: { ...workOrderInformationRequest.body, colName: 'contacts' } },
+    { ...workOrderInformationRequest, body: { ...workOrderInformationRequest.body, size: 201 } },
+    { ...workOrderInformationRequest, body: { ...workOrderInformationRequest.body, page: 2 } },
+    { ...workOrderInformationRequest, body: { ...workOrderInformationRequest.body, _all: '1' } },
+    { ...workOrderInformationRequest, path: 'biz/extField/upsert' },
+  ])('keeps unverified metadata and malicious variants closed before Production HTTP ($method $path)', async input => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'prod')
+    const request = vi.fn()
+    const transport = createUniApiReadTransport({ apiBaseUrl:'https://xlink.fsgo365.cn/fsgo/wm',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session'), request })
+    await expect(transport.execute(input as ApiReadRequest)).rejects.toMatchObject({ category: 'unsupported_capability' })
+    expect(request).not.toHaveBeenCalled()
   })
 })

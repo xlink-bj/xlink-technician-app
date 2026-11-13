@@ -13,11 +13,19 @@
 - 同后台 [`ExtFieldServiceImpl.query:36–72`](https://github.com/xlink-bj/xlink-cloud-backend/blob/5fc008d32e771205260f120621c1c4fc62d0824e/src/main/java/com/fsgo/service/biz/ExtFieldServiceImpl.java#L36)：用户/组织/角色 Customize 调整返回顺序；reader 保留响应顺序，不重新按 order 排序破坏个性化结果。
 - 既有新 App `read-models/work-order.ts`：客户姓名/地址/联系字段来自 ServiceAppointment；原详情角色列表来源、返回身份校验、DEV 租户校验与作用域撤销仍适用。
 
+## 后续库级补证（父任务转述，非本会话独立执行）
+
+父任务补充当前生产库 active 元数据：ServiceAppointment 74 字段（25 preset、49 扩展），有 showType=4 的 5 条、showType=5 的 4 条（均为非空字符串 roleIds 数组、无旧 showField），phone/sourceType/channel/foreignOrderNum 等 name 重复；Contacts 13 字段，showList 均不含 4。这证明当前库中的结构复杂性，**不是当前登录用户经过 Customize 后的有效 API 结果**，也不证明字段可读。未获取/保存字段原始配置或业务值。
+
+实现按字段 ID 保留重名行，绝不按 name 合并；相同 name 的 root/exts 值和条件各按 preset/showFieldPreset 寻址；无明确角色上下文的 4/5 规则省略；Contacts 配置被固定 ServiceAppointment reader 拒绝并安全回退。库级 Contacts 缺移动详情配置不成为虚构 App 客户详情的理由。父任务另证实 R1 4 为角色包含、5 为角色不包含；本片不修改共享角色运行时，未取得可消费的当前角色读上下文时，两者都继续隐藏。当前角色必须是 currentRole._id，不能使用用户全部 roleIds 并集。当前有效 API 配置仍待证实。
+
+进一步由父任务转述：74 条中 showList4 共 26，类型 datetime3/select5/file2/text11/textarea1/area1/map1/cascade1/phone1；11 条 active 字段有 mpDetailHide（不全属于 showList4），36 条 active type0 Customize，calculateConfig 均解析为空。这些仍是库级证据。Customize 仅重排/宽度并追加未命中字段，不是 ACL；miniz 控制器 tenant 注入被注释，不能从 API 成功推断租户/字段授权。本片仅在已有角色列表/身份/租户守卫的真实 DEV 路径启动新读取；未知环境、Beta、Production 均保留旧资料。area/map 不猜实现，只显示未支持说明且不携带原值。
+
 ## 实现与安全回退
 
 `work-order-information.ts` 只迭代已验证的字段配置，不遍历业务 JSON。复用既有 `formDefinition` 元数据解码、Runtime 可见性和 mobile-detail 适用性、完整 Code 字典 reader，以及既有 `r1ReadFieldDisplayValue` 只读格式化函数。内部 mapper 使用本地标签复用解码器，不创建真实 FormDefinition/表单实例，也不添加写路径。
 
-- 仅 tenant/colName/激活/字段 ID/preset/完整计数均成立的配置可进入投影；重复身份或不完整响应回退。
+- 固定请求及其 body 均冻结，调用方不能改写对象名、方法或预算；配置单次只读、无重试或扩页。每个详情最多解析 4 种去重的 Code 字典，每种沿用已有最多 10 页/500 项的 reader，因此新增读取绝对上限为 1 配置 + 40 Code 请求；超预算选项保留明确未核实展示，字典缓存仅在该详情调用内存活。仅 tenant/colName/激活/字段 ID/preset/完整计数均成立的配置可进入投影；重复身份或不完整响应回退。
 - preset 精确选择 root 或 exts；同名键不互相覆盖，保留 0/false/null/空串。条件也按 showFieldPreset 精确取值；规则不完整不展示该字段。
 - 已支持普通标量/选择类型只读展示；未知类型、对象值、异常 EXTS 容器显示不可展示说明，不输出原对象。Code 解析失败继续明确标记“选项未核实”，不把码当已验证标签。
 - 缺少 showList、隐藏配置、角色规则不明确、未知前端规则/provider 配置、未知 operationType 或条件不完整时省略相应字段。已知编辑模式不产生编辑/保存能力。
@@ -36,7 +44,7 @@
 
 ## 验证与复现
 
-最终结果：类型检查 PASS；10 个相关单元测试文件、380 项 PASS（其中新增专用 29 项）；新资料 H5 1 项 PASS；既有详情 A/B 生命周期 H5 2 项 PASS（迟到 success / session-invalid）；架构边界、依赖自检/无增长、所有权、UI、配置布局和 review hygiene 全部 PASS。未执行全量 verify、远端 CI、生产读取或原生运行。
+最终结果：类型检查 PASS；10 个相关单元测试文件、410 项 PASS（其中新增专用 59 项）；新资料 H5 1 项 PASS；既有详情 A/B 生命周期 H5 2 项 PASS（迟到 success / session-invalid）；架构边界、依赖自检/无增长、所有权、UI、配置布局和 review hygiene 全部 PASS。未执行全量 verify、远端 CI、生产读取或原生运行。
 
 使用已安装工作区可执行文件，避免本环境 pnpm 包管理器版本自启动安装到只读 home。
 
@@ -51,6 +59,8 @@ node scripts/check-ui-governance.mjs
 node config/check-layout.mjs
 node tools/review/checks/check-review-root-hygiene.mjs
 ```
+
+专用负例覆盖恶意 colName 替换、201 行超限、固定请求变异以及 Production 传输的 GET/PUT/DELETE、写路由、任意对象、扩页和 _all；全部在实际 HTTP 之前拒绝。Production 合法形状的新配置请求同样维持关闭。
 
 H5 使用真实 uni-app 入口/正常组合、合成登录、全部 HTTP/WS 拦截，430×932。覆盖缺配置回退、新增/改名/响应排序、root/exts、隐藏/未知类型/角色省略、手机号脱敏、空配置、503 回退、A 配置延迟返回后 B 不串数据、未接单阻断且不读配置。检查账本无业务保存/上传/流程命令。DEV 原有 function/changeRole 仅拦截返回合成菜单，未发送真实角色变更。
 

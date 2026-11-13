@@ -6,12 +6,12 @@ import { asRecord, optionalRecord, optionalSignedInteger } from '../../common/re
 import { formDefinition } from './form'
 
 /** A counted single-page configuration read; no all-record or ACL bypass flags. */
-export const workOrderInformationRequest = {
-  method: 'POST' as const, path: 'biz/extField/query', body: {
+export const workOrderInformationRequest = Object.freeze({
+  method: 'POST' as const, path: 'biz/extField/query', body: Object.freeze({
     colName: 'serviceAppointment', 'is:state|integer#and': 1,
     sortField: 'order', sortOrder: 'asc', page: 1, size: 200,
-  },
-}
+  }),
+})
 
 const supportedTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'switch', 'rate', 'select', 'radio', 'checkbox', 'cascade'])
 const readConfigKeys = new Set(['mpDetailHide', 'showField', 'showValue', 'showType', 'roleIds', 'exts',

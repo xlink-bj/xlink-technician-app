@@ -5,6 +5,7 @@ import type {
   FormDataRead,
   FormValueCodec,
   FormDefinitionRead,
+  FormFieldOptionRead,
   QuotationActionContentRead,
   ReadPage,
   R1NodeFormReference,
@@ -578,22 +579,29 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
         // detail reads must never silently downgrade to the fallback.
         // Production ServiceAppointment metadata is not yet an approved live
         // read contract. Keep its existing transport gate and verified fallback.
-        if (!productionReadOnly && detailTenant && record.tenantId === detailTenant
+        if (realDev && !productionReadOnly && detailTenant && record.tenantId === detailTenant
           && !detail.workflowNodes?.some(node => node.category === 'accept' && node.lifecycle === 'active')
           && (!scopedDetail || detailCurrent())) {
           try {
             const rawFields = await this.transport.execute(workOrderInformationRequest)
             assertDetailCurrent()
             const fields = [...workOrderInformationFields(rawFields, detailTenant)]
+            // Four distinct dictionaries per detail, each using the existing
+            // 10-page reader: at most 1 schema + 40 Code requests. No retries.
+            const dictionaries = new Map<string, readonly FormFieldOptionRead[]>()
             for (let index = 0; index < fields.length; index++) {
               const field = fields[index]!
               if (['select', 'radio', 'checkbox'].includes(field.type) && field.valueOption && !field.options?.length) {
-                const options = await this.readCodeOptions({ valueOption: field.valueOption }, assertDetailCurrent)
-                if (options.state === 'succeeded' && options.data) fields[index] = { ...field,
-                  options: options.data.items.map(option => ({ value: option.value, label: option.label })) }
-                else if (options.error?.category === 'session_invalid' || options.error?.category === 'authorization_denied') {
-                  throw new ApiReadTransportError('Work Order information dictionary authorization failed', options.error.category)
+                if (!dictionaries.has(field.valueOption) && dictionaries.size < 4) {
+                  dictionaries.set(field.valueOption, [])
+                  const options = await this.readCodeOptions({ valueOption: field.valueOption }, assertDetailCurrent)
+                  if (options.state === 'succeeded' && options.data) dictionaries.set(field.valueOption,
+                    options.data.items.map(option => ({ value: option.value, label: option.label })))
+                  else if (options.error?.category === 'session_invalid' || options.error?.category === 'authorization_denied') {
+                    throw new ApiReadTransportError('Work Order information dictionary authorization failed', options.error.category)
+                  }
                 }
+                if (dictionaries.has(field.valueOption)) fields[index] = { ...field, options: dictionaries.get(field.valueOption) }
               }
             }
             assertDetailCurrent()
