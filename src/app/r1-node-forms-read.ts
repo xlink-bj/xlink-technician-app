@@ -2,6 +2,7 @@ import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {bindR1ConfiguredFileReadDisplay} from '@shared/form/r1-configured-file-read-evidence'
 import type {R1FileCreateStorage} from '@shared/form/r1-file-create-storage'
 import {configuredFileSource} from './r1-survey-media-source'
+import { configuredRecordEditStorage, recordEditAuditProjection } from './r1-record-edit-source'
 import {configuredFileStorage,assertConfiguredFileOriginal,createConfiguredFileCodec} from '@adapters/api/r1-configured-file-storage'
 import {surveyMediaSourceSeal} from './r1-survey-media-source'
 import {assertSurveyMediaOriginal} from '@features/work-orders/r1-survey-media-create'
@@ -22,7 +23,7 @@ import { isFieldApplicable } from '@runtimes/dynamic-form'
 import { ACTION_FORM_SURFACE, actionFormSchemaFor } from '@features/work-orders/action-form-schema'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
-import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead } from '@features/work-orders/r1-node-forms-read'
+import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead, R1RecordEditRead } from '@features/work-orders/r1-node-forms-read'
 import { parseR1RepeatGrant } from './r1-repeat-authorization'
 import { parseR1FormsGrant } from './r1-forms-authorization'
 import { assertSurveyLeakageCauseReadValue } from '@features/work-orders/survey-leakage-cause'
@@ -110,9 +111,23 @@ export function createNormalNodeFormsReader(input: {
   })
   let generation = 0
   let current: { snapshot: R1NodeFormsSnapshot; fingerprint: string; formsExts?: string;
+    editStorage?: R1FileCreateStorage; editSeal?: string; editSnapshotSeal?: string; editIds?: readonly string[]; editGrantSeal?: string;
+    editWires?: ReadonlyMap<string,string>;
     originals: ReadonlyMap<string, string>; formsCreateRoute?: Omit<R1GenericMapRouteRead,'recordId'|'original'>; genericRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'>;
     schemaAtRead: string; configuredFileStorage?:R1FileCreateStorage; surveyMediaSeal?:string; surveyMediaSnapshotSeal?:string; conditionalSurveySeal?: string; conditionalSnapshotSeal?: string; appointmentRoute?: true; appointmentSeal?: string; fileRoute?: Omit<R1GenericMapRouteRead, 'recordId' | 'original'> } | null = null
   const fileDisplayChecks=new WeakMap<object,()=>boolean>()
+  const editReads = new WeakMap<object, { snapshot: R1NodeFormsSnapshot; id: string; raw: string; wire: string; seal: string }>()
+  const revokedEdits = new WeakSet<object>()
+  const editSnapshotSeal = (s: R1NodeFormsSnapshot) => JSON.stringify([s.workOrderId,s.node,s.definition,s.fillableFieldIds,s.records])
+  const liveEdit = (s: R1NodeFormsSnapshot, id: string) => {
+    const valid = !revokedEdits.has(s) && current?.snapshot === s && current.editStorage
+    && input.env.VITE_XLINK_R1_REPEAT_ACTIONS==='true'
+    && JSON.stringify(parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT))===current.editGrantSeal
+    && current.editIds?.includes(id) && fingerprint() === current.fingerprint && schemaIdentity(s) === current.schemaAtRead
+    && editSnapshotSeal(s) === current.editSnapshotSeal && input.read.isWorkOrderListedForCurrentSession?.(s.workOrderId) === true
+    if(!valid)revokedEdits.add(s)
+    return valid ? current : null
+  }
   const surveyMediaReads=new WeakMap<object,{snapshot:R1NodeFormsSnapshot;fingerprint:string;seal:string;snapshotSeal:string;storage?:R1FileCreateStorage}>()
   const mediaSnapshotSeal=(s:R1NodeFormsSnapshot)=>JSON.stringify([s.workOrderId,s.node,s.definition,s.fillableFieldIds,s.records])
   const revokedSurveyMedia=new WeakSet<object>()
@@ -284,6 +299,27 @@ export function createNormalNodeFormsReader(input: {
         && input.read.isWorkOrderListedForCurrentSession?.(snapshot.workOrderId) === true
         ? current.originals.get(recordId) : undefined
       return raw ? JSON.parse(raw) as Record<string, unknown> : null
+    },
+    currentRecordEdit(snapshot, recordId) {
+      const source = liveEdit(snapshot,recordId), raw = source?.originals.get(recordId)
+      const wire=source?.editWires?.get(recordId)
+      if (!source?.editStorage || !source.editSeal || !raw || !wire) return null
+      const original=JSON.parse(raw) as Row,wireOriginal=JSON.parse(wire) as Row
+      const projectedAuditDateKeys=recordEditAuditProjection(original,wireOriginal)
+      if(!projectedAuditDateKeys)return null
+      const evidence: R1RecordEditRead = Object.freeze({ storage: source.editStorage, sourceSeal: source.editSeal,
+        original,wireOriginal,projectedAuditDateKeys })
+      editReads.set(evidence,{snapshot,id:recordId,raw,wire,seal:source.editSeal});return evidence
+    },
+    isCurrentRecordEdit(snapshot, recordId, evidence) {
+      const source=liveEdit(snapshot,recordId), stamp=evidence&&typeof evidence==='object'?editReads.get(evidence):undefined
+      if(!source||!stamp||stamp.snapshot!==snapshot||stamp.id!==recordId||stamp.seal!==source.editSeal
+        ||source.originals.get(recordId)!==stamp.raw||source.editWires?.get(recordId)!==stamp.wire)return false
+      try{return formsExtsJson((evidence as R1RecordEditRead).original)===stamp.raw
+        &&formsExtsJson((evidence as R1RecordEditRead).wireOriginal)===stamp.wire
+        &&JSON.stringify((evidence as R1RecordEditRead).projectedAuditDateKeys)===JSON.stringify(recordEditAuditProjection((evidence as R1RecordEditRead).original,(evidence as R1RecordEditRead).wireOriginal))
+        &&JSON.stringify((evidence as R1RecordEditRead).storage)===JSON.stringify(source.editStorage)
+        &&(evidence as R1RecordEditRead).sourceSeal===stamp.seal}catch{return false}
     },
     currentGenericMapRoute(snapshot, recordId) {
       const source=liveRoute(snapshot,recordId)
@@ -544,10 +580,48 @@ export function createNormalNodeFormsReader(input: {
       // List rows are discovery, not the detail read used to display a record.
       const records = []
       const originals = new Map<string,string>()
+      const requestedEdit = parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT)
+      const editStorage = configuredRecordEditStorage(sourceSnapshot,ext,fields,input.tenantId)
+      const editGrant = requestedEdit?.version===6 && requestedEdit.synthetic===true && editStorage
+        && input.env.VITE_XLINK_R1_REPEAT_ACTIONS==='true'
+        && input.env.VITE_XLINK_ENABLE_REAL_WRITES==='true' && input.env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES==='true'
+        && requestedEdit.scope.tenantId===input.tenantId && requestedEdit.scope.userId===actor.user.id
+        && requestedEdit.scope.roleId===actor.currentRole.id && requestedEdit.scope.workOrderId===workOrderId
+        && requestedEdit.scope.runtimeNodeId===runtimeNodeId && requestedEdit.scope.workflowRunId===node.runId
+        && requestedEdit.scope.formDefinitionId===definitionId ? requestedEdit : null
+      const editIds=editGrant?.recordIds??[]
+      if(editIds.some(key=>!discovered.some(r=>String(r.data.id)===key)))deny()
+      const editWires=new Map<string,string>(),preciseEditIds=new Set<string>()
       for (const r of discovered) {
         const selected=await reader.select(String(r.data.id))
-        const original=reader.originalFor(selected)
+        let original=reader.originalFor(selected)
         if(!original) return deny()
+        // Survey15 precision refinement, limited to IDs already discovered AND
+        // selected through the normal scoped reader. Raw lookup is not authority.
+        if(editStorage && editIds.includes(String(selected.data.id))){
+          const wire=formsExtsJson(original)
+          const checkGrant=()=>{check();if(JSON.stringify(parseR1RepeatGrant(input.env.VITE_XLINK_R1_REPEAT_GRANT))!==JSON.stringify(editGrant))deny()}
+          try{
+          checkGrant()
+          const rawEnvelope=row(await execute({method:'POST',path:'biz/extForm/findByIdWithWorkflow',body:{extId:definitionId,id:String(selected.data.id)}}))
+          checkGrant()
+          if(rawEnvelope.success!==true||rawEnvelope.status!==1)deny()
+          const full=row(row(rawEnvelope.data).data)
+          const expected={_id:String(selected.data.id),tenantId:input.tenantId,sid:workOrderId,nodeId:runtimeNodeId,workflowId:node.runId,state:1}
+          if(Object.entries(expected).some(([key,value])=>full[key]!==value)
+            ||['extId','definitionId','formDefId','formDefinitionId'].some(key=>Object.hasOwn(full,key)&&full[key]!==definitionId)
+            ||Object.hasOwn(full,'workflowNodeId')&&full.workflowNodeId!==runtimeNodeId)deny()
+          formsExtsJson(full)
+          if(!recordEditAuditProjection(full,original)||fields.some(f=>['createTime','updateTime','createDateTime','updateDateTime'].includes(String(f.name))))deny()
+          original=full
+          editWires.set(String(selected.data.id),wire);preciseEditIds.add(String(selected.data.id))
+          }catch(error){
+            // Lack of a Map type source removes edit capability, never promotes
+            // the formatted query to proof. Existing scoped readonly display
+            // remains available; actor/grant loss still fails the entire read.
+            checkGrant();if(editStorage.kind==='survey-dto')throw error
+          }
+        }
         if(configuredGrant&&!fileDecodeSource&&hydrated.some(field=>field.type==='file'))throw Error('当前附件配置的存储位置无法核实，不能把原文投影成未保存。')
         if(fileDecodeSource)assertConfiguredFileOriginal(fileDecodeSource.storage,original)
         else if(surveyMediaSeal)assertSurveyMediaOriginal(original)
@@ -573,6 +647,7 @@ export function createNormalNodeFormsReader(input: {
       const genericRoute = fields.length>50?routeFacts:undefined
       const conditionalSurveySeal = conditionalSurveySourceSeal(snapshot,ext,fields,input.tenantId)
       current = { snapshot, fingerprint: identity, originals, schemaAtRead:schemaIdentity(snapshot),
+        ...(editGrant&&editStorage?{editStorage,editWires,editIds:[...preciseEditIds],editGrantSeal:JSON.stringify(editGrant),editSeal:JSON.stringify([ext,fields,editStorage]),editSnapshotSeal:editSnapshotSeal(snapshot)}:{}),
         ...(formsCreateRoute?{formsCreateRoute}:{}),
         ...(surveyMediaSeal?{surveyMediaSeal,surveyMediaSnapshotSeal:mediaSnapshotSeal(snapshot),...(configuredSource?{configuredFileStorage:configuredSource.storage}:{})}:{}),
         ...(conditionalSurveySeal?{conditionalSurveySeal,conditionalSnapshotSeal:conditionalSnapshotSeal(snapshot)}:{}),

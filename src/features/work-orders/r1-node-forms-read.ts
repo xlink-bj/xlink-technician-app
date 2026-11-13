@@ -33,6 +33,15 @@ export interface R1RepeatAppointmentRead {
   readonly original: Readonly<Record<string, unknown>>
   readonly appointmentReplacement: AppointmentReplacementContext
 }
+export interface R1RecordEditRead {
+  readonly storage: R1FileCreateStorage
+  readonly sourceSeal: string
+  readonly original: Readonly<Record<string, unknown>>
+  /** Exact scoped-query wire, separately retained from the precision read. */
+  readonly wireOriginal: Readonly<Record<string, unknown>>
+  /** Observed fixed R1 audit Date→String projection; never a BSON-lossless claim. */
+  readonly projectedAuditDateKeys: readonly string[]
+}
 export interface R1NodeFormsReader {
   enabled(): boolean
   load(workOrderId: string, runtimeNodeId: string): Promise<R1NodeFormsSnapshot>
@@ -56,6 +65,10 @@ export interface R1NodeFormsReader {
    * Survives this reader's own load gap; latches false on observed scope loss. */
   retainReadIdentity?(snapshot: R1NodeFormsSnapshot): { isSameActor(): boolean } | null
   currentFormOriginal?(snapshot: R1NodeFormsSnapshot, recordId: string): Readonly<Record<string, unknown>> | null
+  /** Same normal reader, precise selected original plus explicit storage route;
+   * copied descriptors cannot establish freshness or edit authority. */
+  currentRecordEdit?(snapshot: R1NodeFormsSnapshot, recordId: string): R1RecordEditRead | null
+  isCurrentRecordEdit?(snapshot: R1NodeFormsSnapshot, recordId: string, evidence: unknown): boolean
   /** Private-reader issuance: exact string Ext.type=0, matching raw field
    * collection identities and exact selected original; never an ACK grant. */
   currentGenericMapRoute?(snapshot: R1NodeFormsSnapshot, recordId: string): R1GenericMapRouteRead | null

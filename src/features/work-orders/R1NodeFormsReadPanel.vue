@@ -30,6 +30,8 @@
               :model-value="record.values?.[field.valueKey]" />
           </template>
         </view>
+        <text v-if="actions?.editProblem?.(String(record.id))" class="form-read__hint"
+          :data-testid="`r1-normal-edit-status-${record.id}`">{{ actions.editProblem(String(record.id)) }}</text>
         <AppButton v-if="actions?.canEdit?.(String(record.id)) && !actions.locked()" variant="secondary" size="compact"
           :disabled="busy || loading" :data-testid="`r1-normal-edit-${record.id}`" @tap="edit(String(record.id))">编辑记录</AppButton>
       </view>

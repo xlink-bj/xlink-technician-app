@@ -1,4 +1,5 @@
 import {createSurveyMediaPageActions} from './r1-survey-media-actions'
+import { createConfiguredRecordEditActions } from './r1-configured-record-edit'
 import { isSurveyConditionalHiddenClear, supportsSurveyConditionalCreate } from '@features/work-orders/r1-survey-conditional-create'
 import { createRepeatAppointmentPageActions } from './r1-repeat-appointment-actions'
 import type { AuthSessionPort,MediaFilePickerPort,MediaUploadQueuePort } from '@shared/ports'
@@ -9,8 +10,9 @@ import { createR1RepeatActions, r1RepeatActionsEnabled, type R1RepeatScope } fro
 
 const keys = ['tenantId','userId','roleId','workOrderId','workflowRunId','runtimeNodeId','formDefinitionId'] as const
 export interface R1RepeatGrant {
-  readonly version: 1 | 2 | 3 | 4
-  readonly profile?: 'survey-media-first' | 'dynamic-file-first'
+  readonly version: 1 | 2 | 3 | 4 | 6
+  readonly profile?: 'survey-media-first' | 'dynamic-file-first' | 'configured-record-edit'
+  readonly synthetic?: true
   readonly scope: R1RepeatScope
   readonly expiresAt: string
   readonly fieldIds: readonly string[]
@@ -22,16 +24,16 @@ export function parseR1RepeatGrant(raw: unknown, now = Date.now()): R1RepeatGran
   try {
     if (typeof raw !== 'string' || raw.length > 10000) return null
     const g = JSON.parse(raw), s = g?.scope
-    if (!g || ![1,2,3,4].includes(g.version) || Object.keys(g).sort().join() !== (g.version===2?['version','scope','expiresAt','fieldIds','operations','recordIds']:g.version>=3?['version','scope','expiresAt','fieldIds','operations','profile']:['version','scope','expiresAt','fieldIds','operations']).sort().join() || !s || Object.keys(s).sort().join() !== [...keys].sort().join()
+    if (!g || ![1,2,3,4,6].includes(g.version) || Object.keys(g).sort().join() !== (g.version===6?['version','scope','expiresAt','fieldIds','operations','recordIds','profile','synthetic']:g.version===2?['version','scope','expiresAt','fieldIds','operations','recordIds']:g.version>=3?['version','scope','expiresAt','fieldIds','operations','profile']:['version','scope','expiresAt','fieldIds','operations']).sort().join() || !s || Object.keys(s).sort().join() !== [...keys].sort().join()
       || keys.some(k => typeof s[k] !== 'string' || !s[k] || s[k].trim() !== s[k] || s[k].includes(','))
       || typeof g.expiresAt !== 'string' || !Number.isFinite(Date.parse(g.expiresAt)) || Date.parse(g.expiresAt) <= now
       || !Array.isArray(g.fieldIds) || g.fieldIds.length < 1 || g.fieldIds.length > 50
       || g.fieldIds.some((v: unknown) => typeof v !== 'string' || !v || v.trim() !== v)
       || new Set(g.fieldIds).size !== g.fieldIds.length
-      || (g.version===1?JSON.stringify(g.operations)!=='["create","complete"]':g.version>=3?g.profile!==(g.version===3?'survey-media-first':'dynamic-file-first')||JSON.stringify(g.operations)!=='["create"]':
+      || (g.version===6?(g.synthetic!==true||g.profile!=='configured-record-edit'||JSON.stringify(g.operations)!=='["edit"]'||!Array.isArray(g.recordIds)||g.recordIds.length<1||g.recordIds.length>50||g.recordIds.some((v:unknown)=>typeof v!=='string'||!v||v.trim()!==v||v.includes(','))||new Set(g.recordIds).size!==g.recordIds.length):g.version===1?JSON.stringify(g.operations)!=='["create","complete"]':g.version>=3?g.profile!==(g.version===3?'survey-media-first':'dynamic-file-first')||JSON.stringify(g.operations)!=='["create"]':
         JSON.stringify(g.operations)!=='["edit"]'||!Array.isArray(g.recordIds)||g.recordIds.length<1||g.recordIds.length>50
         ||g.recordIds.some((v:unknown)=>typeof v!=='string'||!v||v.trim()!==v||v.includes(','))||new Set(g.recordIds).size!==g.recordIds.length)) return null
-    return Object.freeze({ ...g, scope: Object.freeze({ ...s }), fieldIds: Object.freeze([...g.fieldIds]), operations: Object.freeze([...g.operations]), ...(g.version===2?{recordIds:Object.freeze([...g.recordIds])}:{}) })
+    return Object.freeze({ ...g, scope: Object.freeze({ ...s }), fieldIds: Object.freeze([...g.fieldIds]), operations: Object.freeze([...g.operations]), ...([2,6].includes(g.version)?{recordIds:Object.freeze([...g.recordIds])}:{}) })
   } catch { return null }
 }
 
@@ -66,6 +68,10 @@ export function createNormalRepeatActionProvider(input: {
   return {
     forSnapshot(snapshot) {
       const g = grant(), a = input.auth.getCurrentSession()
+      if (g?.version === 6) return createConfiguredRecordEditActions({ snapshot, reader: input.reader,
+        auth: input.auth, env: input.env, origin: input.origin, getGrant: grant,
+        transport: createUniApiCommandTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
+          getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null }) })
       if(g?.version===4){
         if(!input.media||!input.reader.isCurrent(snapshot)||a?.user.id!==g.scope.userId||a.currentRole?.id!==g.scope.roleId)return null
         return createSurveyMediaPageActions({snapshot,reader:input.reader,auth:input.auth,env:input.env,origin:input.origin,getGrant:grant,media:input.media,

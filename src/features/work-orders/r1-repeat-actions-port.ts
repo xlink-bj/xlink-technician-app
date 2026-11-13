@@ -14,6 +14,8 @@ export interface R1RepeatPageActions {
   /** Optional forms capabilities; absent keeps the original Repeat contract. */
   canCreate?(): boolean
   canEdit?(recordId: string): boolean
+  /** Business feedback from this record's existing capability/receipt only. */
+  editProblem?(recordId: string): string | null
   canComplete?(): boolean
   canSaveAndComplete?(): boolean
   projectFields?(values: Readonly<Record<string, unknown>>, recordId?: string): readonly (R1LocalField & { readonly visible: boolean })[]
