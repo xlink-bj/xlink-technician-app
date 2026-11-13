@@ -4,6 +4,7 @@ import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-action
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from '@features/work-orders/action-form-schema'
 import { hasDistinctR1ChoiceMembers } from '@features/work-orders/r1-local-form-fields'
 import { isR1MobilePhone } from '@shared/form/r1-mobile-phone'
+import { isR1DefaultSwitchValue, isR1DefaultRateValue } from '@shared/form/r1-default-controls'
 import { evaluateFieldState, normalizeFieldValue, normalizeSubmission } from '@runtimes/dynamic-form'
 import { evaluateNodeVisibility, isHandlerMatch } from '@runtimes/workflow/policy'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
@@ -172,6 +173,9 @@ export function createConfiguredRecordEditActions(input: {
       }else if(v!==undefined&&!(typeof v==='string'||typeof v==='number'&&Number.isFinite(v)))refuse()
       if(['radio','select','phone','IDNumber','date','time'].includes(f.type)&&v!==undefined&&typeof v!=='string')refuse()
       if(f.type==='phone'&&v!==undefined&&v!==''&&!isR1MobilePhone(v))refuse('手机号格式不符合要求。')
+      if(f.type==='switch'&&v!==undefined&&!isR1DefaultSwitchValue(v)
+        &&!(v===''&&initial[f.valueKey]===''))refuse('请明确选择是或否。')
+      if(f.type==='rate'&&v!==undefined&&v!==''&&!isR1DefaultRateValue(v))refuse('请使用1至5的整数评分。')
       if(['number','digit'].includes(f.type)&&v==='')refuse()}
     const result=normalizeSubmission({fields:schemas,values:merged,surface:ACTION_FORM_SURFACE});if(!result.ok)refuse()
     const patch:Record<string,string|number|boolean|readonly string[]>={}
@@ -180,6 +184,9 @@ export function createConfiguredRecordEditActions(input: {
       // optional []/empty-string sentinel must not accidentally clear them.
       if(!evaluateFieldState(actionFormSchemaFor(f),{values:merged as never,surface:ACTION_FORM_SURFACE}).visible)continue
       const supplied=values[key]
+      // Retain an already-empty optional switch verbatim; do not invent a new
+      // clear operation or an EXTS mirror for an unchanged legacy empty slot.
+      if(f.type==='switch'&&supplied===''&&initial[key]==='')continue
       // Empty optional checkbox is an explicit clear, not absence. R1's
       // checkbox-group serializes []; omitting it would retain the old value.
       const value=result.value.values[key]??(!f.required&&f.type==='checkbox'&&Array.isArray(supplied)&&supplied.length===0?[]

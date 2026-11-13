@@ -25,6 +25,7 @@ import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead, R1RecordEditRead } from '@features/work-orders/r1-node-forms-read'
 import { parseR1RepeatGrant } from './r1-repeat-authorization'
+import { hasR1DefaultControlOverrides } from '@shared/form/r1-default-controls'
 import { parseR1FormsGrant } from './r1-forms-authorization'
 import { assertSurveyLeakageCauseReadValue } from '@features/work-orders/survey-leakage-cause'
 import { createNormalR1FileCodec } from '@adapters/api/normal-r1-file-codec'
@@ -544,7 +545,7 @@ export function createNormalNodeFormsReader(input: {
       }
       const formsCreateRoute=routeFacts&&fields.length<=50&&!['survey','inspectionAppointment','serviceAppointment'].includes(routeFacts.colName)
         &&fields.every(f=>(!hydrated.some(mapped=>mapped.fieldId===f._id&&['switch','rate'].includes(mapped.type))
-          ||['switch','rate'].includes(String(f.type))&&!['count','allowHalf','half','step','activeValue','inactiveValue','max','min','options'].some(k=>Object.hasOwn(f,k)))
+          ||['switch','rate'].includes(String(f.type))&&!hasR1DefaultControlOverrides(f))
           &&[0,1].includes(f.preset as number)&&(ordinaryFileConfig(f)?['0','1',0,1].includes(f.required as never):['0','1'].includes(f.required as string))
           &&(typeof f.multiple==='boolean'||ordinaryFileConfig(f)&&!Object.hasOwn(f,'multiple'))
           &&(f.operationType==='1'||ordinaryFileConfig(f)&&!Object.hasOwn(f,'operationType'))&&(f.calculateConfig==null||f.calculateConfig==='')&&(f.router==null||f.router==='')

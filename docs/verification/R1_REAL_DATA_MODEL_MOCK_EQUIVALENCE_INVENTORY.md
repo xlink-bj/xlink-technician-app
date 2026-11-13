@@ -8,6 +8,8 @@
 
 后续简单字段批次：[type0 Map phone／IDNumber／date／time／单值 select（2026-11-13）](R1_MAP_REMAINING_SCALARS_INTEGRATION_20261113.md)。复用校验与控件，不推广 typed DTO、复杂配置或真实写入；本地完整 6152 用例及 32 条核心 H5 路径通过，最终按独立提交 CI 核验。
 
+后续默认控件批次：[type0 Map switch／rate（2026-11-13）](R1_MAP_DEFAULT_SWITCH_RATE_INTEGRATION_20261113.md)。只接 R1 字面值和默认 1–5 量程，区分可选评分清空与 switch 原文保留；本地完整 6204 用例及 37 条核心 H5 通过，媒体与其他低代码配置仍另列缺口。
+
 > 2026-11-05 Owner 决策；适用 `xlink-bj/xlink-technician-app` 当前技术工程师主流程。此文档是**建立 1:1 协议/模型 Mock 的执行清单**，不是 Production 原始数据导出、真实写入许可或已完成的 R1 全业务验收。
 
 ## 0. 权威来源与判定口径

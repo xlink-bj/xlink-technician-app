@@ -85,20 +85,16 @@ it.each([{ verify: 'custom' }, { placeholder: 123 }, { placeholder: '说明', su
     expect(h.writes).toEqual([])
   })
 
-it('does not promote a writable switch or an unknown readonly type to a supported storage strategy', async () => {
-  for (const type of ['switch', 'unknown-control']) {
-    const h = existingRecordFixture(true)
-    h.mapRoute()
-    h.fields[0].type = type
-    if (type === 'unknown-control') {
-      h.node.nodeDef.formFieldIdsReadOnly = ['configured-0']
-      h.node.nodeDef.formFieldIdsFill = ['configured-1']
-      h.grant.fieldIds = ['configured-1']
-      h.setGrant()
-    }
-    expect(h.provider().forSnapshot(await h.load())).toBeNull()
-    expect(h.writes).toEqual([])
-  }
+it('does not promote an unknown readonly type to a supported storage strategy', async () => {
+  const h = existingRecordFixture(true)
+  h.mapRoute()
+  h.fields[0].type = 'unknown-control'
+  h.node.nodeDef.formFieldIdsReadOnly = ['configured-0']
+  h.node.nodeDef.formFieldIdsFill = ['configured-1']
+  h.grant.fieldIds = ['configured-1']
+  h.setGrant()
+  expect(h.provider().forSnapshot(await h.load())).toBeNull()
+  expect(h.writes).toEqual([])
 })
 
 it('keeps the 200-row metadata bound and the older grant limits', async () => {

@@ -5,6 +5,7 @@ import { evaluateFieldState, evaluateVisibility, normalizeSubmission } from '@ru
 import type { VisibilityExpression } from '@runtimes/dynamic-form'
 import { completePath, verifiedTree } from './r1-forms-cascade-create'
 import { isR1NormalImageWireArray } from '@shared/form/r1-normal-image-contract'
+import { isR1DefaultSwitchValue, isR1DefaultRateValue } from '@shared/form/r1-default-controls'
 import { sameR1NormalFileValues } from './r1-normal-file-values'
 import type { R1FileWireValue } from '@shared/types'
 
@@ -91,8 +92,8 @@ function literals(plan:ReturnType<typeof planFor>,values:Readonly<Record<string,
     }else{
       if(Array.isArray(v)||typeof v==='object'||typeof v==='number'&&!Number.isFinite(v))return deny()
       if(v==='')continue
-      if(e.kind==='switch'&&v!=='1'&&v!=='0')return deny()
-      if(e.kind==='rate'&&(typeof v!=='number'||!Number.isSafeInteger(v)||v<1||v>5))return deny()
+      if(e.kind==='switch'&&!isR1DefaultSwitchValue(v))return deny()
+      if(e.kind==='rate'&&!isR1DefaultRateValue(v))return deny()
     }
   }
   return runtime
