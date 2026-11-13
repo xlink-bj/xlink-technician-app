@@ -44,8 +44,37 @@ describe('ServiceAppointment configured information is a bounded read projection
     const record={user:{roleIds:['matching-role','other']},currentRole:{_id:'other'},exts:{memo:'PRIVATE'}}
     expect(display(record,[row('memo',{showType:4,roleIds:['matching-role']}),row('memo',{_id:'field-role5',showType:5,roleIds:['matching-role']})])).toEqual([])
   })
-  it.each(['area','map'])('never infers a %s codec from an unsupported field name',type=>{
+  it.each(['area','map'])('never infers a %s value from an unknown object shape',type=>{
     expect(display({exts:{memo:{coordinate:'PRIVATE'}}},[row('memo',{type})])).toEqual([['memo','unsupported']])
+  })
+  it('renders verified area paths from exact root/exts locations using the pinned three-level dictionary', () => {
+    const record={area:['440000','440300','440305'],exts:{area:[330000,330100,330106]}}
+    expect(display(record,[row('area',{preset:1,type:'area',nameDisp:'根区域'}),row('area',{_id:'ext-area',type:'area',nameDisp:'扩展区域'})]))
+      .toEqual([['根区域','广东省深圳市南山区'],['扩展区域','浙江省杭州市西湖区']])
+  })
+  it.each([['440000','330100','330106'],['440000','440300','330106'],['990000','990100','990101'],['440000','440300'],[['440000','440300','440305']], '440000,440300,440305'])('does not reveal an unknown or mismatched area path (%j)', value=>{
+    expect(display({exts:{area:value},province:'440000',city:'440300',district:'440305'},[row('area',{type:'area'})])).toEqual([['area','unsupported']])
+  })
+  it('preserves empty and absent area values without inventing administrative labels',()=>{
+    expect(display({exts:{area:[]}},[row('area',{type:'area'})])).toEqual([['area','空值']])
+    expect(display({exts:{area:null}},[row('area',{type:'area'})])).toEqual([['area','空值']])
+    expect(display({},[row('area',{type:'area'})])).toEqual([['area','未保存']])
+  })
+  it('reads map addresses as plain field strings and never reconstructs them from gpsPoint',()=>{
+    const record={address:'合成根地址',gpsPoint:{longitude:'PRIVATE-LNG',latitude:'PRIVATE-LAT'},exts:{address:'合成扩展地址'}}
+    const config=[row('address',{preset:1,type:'map',nameDisp:'根地址'}),row('address',{_id:'ext-address',type:'map',nameDisp:'扩展地址'})]
+    expect(display(record,config)).toEqual([['根地址','合成根地址'],['扩展地址','合成扩展地址']])
+    const unreadGps={address:'合成根地址',exts:{address:'合成扩展地址'}}
+    Object.defineProperty(unreadGps,'gpsPoint',{get:()=>{throw Error('gpsPoint must remain unread')}})
+    expect(display(unreadGps,config)).toEqual([['根地址','合成根地址'],['扩展地址','合成扩展地址']])
+    expect(JSON.stringify(projectWorkOrderInformation(record,fields(config),true))).not.toContain('PRIVATE')
+    expect(display({gpsPoint:record.gpsPoint},[config[0]!])).toEqual([['根地址','未保存']])
+  })
+  it.each([{longitude:1,latitude:2},[1,2],42])('rejects non-string map data (%j) without projecting coordinates', value=>{
+    expect(display({exts:{address:value}},[row('address',{type:'map'})])).toEqual([['address','unsupported']])
+  })
+  it('retains the phone privacy boundary even if metadata changes the phone type to map',()=>{
+    expect(display({status:104,phone:'13800000000'},[row('phone',{preset:1,type:'map'})])).toEqual([['phone','138****0000']])
   })
   it('rejects Contacts configuration even when supplied as an empty-mobile-detail historical object', () => {
     expect(()=>fields([row('phone',{colName:'contacts',preset:1,showList:['1','2','3']})])).toThrow()
@@ -101,6 +130,10 @@ describe('information read integration preserves detail authority and fallback',
     expect((await h.read('B')).data?.informationFields?.[0]?.value).toBe('B value')
     expect(h.execute.mock.calls.filter(([r])=>r.path==='biz/extField/query').map(([r])=>r)).toEqual([workOrderInformationRequest,workOrderInformationRequest])
     expect(h.execute.mock.calls.some(([r])=>/upsert|save|process|contact/i.test(r.path))).toBe(false)
+  })
+  it('keeps a valid nonempty configuration with every field hidden distinct from a failed read',async()=>{
+    const h=harness();h.config(page([row('memo',{showList:['3']}),row('name',{preset:1,frontEndConfig:{mpDetailHide:true}})]));await h.list()
+    const result=await h.read();expect(result.state).toBe('succeeded');expect(result.data?.informationFields).toEqual([])
   })
   it('uses the existing complete scoped dictionary reader for configured choices',async()=>{
     const h=harness();h.config(page([row('memo',{type:'radio',valueOption:'information-choice'})]));await h.list()

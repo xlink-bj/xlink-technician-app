@@ -4,6 +4,8 @@ import { evaluateVisibility, isFieldApplicable } from '@runtimes/dynamic-form'
 import { AdapterMappingError } from '../../common/operations'
 import { asRecord, optionalRecord, optionalSignedInteger } from '../../common/records'
 import { formDefinition } from './form'
+import { countyList } from '../reference/area-county-dictionary'
+import { cityList, provinceList } from '../reference/area-region-dictionary'
 
 /** A counted single-page configuration read; no all-record or ACL bypass flags. */
 export const workOrderInformationRequest = Object.freeze({
@@ -13,7 +15,7 @@ export const workOrderInformationRequest = Object.freeze({
   }),
 })
 
-const supportedTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'switch', 'rate', 'select', 'radio', 'checkbox', 'cascade'])
+const supportedTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'switch', 'rate', 'select', 'radio', 'checkbox', 'cascade', 'area', 'map'])
 const readConfigKeys = new Set(['mpDetailHide', 'showField', 'showValue', 'showType', 'roleIds', 'exts',
   'placeholder', 'width', 'minlength', 'maxlength', 'minLength', 'maxLength', 'group', 'max', 'min', 'componentType'])
 const has = (record: Record<string, unknown>, key: string) => Object.prototype.hasOwnProperty.call(record, key)
@@ -65,6 +67,20 @@ export function workOrderInformationFields(raw: unknown, tenantId: string): read
   })
 }
 
+/** R1 area is a complete province/city/county adcode path. Unknown or
+ * inconsistent paths remain unavailable; never use root province/city/district
+ * as a replacement for the configured value, or expose raw unknown codes. */
+function areaReadLabel(value: unknown): string | undefined {
+  if (!Array.isArray(value) || value.length !== 3) return undefined
+  const codes = value.map(code => typeof code === 'string' && /^\d{6}$/.test(code) ? code
+    : typeof code === 'number' && Number.isInteger(code) && code >= 100000 && code <= 999999 ? String(code) : undefined)
+  const [province, city, county] = codes
+  if (!province || !city || !county || !province.endsWith('0000') || !city.endsWith('00')
+    || city.slice(0, 2) !== province.slice(0, 2) || county.slice(0, 4) !== city.slice(0, 4)) return undefined
+  const labels = [provinceList[province], cityList[city], countyList[county]]
+  return labels.every(Boolean) ? labels.join('') : undefined
+}
+
 export function projectWorkOrderInformation(
   record: Record<string, unknown>, fields: readonly FormFieldRead[], includePhone: boolean,
 ): readonly WorkOrderInformationFieldRead[] {
@@ -91,6 +107,16 @@ export function projectWorkOrderInformation(
       if (mask) result.push({ field, value: `${mask[1]}****${mask[2]}` })
       else if (value === undefined || value === null || value === '') result.push({ field, ...(value !== undefined ? { value } : {}) })
       else result.push({ field: { ...field, unsupportedReason: 'Phone display mask is unavailable' } })
+      continue
+    }
+    if (field.type === 'area' || field.type === 'map') {
+      if (value === undefined || value === null || value === '') result.push({ field, ...(value !== undefined ? { value } : {}) })
+      else if (field.type === 'area') {
+        const label = Array.isArray(value) && value.length === 0 ? '' : areaReadLabel(value)
+        if (label !== undefined) result.push({ field, value: label })
+        else result.push({ field: { ...field, unsupportedReason: 'Area code path is unverified' } })
+      } else if (typeof value === 'string') result.push({ field, value })
+      else result.push({ field: { ...field, unsupportedReason: 'Map address must be a string' } })
       continue
     }
     const scalar = (v: unknown): v is string | boolean | number => typeof v === 'string' || typeof v === 'boolean' || typeof v === 'number' && Number.isFinite(v)

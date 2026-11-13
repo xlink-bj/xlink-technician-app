@@ -6,7 +6,7 @@ test('normal App displays bounded configured information, safe fallback and isol
   let config:Record<string,unknown>={data:[]}, currentId='A', configFailure=false, preAccept=false, holdA=false, releaseA=()=>{}, markA=()=>{}
   const arrivedA=new Promise<void>(resolve=>{markA=resolve})
   const row=(id:string)=>({_id:id,name:'合成客户'+id,phone:'13800000000',orderNum:'SYNTHETIC-'+id,tenantId:'synthetic-authority',state:1,status:104,
-    address:'合成地址',serviceType:'40',memo:'根部备注'+id,exts:{sourceType:'',memo:'扩展备注'+id,hidden:'不能展示的合成隐藏值',unknown:{secret:'不能展示的合成对象'}}})
+    address:'合成地址',area:['440000','440300','440305'],gpsPoint:{longitude:'DO-NOT-EXPOSE-LNG',latitude:'DO-NOT-EXPOSE-LAT'},serviceType:'40',memo:'根部备注'+id,exts:{sourceType:'',area:[330000,330100,330106],memo:'扩展备注'+id,hidden:'不能展示的合成隐藏值',unknown:{secret:'不能展示的合成对象'}}})
   const configured=(data:unknown[])=>({data,total:data.length,page:1,size:200})
   page.on('pageerror',e=>errors.push(e.message))
   await page.routeWebSocket('**/*', socket=>{if(new URL(socket.url()).origin.replace('ws:','http:')===origin)socket.connectToServer();else{unexpected.push('WS');socket.close()}})
@@ -48,6 +48,14 @@ test('normal App displays bounded configured information, safe fallback and isol
     await page.screenshot({path:info.outputPath('after-configured-430x932.png'),fullPage:true});await back()
     config=configured([field('memo',{preset:1,nameDisp:'重新排序后根备注'}),field('name',{preset:1,nameDisp:'再次改名'})])
     await open();await expect(rows.locator('.row-label')).toHaveText(['重新排序后根备注','再次改名']);await expect(rows.first()).toContainText('根部备注A');await back()
+    config=configured([field('area',{preset:1,type:'area',nameDisp:'根区域'}),field('area',{_id:'ext-area',type:'area',nameDisp:'扩展区域'}),field('address',{preset:1,type:'map',nameDisp:'地图地址'})])
+    await open();await expect(rows).toContainText(['广东省深圳市南山区','浙江省杭州市西湖区','合成地址'])
+    await expect(page.locator('.customer-info-panel')).not.toContainText('DO-NOT-EXPOSE')
+    await page.screenshot({path:info.outputPath('area-map-readonly-430x932.png'),fullPage:true});await back()
+    config=configured([field('name',{preset:1,showList:['3']}),field('address',{preset:1,type:'map',frontEndConfig:{mpDetailHide:true}})])
+    await open();await expect(rows).toHaveCount(0);await expect(page.locator('.customer-info-panel')).toContainText('暂无可展示资料')
+    await expect(page.locator('.customer-info-panel')).not.toContainText('客户姓名');await expect(page.locator('.customer-info-panel')).not.toContainText('合成客户A')
+    await page.screenshot({path:info.outputPath('all-configured-fields-hidden-430x932.png'),fullPage:true});await back()
     config=configured([]);await open();await expect(rows).toHaveCount(0);await expect(page.locator('.customer-info-panel')).toContainText('暂无可展示资料');await back()
     configFailure=true;await open();await expect(rows).toHaveCount(0);await expect(page.locator('.customer-info-panel')).toContainText('客户姓名');await back();configFailure=false
     config=configured([field('memo',{nameDisp:'切换字段'})]);holdA=true
