@@ -289,6 +289,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/role-field-visibility.config.ts
+      - name: Verify read-only Work Order information selected-role isolation (5 cases)
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/work-order-information-role.config.ts
       - name: Verify reader-proven generic Map scalar edit in the normal App
         env:
           XLINK_H5_GENERIC_MAP_EDIT: 'true'
@@ -357,6 +362,7 @@ jobs:
             test-results/work-order-authority-revocation/
             test-results/forms-scalar-subset/
             test-results/role-field-visibility/
+            test-results/work-order-information-role/
             test-results/generic-map-edit/
             test-results/repeat-appointment-edit/
             test-results/normal-appointment-experience/

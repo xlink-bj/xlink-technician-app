@@ -1,7 +1,9 @@
 # 工单资料薄只读适配层（2026-11-13）
 
 基线：`main@48038f309388642390e2a0cd5c7dc43d55a1a4bd`。
-交付状态：**SOURCE + synthetic normal-App H5 verified；当前 Production 生效配置未核实，Production 新入口维持关闭。**
+后续角色贯通见 [只读角色上下文验证](WORK_ORDER_INFORMATION_SELECTED_ROLE_20261113.md)。下文角色名单一律拒绝的描述和 424 项结果是首批快照；后续仅在可信当前角色读上下文下支持有限 4/5 子集，Production 入口仍关闭。
+
+首批交付状态：**SOURCE + synthetic normal-App H5 verified；当前 Production 生效配置未核实，Production 新入口维持关闭。**
 本记录不把历史固定源码或 Mock 当作当前生产有效配置证据。
 
 ## 范围与证据
@@ -48,7 +50,7 @@ area 只接受完整三级六码路径（字符串或有限整数）、各级字
 ## 待核实与明确关闭项
 
 1. **当前 Production 生效配置**：需要在当前登录租户/技师角色下，对 `colName=serviceAppointment` 的有界只读返回确认 total/page/size/完整性、preset、showList、实际类型、条件组合、roleIds、operationType、extId 和 Customize 生效顺序。只需脱敏结构证据；不需要客户原值或凭据。本片不执行生产登录/调查，不改变 Production ExtField 白名单，`getWorkOrderDetail` 在 Production 跳过新读取并保留原资料。后续开启需明确允许的有界请求和作用域防护，不能把本次 H5 PASS 当作开启依据。
-2. 角色条件/非空 roleIds、showType=2 的自值语义、特殊 provider、媒体、脚本以及 numeric group 的用户可见分组语义未证明；保守不扩展。group 元数据不据数字猜标题，服务端顺序仍保留。
+2. 首批未覆盖角色条件/非空 roleIds；后续有限 4/5 子集见上方记录。showType=2 的自值语义、特殊 provider、媒体、脚本以及 numeric group 的用户可见分组语义未证明；保守不扩展。group 元数据不据数字猜标题，服务端顺序仍保留。
 3. Contacts：现有 contactIds 只证明联系引用，不证明当前可安全读取 Contacts 主数据的完整关联、API 和权限。本片无 Contacts 请求，也不按姓名/电话猜关联。
 4. 原生 MP/App 和 Owner 商业视觉验收未执行；本任务使用 H5，不启动原生设备。R2 无新视觉设计诉求/无凭据，本次仅检查现有实际 App 的匹配视口前后截图，不声称新的 R2 Live 验收。
 
