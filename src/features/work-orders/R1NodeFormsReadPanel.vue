@@ -61,7 +61,7 @@
             <AppButton variant="text" :disabled="busy" @tap="confirmSaveCompletion = false">返回检查</AppButton>
           </template>
           </template>
-          <AppButton v-if="editing || actions.fileMedia" variant="text" :disabled="busy || fileCancelling" :loading="fileCancelling" data-testid="r1-normal-edit-cancel" @tap="cancelEdit">{{ actions.fileMedia ? '取消本次新增' : '取消编辑' }}</AppButton>
+          <AppButton v-if="editing || actions.fileMedia" variant="text" :disabled="busy || fileCancelling" :loading="fileCancelling" data-testid="r1-normal-edit-cancel" @tap="cancelEdit">{{ actions.fileMedia && !editingId ? '取消本次新增' : '取消编辑' }}</AppButton>
           <text class="form-read__hint">保存仅保存本条记录，不会完成当前节点或进入下一阶段。</text>
         </view>
         <view v-if="visibleSnapshot.records.length && !editing && (actions.canComplete ? actions.canComplete() : true)" class="form-read__record">
@@ -324,8 +324,9 @@ async function discardDraft(){
 function setFileValue(fieldId:string,key:string,value:readonly R1FileWireValue[]){
   const s=visibleSnapshot.value,media=actions.value?.fileMedia,retained=actions.value?.retainedFiles
   if(busy.value||loading.value||draftBlocked.value||draftWorking.value||fileCancelling.value||!s||(!media&&!retained)||!editableFields.value.some(f=>f.fieldId===fieldId&&f.valueKey===key&&f.type==='file'&&f.supported)
-    ||(retained?!editingId.value||!actions.value?.canEdit?.(editingId.value)||!isR1RetainedFileSubset(values.value[key],value)
-      :!media||!sameR1NormalFileValues(value,media.values(fieldId))))return
+    ||(media?JSON.stringify(value)!==JSON.stringify(media.values(fieldId,{...values.value,[key]:value}))
+      :retained?!editingId.value||!actions.value?.canEdit?.(editingId.value)||!isR1RetainedFileSubset(values.value[key],value)
+      :true))return
   values.value={...values.value,[key]:value.map(file=>({...file}))}
 }
 function retainedReadFiles(record:FormDataRead,field:R1RecordReadField){
@@ -351,17 +352,19 @@ async function cancelEdit() {
   if(busy.value||fileCancelling.value)return
   const media=actions.value?.fileMedia
   if(!media){
-    if(draftSession&&!editingId.value){const session=draftSession,ticket=version;draftWorking.value=true;try{await session.discard();if(ticket!==version||draftSession!==session)return;draftSession=null;draftRead.value=null;draftMessage.value=''}catch{if(ticket===version)draftMessage.value='本地草稿尚未清理，请保留内容后重试。';return}finally{if(ticket===version)draftWorking.value=false}}
+    // A blocked first-create draft can outlive its shape or a consumed media
+    // session. Confirm its cleanup before closing any current editor.
+    if(draftSession){const session=draftSession,ticket=version;draftWorking.value=true;try{await session.discard();if(ticket!==version||draftSession!==session)return;draftSession=null;draftRead.value=null;draftMessage.value=''}catch{if(ticket===version)draftMessage.value='本地草稿尚未清理，请保留内容后重试。';return}finally{if(ticket===version)draftWorking.value=false}}
     pendingEditor=null;editorSource=null;editorIdentity=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;return}
   const ticket=version,actorScope=props.actorScope,source=visibleSnapshot.value
   fileCancelling.value=true
   try{
     const cancelled=await media.cancel()
-    if(ticket!==version||props.actorScope!==actorScope||actions.value?.fileMedia!==media||!source||!viewReader.isCurrent(source))return
+    if(ticket!==version||props.actorScope!==actorScope||(actions.value?.fileMedia!==media&&actions.value?.fileMedia!==undefined)||!source||!viewReader.isCurrent(source))return
     if(!cancelled){message.value=media.message()||'取消结果尚未核实，请保留当前草稿并核对附件状态。';return}
     if(draftSession){try{await draftSession.discard()}catch{message.value='附件已取消，本地草稿尚未清理，请保留页面后重试。';return};if(ticket!==version||props.actorScope!==actorScope)return;draftSession=null;draftRead.value=null;draftMessage.value=''}
     pendingEditor=null;editorSource=null;editorIdentity=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;fileEditorClosed.value=true
-    message.value='未保存草稿已取消，可重新新增。'
+    message.value=source.records.length?'未保存修改已取消。':'未保存草稿已取消，可重新新增。'
   }catch{if(ticket===version&&props.actorScope===actorScope)message.value='取消结果尚未核实，请保留当前草稿并核对附件状态。'}
   finally{if(ticket===version&&props.actorScope===actorScope)fileCancelling.value=false}
 }
@@ -385,7 +388,7 @@ async function beginCreate() {
 function edit(id:string) {
   if(busy.value||!actions.value?.canEdit?.(id))return
   const initial=actions.value.initialValues?.(id)
-  if(!initial)return
+  if(!initial||actions.value.beginEdit?.(id)===false)return
   pendingEditor=null;editorSource=visibleSnapshot.value?editSource(visibleSnapshot.value,id):null
   editorIdentity=visibleSnapshot.value?viewReader.retainReadIdentity?.(visibleSnapshot.value)??null:null
   values.value={...initial} as Record<string,R1LocalFieldValue>;editing.value=true;editingId.value=id

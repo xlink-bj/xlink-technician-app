@@ -66,7 +66,7 @@ export function existingRecordFixture(alternate = false) {
     afterDispatch?.()
     return { success: true, status: 1, data: structuredClone(record) }
   })
-  const provider = () => createNormalRepeatActionProvider({ auth, reader, env, origin })
+  const provider = (media?: Parameters<typeof createNormalRepeatActionProvider>[0]["media"]) => createNormalRepeatActionProvider({ auth, reader, env, origin,media })
   return { scope, keys, fields, ext, node, record, other, env, grant, reader, provider, writes, events, transport, commands,
     load: () => reader.load(scope.workOrderId, scope.runtimeNodeId), setGrant() { env.VITE_XLINK_R1_REPEAT_GRANT = JSON.stringify(grant) },
     changeActor() { actor = { ...actor, sessionRef: 'other-session' } }, unlist() { listed = false },

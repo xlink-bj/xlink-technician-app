@@ -1,3 +1,6 @@
+import { createR1ConfiguredFormFileSession } from './r1-normal-form-media'
+import type { MediaFilePickerPort, MediaUploadQueuePort } from '@shared/ports'
+import type { R1NormalFormFileSession } from '@features/work-orders/r1-normal-form-media-port'
 import { isR1RetainedFileArray, isR1RetainedFileSubset, type R1RetainedFileValue } from '@shared/form/r1-retained-file-values'
 import type { AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RecordEditRead } from '@features/work-orders/r1-node-forms-read'
@@ -75,10 +78,11 @@ function sameMapResult(expected: Record<string,unknown>, actual: Record<string,u
 }
 
 /** One exact existing-record capability. Data routing is reader-issued; fields
- * and controls are configured. It cannot create, Process, delete or upload. */
+ * and controls are configured. It cannot create, Process or delete; uploads require its exact editor session. */
 export function createConfiguredRecordEditActions(input: {
   snapshot: R1NodeFormsSnapshot; reader: R1NodeFormsReader; auth: Pick<AuthSessionPort,'getCurrentSession'>;
   env: Record<string,unknown>; origin: string; getGrant(): EditGrant | null; transport: ApiCommandTransport;
+  media?: {picker:MediaFilePickerPort;queue:MediaUploadQueuePort};
 }): R1RepeatPageActions | null {
   const g=input.getGrant(), initial=input.snapshot
   if(g?.version!==6||g.synthetic!==true||!g.recordIds?.length)return null
@@ -87,6 +91,7 @@ export function createConfiguredRecordEditActions(input: {
   const fingerprint=()=>{const a=input.auth.getCurrentSession();return a?sessionAuthorizationFingerprint({sessionRef:a.sessionRef,userId:a.user.id,roleId:a.currentRole?.id,roleVersion:a.roleVersion}):null}
   const actorAtRead=fingerprint(), actor={userId:asOpaqueId<'UserId'>(scope.userId),roleIds:[asOpaqueId<'RoleId'>(scope.roleId)],organizationRoles:[]}
   let lease=initial, revoked=false, ownRead=false, used=false
+  let mediaSession:R1NormalFormFileSession|undefined,mediaRecord:string|undefined,editorGeneration=0
   const evidence=(s:R1NodeFormsSnapshot,id:string)=>{
     const e=input.reader.currentRecordEdit?.(s,id)
     return e&&input.reader.isCurrentRecordEdit?.(s,id,e)===true?e:null
@@ -155,11 +160,39 @@ export function createConfiguredRecordEditActions(input: {
     for(const f of lease.definition.fields!){if(Object.hasOwn(ex,f.valueKey))values[f.valueKey]=copy(ex[f.valueKey]);else if(Object.hasOwn(e.original,f.valueKey))values[f.valueKey]=copy(e.original[f.valueKey])}
     return values
   }
+  function beginEdit(id:string):boolean {
+    if(!canEdit(id)||mediaSession?.busy())return false
+    // A previous editor must complete explicit local cleanup before another
+    // record can own new tasks. Never import durable queue tasks as receipts.
+    if(mediaSession)return false
+    if(!input.media)return true
+    const baseline=initialValues(id),e=source(lease,id),originals:Record<string,readonly R1RetainedFileValue[]>={}
+    for(const field of lease.definition.fields??[]){
+      if(field.type==='file'&&grant.fieldIds.includes(field.fieldId)&&e.storage.fields.some(f=>f.fieldId===field.fieldId&&f.type==='file'))
+        originals[field.fieldId]=copy(baseline[field.valueKey]) as readonly R1RetainedFileValue[]
+    }
+    if(!Object.keys(originals).length)return true
+    const generation=++editorGeneration
+    mediaRecord=id
+    const session=createR1ConfiguredFormFileSession({scope, ...input.media,getSnapshot:()=>lease,
+      existing:{recordId:id,originals},isAuthorized:()=>generation===editorGeneration&&mediaRecord===id&&current()},
+      {sourceNodeType:'repeat',allowedSources:['library'],eligible:(snapshot,fieldId,values)=>{
+        const f=snapshot.definition.fields?.find(f=>f.fieldId===fieldId)
+        if(!f||!Object.hasOwn(originals,fieldId)||f.readOnly||snapshot.node.formFieldIdsReadOnly?.includes(fieldId))return false
+        const state=evaluateFieldState(actionFormSchemaFor(f),{values:values as never,surface:ACTION_FORM_SURFACE})
+        return state.visible&&!state.readOnly&&state.capability==='SUPPORTED_GENERIC'
+      },assertNonFileValues:()=>{}})
+    mediaSession={...session,dispose(){if(!ownRead){session.dispose();editorGeneration++}},async cancel(){const result=await session.cancel();if(result&&mediaSession===view){session.dispose();mediaSession=undefined;mediaRecord=undefined;editorGeneration++}return result}}
+    const view=mediaSession
+    void view.inspect()
+    return true
+  }
   function normalize(values:Readonly<Record<string,unknown>>,id:string) {
     if(!canEdit(id)||!object(values))refuse()
     const initial=initialValues(id),fields=lease.definition.fields!,merged={...initial,...values}
     if(Object.keys(values).some(key=>!fields.some(f=>f.valueKey===key)))refuse()
     verifyConditionValues(lease,merged)
+    if(mediaSession&&mediaRecord===id&&!mediaSession.ready(merged))refuse('附件队列或回执尚未核实。')
     const writable=fields.filter(f=>grant.fieldIds.includes(f.fieldId)),schemas=writable.filter(f=>f.type!=='file').map(f=>actionFormSchemaFor(f))
     for(const f of fields){
       if(!grant.fieldIds.includes(f.fieldId)&&Object.hasOwn(values,f.valueKey)&&stable(values[f.valueKey])!==stable(initial[f.valueKey]))refuse()
@@ -172,7 +205,9 @@ export function createConfiguredRecordEditActions(input: {
         continue
       }
       if(f.type==='file'){
-        if(!isR1RetainedFileSubset(initial[f.valueKey],v)||state.required&&v.length===0)refuse('附件只能保留或移除当前记录的原始引用。')
+        if(!isR1RetainedFileArray(v)||state.required&&v.length===0)refuse('附件格式或必填规则不符合要求。')
+        if(!isR1RetainedFileSubset(initial[f.valueKey],v)
+          &&!(mediaRecord===id&&mediaSession?.ready(merged)))refuse('附件必须来自原始引用或本次记录绑定上传回执。')
         continue
       }
       if(f.type==='checkbox'||f.type==='cascade'){
@@ -225,6 +260,8 @@ export function createConfiguredRecordEditActions(input: {
       try{source(lease,id);return null}catch{return '记录的完整信息尚未核实，暂不能编辑。'}
     },
     ...(lease.definition.fields?.some(f=>f.type==='file')?{retainedFiles:true as const}:{}),
+    beginEdit,
+    get fileMedia(){return mediaSession},
     initialValues(id){try{return canEdit(id)?initialValues(id):null}catch{return null}},
     // Existing editing has a reader-issued storage policy. Reuse the shared
     // runtime projection directly rather than a create-specific codec list.
@@ -249,6 +286,8 @@ export function createConfiguredRecordEditActions(input: {
         for(const[k,v]of originals)if(stable(input.reader.currentFormOriginal?.(lease,k))!==v)refuse('完整原文已变化。')
         for(const[k,v]of wires)if(stable(evidence(lease,k)?.wireOriginal)!==v)refuse('原始提交格式已变化。')
         const e=source(lease,id),patch=normalize(draft,id)
+        const media=mediaSession
+        if(media){if(mediaRecord!==id)refuse();await media.assertValues(lease,draft);if(!canEdit(id))refuse()}
         let expected:Record<string,unknown>,request:ApiCommandRequest
         if(e.storage.kind==='survey-dto'){
           expected=copy(e.original)
@@ -284,7 +323,7 @@ export function createConfiguredRecordEditActions(input: {
         await fresh()
         for(const[k,v]of originals)if(k!==id&&stable(input.reader.currentFormOriginal?.(lease,k))!==v)refuse('其他记录发生变化。')
         if(!same(source(lease,id).original as Record<string,unknown>,true))refuse('权威回读与保存内容不一致。')
-        mark('completed');used=true;return lease
+        mark('completed');if(media){try{await media.finalize()}catch{/* The durable completed receipt prevents any resend. */}}used=true;return lease
       })
     },
   }

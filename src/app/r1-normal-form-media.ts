@@ -1,5 +1,6 @@
 import {isSurveyMediaFieldEligible} from '@features/work-orders/r1-survey-media-create'
 import { ref } from 'vue'
+import { isR1RetainedFileArray, isR1RetainedFileSubset } from '@shared/form/r1-retained-file-values'
 import type { MediaFilePickerPort, MediaUploadQueuePort } from '@shared/ports'
 import { asOpaqueId, r1FileWireFromUpload, type LocalMedia, type MediaUploadTask, type MediaUploadTaskId, type OperationSnapshot, type R1FileWireValue } from '@shared/types'
 import { isR1NormalImageMedia, isR1NormalImageWireArray } from '@shared/form/r1-normal-image-contract'
@@ -37,6 +38,8 @@ function createBoundFormFileSession(input: {
   readonly picker: MediaFilePickerPort
   readonly getSnapshot: () => R1NodeFormsSnapshot
   readonly isAuthorized: () => boolean
+  /** Exact existing editor; old references never become upload receipts. */
+  readonly existing?: { readonly recordId: string; readonly originals: Readonly<Record<string, readonly R1FileWireValue[]>> }
 }, mode:'generic'|'survey'|{sourceNodeType:string;allowedSources?:readonly string[];eligible:(snapshot:R1NodeFormsSnapshot,fieldId:string,values:Readonly<Record<string,unknown>>)=>boolean;assertNonFileValues?:(snapshot:R1NodeFormsSnapshot,values:Readonly<Record<string,unknown>>)=>void}): R1NormalFormFileSession {
   const scope = Object.freeze({ ...input.scope }), revision = ref(0)
   const owned = new Map<MediaUploadTaskId, OwnedTask>()
@@ -44,7 +47,8 @@ function createBoundFormFileSession(input: {
   let cancelling = false, queueBlocked = false, cancelBlocked = false
   let settled: Promise<void> = Promise.resolve(), settle: (() => void) | undefined
   const lookup = { userId: asOpaqueId<'UserId'>(scope.userId), workOrderId: asOpaqueId<'WorkOrderId'>(scope.workOrderId),
-    workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(scope.runtimeNodeId), formDefinitionId: asOpaqueId<'FormDefinitionId'>(scope.formDefinitionId) }
+    workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(scope.runtimeNodeId), formDefinitionId: asOpaqueId<'FormDefinitionId'>(scope.formDefinitionId),
+    ...(input.existing ? {formDataId:asOpaqueId<'FormDataId'>(input.existing.recordId)} : {}) }
   const signature = (snapshot: R1NodeFormsSnapshot) => JSON.stringify([snapshot.definition.fields, snapshot.definition.purpose, snapshot.node.formFieldIdsReadOnly, snapshot.fillableFieldIds])
   const initialSignature = signature(input.getSnapshot())
   const changed = () => { revision.value++ }
@@ -76,7 +80,9 @@ function createBoundFormFileSession(input: {
     if (expected !== epoch) return deny('附件操作已取消。')
     // A verified save may already be visible to the panel before trusted local
     // cleanup runs. Close create UI without revoking cleanup's bound epoch.
-    if (!afterSave && snapshot.records.length !== 0) return deny('附件只支持首次创建。')
+    if (input.existing) {
+      if (!validId(input.existing.recordId) || !snapshot.records.some(record=>record.id===input.existing!.recordId)) return deny('附件所属记录已失效。')
+    } else if (!afterSave && snapshot.records.length !== 0) return deny('附件只支持首次创建。')
     return snapshot
   }
   function field(fieldId: string, values: Readonly<Record<string, unknown>>, expected = epoch) {
@@ -90,7 +96,7 @@ function createBoundFormFileSession(input: {
   function exactScope(task: MediaUploadTask): boolean {
     return task.scope.userId === lookup.userId && task.scope.workOrderId === lookup.workOrderId
       && task.scope.workflowNodeId === lookup.workflowNodeId && task.scope.formDefinitionId === lookup.formDefinitionId
-      && task.scope.formDataId === undefined
+      && task.scope.formDataId === lookup.formDataId
   }
   function uploadedValue(entry: OwnedTask): R1FileWireValue | null {
     const task = entry.task, uploaded = task.uploadedRef
@@ -105,7 +111,7 @@ function createBoundFormFileSession(input: {
     // controller's proof. Pin only a verified process/retry success below.
     return entry.uploaded !== undefined && JSON.stringify(entry.task.uploadedRef) === entry.uploaded ? uploadedValue(entry) : null
   }
-  function currentValues(fieldId: string): readonly R1FileWireValue[] {
+  function uploadedValues(fieldId: string): readonly R1FileWireValue[] {
     const files: R1FileWireValue[] = []
     for (const entry of owned.values()) if (entry.task.scope.fieldId === fieldId) {
       const value = receipt(entry)
@@ -114,6 +120,27 @@ function createBoundFormFileSession(input: {
     if (!isR1NormalImageWireArray(files)) return deny('附件回执重复或格式异常。')
     return copyValues(files)
   }
+  const stable=(v:unknown):string=>JSON.stringify(v,(_key,value)=>object(value)?Object.fromEntries(Object.keys(value).sort().map(k=>[k,value[k]])):value)
+  function oldValues(fieldId:string, values?:Readonly<Record<string,unknown>>): readonly R1FileWireValue[] {
+    if(!input.existing)return []
+    const original=input.existing.originals[fieldId]
+    if(!isR1RetainedFileArray(original))return deny('已有附件原文无法核实。')
+    const metadata=input.getSnapshot().definition.fields?.find(f=>f.fieldId===fieldId)
+    if(!metadata)return deny()
+    const candidate=values?.[metadata.valueKey]??original
+    if(!isR1RetainedFileArray(candidate))return deny('附件列表格式异常。')
+    const retained=candidate.filter(file=>original.some(old=>stable(old)===stable(file)))
+    if(!isR1RetainedFileSubset(original,retained))return deny('已有附件顺序或原文已变化。')
+    return retained
+  }
+  function currentValues(fieldId:string, values?:Readonly<Record<string,unknown>>):readonly R1FileWireValue[]{
+    if(!input.existing)return uploadedValues(fieldId)
+    const combined=[...oldValues(fieldId,values),...uploadedValues(fieldId)]
+    if(!isR1RetainedFileArray(combined))return deny('附件引用重复或格式异常。')
+    return Object.freeze(JSON.parse(JSON.stringify(combined)))
+  }
+  const exactValues=(left:unknown,right:readonly R1FileWireValue[])=>input.existing
+    ?isR1RetainedFileArray(left)&&stable(left)===stable(right):sameValues(left,right)
   async function readQueue(expected: number, afterSave = false): Promise<void> {
     try {
       guard(expected, afterSave)
@@ -140,8 +167,8 @@ function createBoundFormFileSession(input: {
     }
   }
   function validateDraft(fieldId: string, values: Readonly<Record<string, unknown>>, expected: number) {
-    const selected = field(fieldId, values, expected), files = currentValues(fieldId)
-    if (Object.hasOwn(values, selected.key) && !sameValues(values[selected.key], files)) return deny('附件列表与当前上传会话不一致。')
+    const selected = field(fieldId, values, expected), files = currentValues(fieldId, values)
+    if (Object.hasOwn(values, selected.key) && !exactValues(values[selected.key], files)) return deny('附件列表与当前上传会话不一致。')
     return selected
   }
   function verifyValues(snapshot: R1NodeFormsSnapshot, values: Readonly<Record<string, unknown>>, expected: number) {
@@ -152,10 +179,17 @@ function createBoundFormFileSession(input: {
     for (const [key, value] of Object.entries(values)) {
       const metadata = fields.find(candidate => candidate.valueKey === key)
       if (metadata?.type !== 'file') { if (Array.isArray(value)&&!fieldPlan) return deny(); continue }
-      const selected = field(metadata.fieldId, values, expected), files = currentValues(metadata.fieldId)
-      if (!sameValues(value, files) || files.length > selected.max) return deny('附件不是本会话上传的精确回执。')
+      if(input.existing){
+        if(!Object.hasOwn(input.existing.originals,metadata.fieldId))continue
+        if(typeof mode==='object'&&!mode.eligible(snapshot,metadata.fieldId,values)){
+          if(stable(value)!==stable(input.existing.originals[metadata.fieldId])||[...owned.values()].some(entry=>entry.task.scope.fieldId===metadata.fieldId))return deny('隐藏附件不能修改或接纳新回执。')
+          continue
+        }
+      }
+      const selected = field(metadata.fieldId, values, expected), files = currentValues(metadata.fieldId, values)
+      if (!exactValues(value, files) || files.length > selected.max) return deny('附件不是本会话上传的精确回执。')
     }
-    for (const entry of owned.values()) if (!sameValues(values[entry.task.scope.valueKey], currentValues(entry.task.scope.fieldId))) return deny('已上传附件未完整包含在保存内容中。')
+    for (const entry of owned.values()) if (!exactValues(values[entry.task.scope.valueKey], currentValues(entry.task.scope.fieldId,values))) return deny('已上传附件未完整包含在保存内容中。')
   }
   async function mutation(fieldId: string, values: Readonly<Record<string, unknown>>, action: (expected: number, selected: { key: string; max: number }) => Promise<void>): Promise<readonly R1FileWireValue[] | null> {
     if (inFlight || cancelling || queueBlocked || cancelBlocked) return null
@@ -170,7 +204,7 @@ function createBoundFormFileSession(input: {
       await action(expected, selected)
       field(fieldId, values, expected)
       text = ''; changed()
-      return currentValues(fieldId)
+      return currentValues(fieldId, values)
     } catch (error) {
       // Rejected awaits still cross an authorization boundary.
       try { guard(expected) } catch { /* guard permanently revokes lost authority */ }
@@ -187,7 +221,12 @@ function createBoundFormFileSession(input: {
       entry.ambiguous = true; uncertain = true; return
     }
     entry.task = cloneTask(task)
-    const knownFailure = result.state === task.state && ['failed_retryable', 'failed_terminal'].includes(task.state)
+    // The default native adapter collapses transport/malformed ACK failures
+    // into an unclassified terminal error. That does not prove no upload.
+    // Keep this existing editor uncertain; never cancel/retry it as a known
+    // rejection. First-create callers retain their established semantics.
+    const unknownTerminal = input.existing && task.lastError?.category === 'server_terminal' && !task.lastError.code
+    const knownFailure = !unknownTerminal && result.state === task.state && ['failed_retryable', 'failed_terminal'].includes(task.state)
       && !['ambiguous_upload', 'ambiguous_postprocess'].includes(task.lastError?.code ?? '')
     if (!entry.ambiguous && ((result.state === 'succeeded' && uploadedValue(entry)) || knownFailure)) {
       // Even a canceled epoch may retain this outcome for exact local cleanup.
@@ -217,12 +256,12 @@ function createBoundFormFileSession(input: {
     revision,
     busy: () => inFlight || cancelling,
     message: () => text,
-    values(fieldId) { try { if (disposed || finalized || cancelling) return []; guard(); return currentValues(fieldId) } catch { return [] } },
+    values(fieldId, values) { try { if (disposed || finalized || cancelling) return []; guard(); return currentValues(fieldId,values) } catch { return [] } },
     canPick(fieldId, values) {
       try {
         if (inFlight || cancelling || uncertain || queueBlocked || cancelBlocked || disposed || finalized) return false
         const selected = validateDraft(fieldId, values, epoch)
-        return [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length < selected.max
+        return oldValues(fieldId,values).length + [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length < selected.max
       } catch { return false }
     },
     ready(values) {
@@ -292,13 +331,13 @@ function createBoundFormFileSession(input: {
       } finally { cancelling = false; changed() }
     },
     pick: (fieldId, values) => mutation(fieldId, values, async (expected, selected) => {
-      if ([...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length >= selected.max) return deny('已达到附件数量上限。')
+      if (oldValues(fieldId,values).length + [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length >= selected.max) return deny('已达到附件数量上限。')
       guard(expected)
       const picked = await input.picker.pick()
       guard(expected)
       if (picked.state === 'cancelled') return
       if (picked.state !== 'granted' || !picked.value?.length) return deny('未能读取所选附件。')
-      if (picked.value.length + [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length > selected.max) return deny('所选附件超过数量上限。')
+      if (picked.value.length + oldValues(fieldId,values).length + [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).length > selected.max) return deny('所选附件超过数量上限。')
       if (new Set(picked.value.map(media => media.ref)).size !== picked.value.length || picked.value.some(media => !validId(media.ref) || !mime(media.mimeType) || !isR1NormalImageMedia(media)
         || !(typeof mode==='object'?(mode.allowedSources??['library']).includes(media.source):mode==='survey'?media.source==='library':['camera', 'library', 'file'].includes(media.source)) || !validId(media.localPath)
         || (media.size !== undefined && (!Number.isSafeInteger(media.size) || media.size <= 0))
@@ -336,7 +375,12 @@ function createBoundFormFileSession(input: {
         field(fieldId, values, expected)
       }
     }),
-    remove: (fieldId, index, values) => mutation(fieldId, values, async expected => {
+    remove: async (fieldId, index, values) => {
+      const removedIndex=index,retained=input.existing?oldValues(fieldId,values):[]
+      const result=await mutation(fieldId, values, async expected => {
+      const retained=oldValues(fieldId,values)
+      if (input.existing && Number.isSafeInteger(index) && index>=0 && index<retained.length) return
+      index-=retained.length
       const tasks = [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId && receipt(entry))
       if (!Number.isSafeInteger(index) || index < 0 || !tasks[index]) return deny('待移除附件身份尚未核实。')
       const entry = tasks[index]!
@@ -346,7 +390,9 @@ function createBoundFormFileSession(input: {
       if (removed.state !== 'succeeded') return deny('附件移除未完成。')
       owned.delete(entry.task.taskId); changed()
       await readQueue(expected)
-    }),
+    })
+      return result && removedIndex>=0 && removedIndex<retained.length ? result.filter((_file,i)=>i!==removedIndex) : result
+    },
     discardFailed: (fieldId, values) => mutation(fieldId, values, async expected => {
       const tasks = [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId && !entry.ambiguous && entry.cleanup
         && ['failed_retryable', 'failed_terminal'].includes(entry.task.state))

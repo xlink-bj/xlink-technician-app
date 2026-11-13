@@ -2,12 +2,12 @@ import type { Ref } from 'vue'
 import type { R1FileWireValue } from '@shared/types'
 import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
 
-/** Create-only view. No persisted queue task is imported into a fresh session. */
+/** Queue view bound to a create or exact existing editor. Durable tasks never issue new receipt authority. */
 export interface R1NormalFormFileSessionView {
   readonly revision: Ref<number>
   busy(): boolean
   message(): string
-  values(fieldId: string): readonly R1FileWireValue[]
+  values(fieldId: string, draft?: Readonly<Record<string, unknown>>): readonly R1FileWireValue[]
   canPick(fieldId: string, values: Readonly<Record<string, unknown>>): boolean
   /** Cached UI hint only. Saving still requires async queue verification. */
   ready(values: Readonly<Record<string, unknown>>): boolean

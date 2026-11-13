@@ -16,6 +16,8 @@ export interface R1RepeatPageActions {
   /** Optional forms capabilities; absent keeps the original Repeat contract. */
   canCreate?(): boolean
   canEdit?(recordId: string): boolean
+  /** Starts one exact record/editor upload epoch; does not grant edit authority. */
+  beginEdit?(recordId:string):boolean
   /** Business feedback from this record's existing capability/receipt only. */
   editProblem?(recordId: string): string | null
   canComplete?(): boolean

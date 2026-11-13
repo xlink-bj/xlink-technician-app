@@ -70,7 +70,7 @@ export function createNormalRepeatActionProvider(input: {
     forSnapshot(snapshot) {
       const g = grant(), a = input.auth.getCurrentSession()
       if (g?.version === 6) return createConfiguredRecordEditActions({ snapshot, reader: input.reader,
-        auth: input.auth, env: input.env, origin: input.origin, getGrant: grant,
+        auth: input.auth, env: input.env, origin: input.origin, getGrant: grant, media:input.media,
         transport: createUniApiCommandTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
           getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null }) })
       if(g?.version===4){

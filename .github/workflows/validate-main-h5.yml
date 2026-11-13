@@ -240,8 +240,8 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  scoped-form-integrations-h5:
-    # Independent runner/workspace keeps the original Stage 1B budget intact.
+  scoped-existing-media-h5:
+    # Independent runner/workspace; suites remain serial within this job.
     # Same automatic gate conditions, assertions and synthetic network fences.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
@@ -314,6 +314,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/retained-attachment-edit.config.ts
+      - name: Verify existing-record owned image uploads and uncertain-result recovery (8 cases)
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/existing-image-upload.config.ts
       - name: Verify normal App image picker multipart save and readback
         env:
           XLINK_H5_NORMAL_R1_FILE_UPLOAD: 'true'
@@ -326,6 +331,54 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/normal-r1-image-recovery.config.ts
+      - name: Preserve existing edit and media H5 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scoped-existing-media-h5-${{ github.run_id }}
+          path: |
+            test-results/duplicate-file-fields/
+            test-results/duplicate-file-fields-forward/
+            test-results/work-order-authority-revocation/
+            test-results/forms-scalar-subset/
+            test-results/generic-map-edit/
+            test-results/repeat-appointment-edit/
+            test-results/normal-appointment-experience/
+            test-results/configured-record-edit/
+            test-results/map-choice-datetime-edit/
+            test-results/retained-attachment-edit/
+            test-results/normal-r1-file-upload/
+            test-results/normal-r1-image-recovery/
+            test-results/existing-image-upload/
+          if-no-files-found: warn
+          retention-days: 7
+
+
+  scoped-create-lifecycle-h5:
+    # Independent runner/workspace; suites remain serial within this job.
+    # Same automatic gate conditions, assertions and synthetic network fences.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    runs-on: ubuntu-latest
+    # Official image: browsers and OS libraries match the locked Playwright version.
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
+      options: --init
+    defaults:
+      run:
+        shell: bash
+    timeout-minutes: 25
+    env:
+      VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
+      VITE_XLINK_ENABLE_REAL_WRITES: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node scripts/check-playwright-runtime.mjs
       - name: Verify normal App detail route replacement and stale session isolation
         env:
           XLINK_H5_DETAIL_LIFECYCLE: 'true'
@@ -435,24 +488,12 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/normal-survey-cause-read.config.ts
-      - name: Preserve scoped form integration H5 evidence
+      - name: Preserve configured create and lifecycle H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: scoped-form-integrations-h5-${{ github.run_id }}
+          name: scoped-create-lifecycle-h5-${{ github.run_id }}
           path: |
-            test-results/duplicate-file-fields/
-            test-results/duplicate-file-fields-forward/
-            test-results/work-order-authority-revocation/
-            test-results/forms-scalar-subset/
-            test-results/generic-map-edit/
-            test-results/repeat-appointment-edit/
-            test-results/normal-appointment-experience/
-            test-results/configured-record-edit/
-            test-results/map-choice-datetime-edit/
-            test-results/retained-attachment-edit/
-            test-results/normal-r1-file-upload/
-            test-results/normal-r1-image-recovery/
             test-results/work-order-detail-lifecycle/
             test-results/survey-part-create/
             test-results/survey-conditional-create/
@@ -474,6 +515,26 @@ jobs:
             test-results/normal-survey-cause-read/
           if-no-files-found: warn
           retention-days: 7
+
+
+  scoped-form-integrations-h5:
+    # Keep the original required-check identity; neither failed nor skipped
+    # child jobs may make this aggregate appear green.
+    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]')))
+    needs: [scoped-existing-media-h5, scoped-create-lifecycle-h5]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Require both scoped H5 groups to succeed
+        env:
+          EXISTING_MEDIA_RESULT: ${{ needs.scoped-existing-media-h5.result }}
+          CREATE_LIFECYCLE_RESULT: ${{ needs.scoped-create-lifecycle-h5.result }}
+        run: |
+          test "$EXISTING_MEDIA_RESULT" = success
+          test "$CREATE_LIFECYCLE_RESULT" = success
 
   h5-ux:
     # L3 nightly/manual or explicitly marked high-risk PR; ordinary PR/main events keep a skipped check context.

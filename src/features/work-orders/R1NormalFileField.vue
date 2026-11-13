@@ -50,7 +50,7 @@ function safeImage(file:R1FileWireValue):boolean{
 }
 async function change(kind:'pick'|'retry'|'remove'|'discardFailed',index=0){
   if(props.disabled||pending.value)return
-  if(props.retained&&props.allowRetainedRemoval&&kind==='remove'){
+  if(!props.media&&props.retained&&props.allowRetainedRemoval&&kind==='remove'){
     if(!Number.isSafeInteger(index)||index<0||index>=files.value.length)return
     emit('update:modelValue',files.value.filter((_file,i)=>i!==index));return
   }
