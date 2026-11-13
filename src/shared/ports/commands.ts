@@ -1,3 +1,4 @@
+import type { SelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import type { AppointmentReplacementContext } from '@shared/form/appointment-replacement-context'
 import type { FormFieldRead, FormFieldPresentation, FormFieldValue, FormFieldVisibility, FormPurpose } from '@shared/ports/api'
 import type {
@@ -49,6 +50,7 @@ export interface AppointmentFormFieldRead {
   readonly options?: readonly AppointmentFormOption[]
   /** Adapter-normalized conditional visibility; raw backend metadata stays out of UI. */
   readonly visibility?: FormFieldVisibility
+  readonly roleVisibilityContext?: SelectedRoleVisibilityContext
   /** Adapter-normalized option provider identity, when evidenced by the field. */
   readonly valueOption?: string
   readonly presentation?: FormFieldPresentation

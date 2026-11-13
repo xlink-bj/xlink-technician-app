@@ -179,6 +179,8 @@
 </template>
 
 <script setup lang="ts">
+import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { WorkflowNodeRead } from '@shared/ports'
 import type {
@@ -266,7 +268,8 @@ const editableFields = computed(() => viewFields.value.filter(field => field.sup
 const validation = computed(() => viewState.value
   ? validateR1SpecialMockFields(selectedDefinition.value!, draftValues.value)
   : { ok: false as const, message: '表单尚未载入。' })
-const formValid = computed(() => validation.value.ok)
+const inputsValid = useFormInputValidityScope()
+const formValid = computed(() => inputsValid.value && validation.value.ok)
 const validationMessage = computed(() => validation.value.ok ? '' : validation.value.message)
 
 async function restoreMediaTasks(): Promise<void> {
@@ -537,6 +540,7 @@ async function save(): Promise<void> {
   await run(action)
 }
 async function run(action: AStageDynamicFormAction): Promise<void> {
+  if ('fields' in action && !inputsValid.value) return
   const current = controller
   if (!current || busy.value || restoringDraft.value || localSubmissionPending.value || cleanupPending.value || hasPendingMedia.value) return
   busy.value = true

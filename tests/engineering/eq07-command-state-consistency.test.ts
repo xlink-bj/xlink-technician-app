@@ -390,4 +390,39 @@ describe('EQ07 P0 command and form revision consistency / synthetic, no business
     expect(x.upload.upload).not.toHaveBeenCalled()
   })
 
+  it.each([['phone', '123', '13800000000'], ['IDNumber', 'bad-id', '99000019900101001X']] as const)(
+    'keeps %s save-only separate from explicit completion and permits correction', async (type, invalid, valid) => {
+      const x = fixture('survey')
+      vi.mocked(x.command.readDynamicForm!).mockResolvedValueOnce(success({
+        purpose: 'survey', definitionId,
+        fields: [{ fieldId: 'identity', valueKey: 'contact', label: '联系信息', type, required: false, readOnly: false }],
+        values: { contact: invalid },
+      }))
+      await x.load()
+      expect((await x.store.saveDynamicForm()).state).toBe('succeeded')
+      expect(x.command.saveDynamicForm).toHaveBeenCalledTimes(1)
+      expect(x.store.canSubmit).toBe(false)
+      expect((await x.store.completeDynamicForm()).error?.category).toBe('validation')
+      expect(x.command.completeWorkflowNode).not.toHaveBeenCalled()
+      expect(x.store.setField('identity', valid).state).toBe('succeeded')
+      expect((await x.store.saveDynamicForm()).state).toBe('succeeded')
+      expect(x.store.canSubmit).toBe(true)
+      await x.store.completeDynamicForm()
+      expect(x.command.completeWorkflowNode).toHaveBeenCalledTimes(1)
+    },
+  )
+  it.each(['phone', 'IDNumber'] as const)('does not format-block historical readonly %s on completion', async type => {
+    const x = fixture('survey')
+    vi.mocked(x.command.readDynamicForm!).mockResolvedValueOnce(success({
+      purpose: 'survey', definitionId,
+      fields: [{ fieldId: 'identity', valueKey: 'contact', label: '历史只读值', type, required: false, readOnly: true }],
+      values: { contact: 'legacy-format' },
+    }))
+    await x.load()
+    expect((await x.store.saveDynamicForm()).state).toBe('succeeded')
+    expect(x.store.canSubmit).toBe(true)
+    await x.store.completeDynamicForm()
+    expect(x.command.completeWorkflowNode).toHaveBeenCalledTimes(1)
+  })
+
 })

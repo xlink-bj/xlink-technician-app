@@ -16,8 +16,8 @@ describe('R1 form-node write authorization is independent of visible input contr
     const ui = readFileSync(new URL('../../src/shared/ui/ActionWorkspaceFormActions.vue', import.meta.url), 'utf8')
     const page = readFileSync(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8')
     expect(ui).toContain(':disabled="!canSave || saveState')
-    expect(page).toContain(':can-save="workspace.descriptor.execution === \'enabled\'"')
-    expect(page).toContain('@save="workspace.saveDynamicForm"')
+    expect(page).toContain(':can-save="inputsValid && workspace.descriptor.execution === \'enabled\'"')
+    expect(page).toContain('@save="inputsValid && workspace.saveDynamicForm()"')
   })
 
   it('keeps a synthetic local-preview QA test honest about FormData authority', () => {

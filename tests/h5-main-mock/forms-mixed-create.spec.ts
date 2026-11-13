@@ -54,7 +54,7 @@ for(const mode of ['save-double','renamed','optional-clear','wrong-switch-ack','
    await expect(page.getByTestId('r1-normal-draft-restore')).toHaveCount(0)
    await expect(field('evidenceScore')).toContainText('未评分');await expect(field('reviewedItems').locator('[aria-pressed="true"]')).toHaveCount(0);expect(state.writes).toEqual([])
   }
-  await field('note').getByRole('textbox').fill(' mixed preserved ');await field('zeroMeasure').getByRole('textbox').fill('0')
+  await field('note').getByRole('textbox').fill(' mixed preserved ');await field('zeroMeasure').getByRole('spinbutton').fill('0')
   await field('independentFlag').locator('.app-choice').filter({hasText:'否'}).click()
   await field('reviewedItems').locator('.app-choice--multi').filter({hasText:'合成乙'}).click();await field('reviewedItems').locator('.app-choice--multi').filter({hasText:'合成甲'}).click()
   await field('selectedServices').locator('.app-choice--multi').filter({hasText:'合成丙'}).click();await field('selectedServices').locator('.app-choice--multi').filter({hasText:'合成甲'}).click()

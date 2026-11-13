@@ -206,7 +206,7 @@ export function normalizeAppointmentForm(
       fieldContexts[field.fieldId] = { fixedRequired: false }
       continue
     }
-    const visibility = evaluateVisibility(field.visibility, conditionValues)
+    const visibility = evaluateVisibility(field.visibility, conditionValues, field.roleVisibilityContext)
     if (visibility.state === 'unsupported') {
       return {
         state: 'failed_terminal',

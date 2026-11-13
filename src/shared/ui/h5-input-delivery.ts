@@ -14,6 +14,8 @@ export function bindH5InputDelivery(root: unknown, options: {
   readonly initialValue: string
   readonly isDisabled: () => boolean
   readonly emit: (value: string) => void
+  /** Opt into UI-only incomplete numbers; the host must gate its actions. */
+  readonly onValidityChange?: (valid: boolean) => void
   /** Observe parent acceptance after Vue updates, including rejected no-op props. */
   readonly afterCommit?: () => void
 }): { dispose(): void; syncModel(value: string): void; reconcileModel(value: string): void; isCurrent(root: unknown): boolean } | null {
@@ -21,8 +23,16 @@ export function bindH5InputDelivery(root: unknown, options: {
   if (!field) return null
   const inputComponent = root as { $triggerInput?: (detail: { value: string }) => void } | null
   let disposed = false, composing = false, lastPublished = options.initialValue
+  let lastValidity: boolean | undefined
+  const reportValidity = () => {
+    const valid = !(field.tagName === 'INPUT' && (field as HTMLInputElement).type === 'number' && (field as HTMLInputElement).validity?.badInput)
+    if (valid !== lastValidity) { lastValidity = valid; options.onValidityChange?.(valid) }
+    return valid
+  }
+  reportValidity()
   const publish = () => {
     if (disposed || options.isDisabled() || typeof field.value !== 'string') return
+    if (!reportValidity() && options.onValidityChange) return
     if (field.value !== lastPublished) {
       lastPublished = field.value
       options.emit(field.value)
@@ -44,6 +54,7 @@ export function bindH5InputDelivery(root: unknown, options: {
     // uni-input's exposed state setter for external resets, never dispatch a
     // fake user input. This hook emits update:value, not the public input.
     field.value = value
+    reportValidity()
     if (typeof inputComponent?.$triggerInput === 'function') inputComponent.$triggerInput({ value: field.value })
   }
   return {
@@ -52,6 +63,7 @@ export function bindH5InputDelivery(root: unknown, options: {
     reconcileModel(value) { if (!composing) syncModel(value) },
     dispose() {
       disposed = true
+      options.onValidityChange?.(true)
       for (const [name, listener] of Object.entries(listeners)) field.removeEventListener(name, listener)
     },
   }

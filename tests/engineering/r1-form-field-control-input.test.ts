@@ -101,7 +101,7 @@ describe('normal R1 shared field keyboard delivery', () => {
 
 // R1's current-role-only visibility needs its own trusted context contract.
 // Neither supplying roleIds nor an unrelated field value enables it here.
-describe('unimplemented role visibility remains unavailable', () => {
+describe('role visibility without trusted context remains unavailable', () => {
   it.each(['4', '5'].flatMap(showType => [
     { showType, roleIds: ['r'] },
     { showType, roleIds: ['r'], showField: 'role', showValue: 'r' },
@@ -109,7 +109,8 @@ describe('unimplemented role visibility remains unavailable', () => {
     const definition = formDefinition({ data: [{ _id: 'role-field', name: 'privateValue', type: 'text',
       nameDisp: '角色条件', required: '0', showList: ['4'], frontEndConfig: '{}', ...metadata }] }, asOpaqueId<'FormDefinitionId'>('e'))
     const mapped = definition.fields![0]!
-    expect(mapped.unsupportedReason).toBeTruthy()
+    // Mapping may recognize the rule; without reader-issued role context it
+    // must still remain unavailable and never consult the values object.
     expect(evaluateFieldState(actionFormSchemaFor(mapped), {
       surface: 'mobile_detail', values: { role: 'r', privateValue: 'retained' },
     }).capability).toBe('UNSUPPORTED')

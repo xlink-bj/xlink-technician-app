@@ -161,7 +161,7 @@ describe('App UI Design System v0.2', () => {
     expect(workspace).toContain('AppTextarea')
     expect(workspace).toContain('ActionWorkspaceFormActions')
     expect(workspace).toContain('<template #actions')
-    expect(workspace).toContain('@save="workspace.saveDynamicForm"')
+    expect(workspace).toContain('@save="inputsValid && workspace.saveDynamicForm()"')
     expect(workspace).toContain(":submit-label=\"workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : '完成'\"")
     expect(workspace).toContain('variant="workspace"')
     expect(workspace).not.toContain('正在准备操作内容</text>')

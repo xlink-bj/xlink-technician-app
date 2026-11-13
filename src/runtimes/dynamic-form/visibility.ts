@@ -1,3 +1,4 @@
+import { isRoleVisibilityList, selectedRoleForVisibility, type SelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import type { VisibilityEvaluation, VisibilityExpression, VisibilityPath } from './types'
 
 interface PathResult {
@@ -44,11 +45,21 @@ function unsupported(reason: string): VisibilityEvaluation {
   return { state: 'unsupported', visible: false, reason }
 }
 
-function evaluateExpression(expression: unknown, values: Readonly<Record<string, unknown>>): VisibilityEvaluation {
+function evaluateExpression(expression: unknown, values: Readonly<Record<string, unknown>>, roleContext?: SelectedRoleVisibilityContext): VisibilityEvaluation {
   if (typeof expression !== 'object' || expression === null || Array.isArray(expression)) {
     return unsupported('visibility expression must be an object')
   }
   const candidate = expression as Partial<VisibilityExpression> & { readonly kind?: unknown }
+  if (candidate.kind === 'role') {
+    if (!['include', 'exclude'].includes(candidate.mode ?? '') || !isRoleVisibilityList(candidate.roleIds)) {
+      return unsupported('role visibility list is unavailable')
+    }
+    const roleId = selectedRoleForVisibility(roleContext)
+    if (!roleId) return unsupported('current selected role is unavailable')
+    const member = candidate.roleIds.includes(roleId)
+    const visible = candidate.mode === 'include' ? member : !member
+    return { state: visible ? 'visible' : 'hidden', visible }
+  }
   if (candidate.kind === 'all') {
     if (!Array.isArray(candidate.conditions) || candidate.conditions.length === 0) {
       return unsupported('visibility all requires nonempty conditions')
@@ -59,7 +70,7 @@ function evaluateExpression(expression: unknown, values: Readonly<Record<string,
     // Check every child for validity before deciding whether all are visible.
     let allVisible = true
     for (const condition of candidate.conditions) {
-      const result = evaluateExpression(condition, values)
+      const result = evaluateExpression(condition, values, roleContext)
       if (result.state === 'unsupported') return result
       if (!result.visible) allVisible = false
     }
@@ -95,7 +106,8 @@ function evaluateExpression(expression: unknown, values: Readonly<Record<string,
 export function evaluateVisibility(
   expression: VisibilityExpression | undefined,
   values: Readonly<Record<string, unknown>>,
+  roleContext?: SelectedRoleVisibilityContext,
 ): VisibilityEvaluation {
   if (expression === undefined) return { state: 'visible', visible: true }
-  return evaluateExpression(expression, values)
+  return evaluateExpression(expression, values, roleContext)
 }

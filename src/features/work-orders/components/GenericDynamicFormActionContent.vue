@@ -233,7 +233,7 @@
           </view>
         </view>
         <AppInput
-          v-else
+          v-else :reconcile-on-commit="field.type === 'number' || field.type === 'digit'"
           :model-value="stringValue(workspace.dynamicForm?.values[field.valueKey])"
           :input-type="field.type === 'number' ? 'number' : field.type === 'digit' ? 'digit' : 'text'"
           :maxlength="field.presentation?.maxlength"

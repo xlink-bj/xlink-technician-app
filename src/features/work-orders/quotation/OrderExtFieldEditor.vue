@@ -25,6 +25,8 @@
   </view>
 </template>
 <script setup lang="ts">
+import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
+
 import OrderMediaField from './OrderMediaField.vue'
 import type { OrderMediaValue } from './order-extfield-wire'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
@@ -45,10 +47,11 @@ const loading = ref(true)
 const unavailable = ref(false)
 const saveFailed = ref(false)
 const fieldLocked = computed(() => props.locked || saveFailed.value || props.session.current()?.readOnly === true)
+const inputsValid = useFormInputValidityScope()
 const pending = ref(0)
 const mediaPending = ref<Record<string, boolean>>({})
 const hasPendingMedia = computed(() => Object.values(mediaPending.value).some(Boolean))
-function pendingSavesReady() { return !saveFailed.value && pending.value === 0 }
+function pendingSavesReady() { return inputsValid.value && !saveFailed.value && pending.value === 0 }
 function setMediaPending(id: string, pending: boolean) { mediaPending.value = { ...mediaPending.value, [id]: pending }; emit('change', !pending && pendingSavesReady() && !hasPendingMedia.value && evaluated.value?.state === 'ready') }
 function mediaValue(key: string): readonly OrderMediaValue[] { const value = values.value[key]; return Array.isArray(value) ? value as OrderMediaValue[] : [] }
 const localDraftStatus = computed<AppActionDraftStatus>(() => saveFailed.value ? 'save_failed' : pending.value > 0 ? 'saving' : draft.value && draft.value.revision > 0 ? 'saved_local' : 'clean')
@@ -69,7 +72,7 @@ watch(() => [props.serviceType, props.stage] as const, async ([serviceType, stag
   values.value = loaded?.input.values ?? {}
   unavailable.value = !loaded
   loading.value = false
-  emit('change', evaluated.value?.state === 'ready')
+  emit('change', inputsValid.value && evaluated.value?.state === 'ready')
 }, { immediate: true })
 function valueFor(key: string): R1LocalFieldValue | undefined { return values.value[key] as R1LocalFieldValue | undefined }
 function pathValue(key: string): readonly string[] { const value = values.value[key]; return Array.isArray(value) ? value as string[] : [] }
@@ -95,10 +98,11 @@ function setValue(key: string, value: R1LocalFieldValue | readonly OrderMediaVal
   }).catch(() => { if (ticket === generation) saveFailed.value = true }).finally(() => {
     if (ticket !== generation) return
     pending.value -= 1
-    if (!disposed) emit('change', !saveFailed.value && pending.value === 0 && !hasPendingMedia.value && evaluated.value?.state === 'ready')
+    if (!disposed) emit('change', inputsValid.value && !saveFailed.value && pending.value === 0 && !hasPendingMedia.value && evaluated.value?.state === 'ready')
   })
 }
-defineExpose({ validateSelectionEntry: () => Boolean(draft.value && !loading.value && !saveFailed.value && !hasPendingMedia.value && pending.value === 0 && props.session.current() && evaluateOrderExtFields({ ...draft.value.input, values: values.value, context: { ...draft.value.input.context, personType: typeof values.value.personType === 'string' ? values.value.personType : undefined } }, 'selection').state === 'ready') })
+defineExpose({ validateSelectionEntry: () => Boolean(inputsValid.value && draft.value && !loading.value && !saveFailed.value && !hasPendingMedia.value && pending.value === 0 && props.session.current() && evaluateOrderExtFields({ ...draft.value.input, values: values.value, context: { ...draft.value.input.context, personType: typeof values.value.personType === 'string' ? values.value.personType : undefined } }, 'selection').state === 'ready') })
+watch(inputsValid, valid => { if (!disposed) emit('change', valid && !loading.value && pendingSavesReady() && !hasPendingMedia.value && evaluated.value?.state === 'ready') }, { flush: 'sync' })
 // Let already queued, authorized saves drain when leaving the page.
 onBeforeUnmount(() => { disposed = true })
 </script>

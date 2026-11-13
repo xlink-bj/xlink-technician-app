@@ -99,6 +99,8 @@ function claimNormalReader(reader: ReaderPort) {
 </script>
 
 <script setup lang="ts">
+import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
+
 import { isR1RetainedFileArray, isR1RetainedFileSubset } from '@shared/form/r1-retained-file-values'
 import { r1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-read-evidence'
 import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
@@ -143,7 +145,8 @@ const actions = computed(() => visibleSnapshot.value ? actionProvider?.forSnapsh
 const fileBusy=computed(()=>{void actions.value?.fileMedia?.revision.value;return actions.value?.fileMedia?.busy()??false})
 const editableFields = computed(() => visibleSnapshot.value ? actions.value?.projectFields?.(values.value,editingId.value)
   ?? projectR1RepeatFields(visibleSnapshot.value, values.value) : [])
-const validDraft = computed(() => { if(fileCancelling.value)return false;try {void actions.value?.fileMedia?.revision.value
+const inputsValid = useFormInputValidityScope()
+const validDraft = computed(() => { if(!inputsValid.value || fileCancelling.value)return false;try {void actions.value?.fileMedia?.revision.value
   if(actions.value?.fileMedia&&!actions.value.fileMedia.ready(values.value))return false
   return Boolean(visibleSnapshot.value && (actions.value?.validateDraft
   ? actions.value.validateDraft(values.value, editingId.value) : normalizeR1RepeatValues(visibleSnapshot.value, values.value))) } catch { return false } })

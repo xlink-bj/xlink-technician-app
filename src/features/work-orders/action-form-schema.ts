@@ -45,6 +45,7 @@ export function actionFormSchemaFor(
     ...(field.multiple !== undefined ? { multiple: field.multiple } : {}),
     ...(field.options?.length ? { inlineOptions: field.options } : {}),
     ...(field.visibility ? { visibility: field.visibility } : {}),
+    ...(field.roleVisibilityContext ? { roleVisibilityContext: field.roleVisibilityContext } : {}),
     ...(field.valueOption ? { valueOption: field.valueOption } : {}),
     ...(unsupportedReason ? { unsupportedReason } : {}),
   }

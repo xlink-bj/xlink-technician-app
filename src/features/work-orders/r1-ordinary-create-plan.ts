@@ -46,6 +46,7 @@ function planFor(s: R1NodeFormsSnapshot) {
   const keys = new Set(fields.map(f => f.valueKey)), graph = new Map<string,Set<string>>()
   const dependencies = (rule: VisibilityExpression | undefined, refs: Set<string>, depth = 0): void => {
     if (rule === undefined) return
+    if (rule.kind === 'role') return deny() // Role display support is not a create/draft write grant.
     if (depth > fields.length || evaluateVisibility(rule,{}).state === 'unsupported') return deny()
     if (rule.kind === 'all') { rule.conditions.forEach(c => dependencies(c,refs,depth+1)); return }
     const path = Array.isArray(rule.path) && rule.path.length === 1 ? rule.path[0] : rule.path

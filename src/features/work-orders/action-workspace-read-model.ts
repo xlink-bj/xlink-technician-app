@@ -163,7 +163,7 @@ export function createActionWorkspaceReadModel(sources: ActionWorkspaceReadModel
       dynamicFormSaveState.value === 'saved' &&
       Boolean(dynamicForm.value.dataId) &&
       dynamicUnsupportedFields.value.length === 0 &&
-      dynamicValidation.value.state === 'succeeded' &&
+      normalizeDynamicForm(dynamicForm.value, { intent: 'complete' }).state === 'succeeded' &&
       !dynamicRequiredMediaPending.value &&
       !dynamicMediaUploading.value &&
       completionReconciled.value

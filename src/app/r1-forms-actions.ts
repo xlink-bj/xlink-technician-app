@@ -1,3 +1,4 @@
+import { actionIdentityFormatIssue } from '@features/work-orders/action-identity-validation'
 import {sameR1ChoiceValue} from '@features/work-orders/r1-forms-choice-create'
 /** Normal local forms create/save adapter. R1 full EXTS replacement is retained;
  * this client lock does not provide cross-client CAS. Explicit scoped append/edit/Process; never implicit Process. */
@@ -149,9 +150,17 @@ export function createR1FormsActions(input: {
       if(!allowed(operation,recordId) || (finish&&!allowed('save_finish',recordId))) return deny()
       const original=recordId?input.original?.(before.snapshot,recordId):undefined
       if(recordId && (!original || !before.snapshot.records.some(r=>r.id===recordId))) return deny()
-      const normalize=(snapshot:R1NodeFormsSnapshot,raw?:Readonly<Record<string,unknown>>)=>recordId
-        ?input.normalizeExisting?input.normalizeExisting(snapshot,raw??deny(),draft,recordId):normalizeR1FormsEditValues(snapshot,raw??deny(),draft)
-        :{fields:normalizeR1RepeatValues(snapshot,draft),clearedFieldKeys:[] as readonly string[]}
+      const normalize=(snapshot:R1NodeFormsSnapshot,raw?:Readonly<Record<string,unknown>>)=>{
+        const result=recordId
+          ?input.normalizeExisting?input.normalizeExisting(snapshot,raw??deny(),draft,recordId):normalizeR1FormsEditValues(snapshot,raw??deny(),draft)
+          :{fields:normalizeR1RepeatValues(snapshot,draft),clearedFieldKeys:[] as readonly string[]}
+        if(finish){
+          const issue=actionIdentityFormatIssue({fields:snapshot.definition.fields??[],values:draft,
+            conditionValues:{...(raw??{}),...draft},workflowReadOnlyFieldIds:snapshot.node.formFieldIdsReadOnly})
+          if(issue)throw Error(issue.message)
+        }
+        return result
+      }
       const normalized=normalize(before.snapshot,original??undefined)
       const fileKeys=Object.keys(normalized.fields).filter(k=>Array.isArray(normalized.fields[k])&&before.snapshot.definition.fields?.some(f=>f.valueKey===k&&f.type==='file'))
       const fileCreate=Boolean(input.assertFileValues)||fileKeys.length>0

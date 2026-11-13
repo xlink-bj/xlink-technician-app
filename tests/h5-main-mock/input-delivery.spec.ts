@@ -205,3 +205,61 @@ test('textarea keeps native maxlength, external line endings, auto-height and fi
   expect(await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.value())).toBe('')
   await page.evaluate(() => (window as unknown as HarnessWindow).inputHarness.unmount())
 })
+
+import type { mountGenericNumericWorkspace } from './fixtures/generic-numeric-workspace-harness'
+type GenericHarnessWindow = Window & { genericNumeric: Awaited<ReturnType<typeof mountGenericNumericWorkspace>> }
+for (const type of ['number', 'digit'] as const) test(`actual Generic page numeric ${type}: partial input never saves or completes old values`, async ({ page }) => {
+  const external: string[] = [], errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.route('**/*', route => {
+    if (new URL(route.request().url()).origin === 'http://localhost:5174') return route.continue()
+    external.push(route.request().url()); return route.abort()
+  })
+  await page.goto('/#/pages/index/index?devReview=1')
+  await page.evaluate(async kind => {
+    const modulePath = '/tests/h5-main-mock/fixtures/generic-numeric-workspace-harness.ts'
+    const fixture = await import(modulePath)
+    ;(window as unknown as GenericHarnessWindow).genericNumeric = await fixture.mountGenericNumericWorkspace(kind)
+  }, type)
+  const root = page.locator('#generic-numeric-workspace'), field = root.getByTestId('dynamic-field-amount').getByRole('spinbutton')
+  const save = root.getByTestId('dynamic-form-save'), complete = root.getByTestId('action-workspace-submit')
+  const ledger = () => page.evaluate(() => (window as unknown as GenericHarnessWindow).genericNumeric.ledger())
+  await expect(field).toHaveValue('12'); await save.click()
+  await expect(complete).toHaveAttribute('aria-disabled', 'false')
+  const initial = await ledger(); expect(initial).toEqual([{ kind: 'save', values: { amount: 12 } }])
+  // Browser-valid syntax can still be refused by R1 numeric normalization.
+  // Restore the accepted model instead of displaying a rejected new literal.
+  await field.fill(type === 'number' ? '1.5' : '1e2')
+  await expect(field).toHaveValue('12'); expect(await ledger()).toEqual(initial)
+  // Replace a previously saved valid value in one native editing operation:
+  // badInput must not leave the old saved model eligible for completion.
+  await field.press('ControlOrMeta+A'); await field.press('-')
+  expect(await field.evaluate(input => (input as HTMLInputElement).validity.badInput)).toBe(true)
+  await expect(save).toHaveAttribute('aria-disabled', 'true')
+  await expect(complete).toHaveAttribute('aria-disabled', 'true')
+  await save.click({ force: true }); await complete.click({ force: true }); expect(await ledger()).toEqual(initial)
+  await field.fill('14'); await expect(save).toHaveAttribute('aria-disabled', 'false'); await save.click()
+  await expect(complete).toHaveAttribute('aria-disabled', 'false')
+  const second = await ledger()
+  // Also exercise a deliberate clear followed by '-', keeping empty distinct.
+  await field.fill(''); await field.press('-')
+  expect(await field.evaluate(input => (input as HTMLInputElement).validity.badInput)).toBe(true)
+  await expect(save).toHaveAttribute('aria-disabled', 'true')
+  await save.click({ force: true }); await complete.click({ force: true }); expect(await ledger()).toEqual(second)
+  await field.fill('15'); await expect(save).toHaveAttribute('aria-disabled', 'false'); await save.click()
+  await expect(complete).toHaveAttribute('aria-disabled', 'false'); await complete.click()
+  const confirm = root.getByTestId('survey-complete-confirm-action')
+  await expect(confirm).toHaveAttribute('aria-disabled', 'false')
+  const beforeConfirmationInput = await ledger()
+  // A late native edit after opening confirmation must revoke the open action.
+  await field.press('ControlOrMeta+A'); await field.press('-')
+  expect(await field.evaluate(input => (input as HTMLInputElement).validity.badInput)).toBe(true)
+  await expect(confirm).toHaveAttribute('aria-disabled', 'true')
+  await confirm.click({ force: true }); expect(await ledger()).toEqual(beforeConfirmationInput)
+  await root.getByTestId('survey-complete-cancel').click()
+  await field.fill('16'); await expect(save).toHaveAttribute('aria-disabled', 'false'); await save.click()
+  await expect(complete).toHaveAttribute('aria-disabled', 'false'); await complete.click(); await confirm.click()
+  await expect.poll(ledger).toEqual([{ kind: 'save', values: { amount: 12 } }, { kind: 'save', values: { amount: 14 } }, { kind: 'save', values: { amount: 15 } }, { kind: 'save', values: { amount: 16 } }, { kind: 'complete' }])
+  expect(external).toEqual([]); expect(errors).toEqual([])
+  await page.evaluate(() => (window as unknown as GenericHarnessWindow).genericNumeric.unmount())
+})
