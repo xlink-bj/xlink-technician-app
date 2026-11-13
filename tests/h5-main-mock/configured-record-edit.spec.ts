@@ -84,6 +84,8 @@ test(`normal configured existing-record editor ${mode}`,async({page,baseURL},inf
     await page.getByTestId('r1-normal-edit-saved-a').click()
     await expect(page.getByTestId('r1-normal-input-'+textKey).locator('textarea,input')).toHaveValue('原现场说明')
     await page.getByTestId('r1-normal-input-'+numberKey).scrollIntoViewIfNeeded()
+    // uni-app H5 maps the configured digit keyboard to a native number input.
+    await expect(page.getByTestId('r1-normal-input-'+numberKey).locator('input')).toHaveAttribute('type','number')
     await page.screenshot({path:info.outputPath('existing-editor-before.png')})
     await page.getByTestId('r1-normal-input-'+numberKey).locator('input').fill('0')
     await page.getByTestId('r1-normal-input-'+textKey).locator('textarea,input').fill('已核对现场说明')
