@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_GENERIC_MAP_EDIT!=='true','Dedicated fully intercepted generic Map edit only')
@@ -9,6 +10,7 @@ async function fixture(page:Page,baseURL:string){
  page.on('pageerror',e=>s.errors.push(e.message))
  await page.routeWebSocket('**/*',socket=>{if(new URL(socket.url()).host===new URL(baseURL).host)socket.connectToServer();else{s.unexpected.push(socket.url());socket.close()}})
  await page.route('**/*',async route=>{
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
  const req=route.request(),u=new URL(req.url())
  if(u.origin!==baseURL){s.unexpected.push(req.method()+' '+u.origin+u.pathname);return route.abort('blockedbyclient')}
  if(!u.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['xhr','fetch'].includes(req.resourceType()))return route.continue();s.unexpected.push(u.pathname);return route.abort('blockedbyclient')}

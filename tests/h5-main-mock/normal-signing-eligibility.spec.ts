@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import {test,expect} from '@playwright/test'
 // Real normal App navigation; all HTTP is closed synthetic transport. No signing/Contract API is opened.
 for(const mode of ['verified','node-mismatch','late-logout'] as const)test('normal signing readonly eligibility '+mode,async({page,baseURL},info)=>{
@@ -9,6 +10,7 @@ for(const mode of ['verified','node-mismatch','late-logout'] as const)test('norm
  page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')errors.push(m.text())})
  await page.routeWebSocket('**/*',s=>{if(new URL(s.url()).host===new URL(baseURL!).host)s.connectToServer();else{unexpected.push('WS');s.close()}})
  await page.route('**/*',async route=>{
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ json: { success: false, message: 'Synthetic information configuration unavailable' } })
   const req=route.request(),url=new URL(req.url());if(url.origin!==baseURL){unexpected.push(url.origin+url.pathname);return route.abort('blockedbyclient')}
   if(!url.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['xhr','fetch'].includes(req.resourceType()))return route.continue();unexpected.push(url.pathname);return route.abort('blockedbyclient')}
   const path=url.pathname.slice('/xlink/wm/'.length),body=Object.fromEntries(new URLSearchParams(req.postData()??''));calls.push({path,body});const ok=(json:unknown)=>route.fulfill({json})

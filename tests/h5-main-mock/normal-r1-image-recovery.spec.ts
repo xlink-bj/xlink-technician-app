@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { test, expect } from '@playwright/test'
 import { createHash } from 'node:crypto'
@@ -35,6 +36,7 @@ test(`normal image recovery ${mode}`,  async ({ page, request, baseURL }, info) 
     else { unexpected.push('WS ' + socket.url()); socket.close() }
   })
   await page.route('**/*', async route => {
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
     const req = route.request(), url = new URL(req.url())
     if (url.origin === 'https://up-z1.qiniup.com' && req.method() === 'POST') {
       providerRequests++

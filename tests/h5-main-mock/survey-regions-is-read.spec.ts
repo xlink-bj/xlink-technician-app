@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { expect,test } from '@playwright/test'
 test.skip(process.env.XLINK_H5_SURVEY_REGIONS_IS_READ!=='true','Opt-in synthetic regions/IS normal-App read contract')
@@ -27,6 +28,7 @@ for(const mode of ['labels','excluded','wrong-provider','foreign-tenant','unknow
    raw.exts.multiExt=mode==='array-values'?['1','0']:'1'
   }
   await page.route('**/*',async route=>{
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
    const req=route.request(),u=new URL(req.url())
    if(u.origin!==baseURL){unexpected.push('external');return route.abort()}
    if(!u.pathname.startsWith('/xlink/'))return route.continue()

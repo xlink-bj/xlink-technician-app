@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from './work-order-information-fixture'
 import { expect, type Page } from '@playwright/test'
 // Source-shaped synthetic transport only; no provider/proof/model is injected.
 export async function normalWorkspaceFixture(page:Page,baseURL:string){
@@ -8,6 +9,7 @@ export async function normalWorkspaceFixture(page:Page,baseURL:string){
  page.on('pageerror',()=>state.errors.push('pageerror'))
  await page.routeWebSocket('**/*',socket=>{if(new URL(socket.url()).host===new URL(baseURL).host)socket.connectToServer();else{state.unexpected.push('external-websocket');socket.close()}})
  await page.route('**/*',async route=>{
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
   const req=route.request(),u=new URL(req.url());if(u.origin!==baseURL){state.unexpected.push('external');return route.abort()}
   if(!u.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['xhr','fetch'].includes(req.resourceType()))return route.continue();state.unexpected.push('unexpected local');return route.abort()}
   const path=u.pathname.slice('/xlink/wm/'.length),body=Object.fromEntries(new URLSearchParams(req.postData()??'')),ok=(json:unknown)=>route.fulfill({json});state.calls.push(path)

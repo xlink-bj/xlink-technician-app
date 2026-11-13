@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_ORDINARY_CREATE_PLAN!=='true','Opt-in synthetic ordinary per-field state and Code-array create; synthetic only')
@@ -14,6 +15,7 @@ async function fixture(page:Page,baseURL:string,mode:string){
  page.on('pageerror',()=>state.errors.push('pageerror'))
  await page.routeWebSocket('**/*',socket=>{if(new URL(socket.url()).host===new URL(baseURL).host)socket.connectToServer();else{state.unexpected.push('external-websocket');socket.close()}})
  await page.route('**/*',async route=>{
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
   const req=route.request(),u=new URL(req.url());
   if(u.origin==='https://up-z1.qiniup.com'&&req.method()==='POST'){state.uploads++;const response=await route.fetch({url:'http://127.0.0.1:5338/upload',maxRedirects:0});return route.fulfill({response})}
   if(u.origin==='https://synthetic-normal-r1-file.invalid'&&u.pathname==='/objects/normal-r1-photo.png'){const response=await route.fetch({url:'http://127.0.0.1:5338'+u.pathname,maxRedirects:0});return route.fulfill({response})}

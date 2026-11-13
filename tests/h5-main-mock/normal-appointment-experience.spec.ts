@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 import { test, expect } from '@playwright/test'
 test.beforeEach(({},info)=>{test.skip(info.config.metadata.normalAppointmentExperience!==true,'Dedicated intercepted normal appointment experience only')})
@@ -24,6 +25,7 @@ test(`normal repeat appointment ${mode} edits a by real UI and preserves b after
   page.on('pageerror', e => errors.push(e.message))
   await page.routeWebSocket('**/*', socket => { if (new URL(socket.url()).host === new URL(baseURL!).host) socket.connectToServer(); else { unexpected.push('WS ' + socket.url()); socket.close() } })
   await page.route('**/*', async route => {
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
     const req = route.request(), url = new URL(req.url())
     if (url.origin !== baseURL) { unexpected.push(req.method() + ' ' + url.origin + url.pathname); return route.abort('blockedbyclient') }
     if (!url.pathname.startsWith('/xlink/wm/')) {

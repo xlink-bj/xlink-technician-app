@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import {test,expect} from '@playwright/test'
 import {enterNormalFormWorkspace,leaveNormalFormForList} from '../support/normal-form-workspace-entry'
 test.beforeEach(({},info)=>test.skip(info.config.metadata.mapChoiceDatetimeEdit!==true,'Dedicated intercepted Map editing'))
@@ -19,6 +20,7 @@ for(const mode of ['save-cancel','rate-clear','readonly','drift','required'] as 
  page.on('pageerror',e=>errors.push(e.message))
  await page.routeWebSocket('**/*',socket=>{if(new URL(socket.url()).host===new URL(baseURL!).host)socket.connectToServer();else{unexpected.push('WS');socket.close()}})
  await page.route('**/*',async route=>{
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
   const req=route.request(),url=new URL(req.url())
   if(url.origin!==baseURL){unexpected.push(req.method()+' '+url.origin+url.pathname);return route.abort('blockedbyclient')}
   if(!url.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['fetch','xhr'].includes(req.resourceType()))return route.continue();unexpected.push(url.pathname);return route.abort('blockedbyclient')}

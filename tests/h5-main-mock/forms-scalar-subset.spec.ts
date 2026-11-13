@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { test,expect,type Page } from '@playwright/test'
 test.skip(process.env.XLINK_H5_FORMS_SCALAR_SUBSET!=='true','Explicit loopback synthetic scalar-subset grant only')
@@ -12,6 +13,7 @@ async function fixture(page:Page,baseURL:string){
  page.on('pageerror',e=>state.errors.push(e.message))
  await page.routeWebSocket('**/*',s=>{if(new URL(s.url()).host===new URL(baseURL).host)s.connectToServer();else{state.unexpected.push(s.url());s.close()}})
  await page.route('**/*',async route=>{
+    if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
  const req=route.request(),url=new URL(req.url())
  if(url.origin!==baseURL){state.unexpected.push(url.origin+url.pathname);return route.abort('blockedbyclient')}
  if(!url.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['xhr','fetch'].includes(req.resourceType()))return route.continue();state.unexpected.push(url.pathname);return route.abort('blockedbyclient')}

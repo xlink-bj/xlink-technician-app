@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { expect, test } from '@playwright/test'
 import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 import { normalSurveyCauseReadFixture } from '../support/normal-survey-cause-read-fixture'
@@ -16,6 +17,7 @@ for (const mode of ['current', 'duplicate-provider', 'foreign-record', 'raw-conf
    else { unexpected.push('WS ' + socket.url()); socket.close() }
   })
   await page.route('**/*', async route => {
+   if (isWorkOrderInformationRead(route.request(), baseURL!)) return route.fulfill({ json: { success: false, message: 'Synthetic information configuration unavailable' } })
    const request = route.request(), url = new URL(request.url())
    if (url.origin !== baseURL) { unexpected.push('external:' + url.origin); return route.abort() }
    if (!url.pathname.startsWith('/xlink/wm/')) {
