@@ -1,3 +1,4 @@
+import * as inputValidity from '@shared/ui/form-input-validity'
 import { useNormalFormActionPage, formHostHasDetailBack } from '@features/work-orders/normal-form-action-page'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -33,7 +34,7 @@ function component() {
   const { descriptor } = parse(fs.readFileSync(filename, 'utf8'), { filename })
   const source = compileScript(descriptor, { id: 'quotation-success-test', inlineTemplate: true }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
-  const modules: Record<string, unknown> = { vue: Vue,
+  const modules: Record<string, unknown> = { vue: Vue, '@shared/ui/form-input-validity': inputValidity,
     '@shared/ui/AppButton.vue': { __esModule: true, default: Button },
     '@shared/ui/AppStatus.vue': { __esModule: true, default: Status } }
   const module = { exports: {} as { default: Vue.Component } }
@@ -218,7 +219,7 @@ async function mountedParent(realStore = false) {
   const dummy = Vue.defineComponent({ setup: () => () => Vue.h('view') })
   const Hub = Vue.defineComponent({ props: ['workOrderId'], setup(props) { hubRead(props.workOrderId); return () => Vue.h('view', { 'data-testid': 'real-page-order-hub' }) } })
   const modules: Record<string, unknown> = {
-    vue: Vue,
+    vue: Vue, '@shared/ui/form-input-validity': inputValidity,
     '@dcloudio/uni-app': { onLoad: (fn: typeof load) => { load = fn }, onShow: () => {}, onHide: () => {}, onBackPress: () => {}, onUnload: () => {} },
     '@features/work-orders/normal-form-action-page': { useNormalFormActionPage, formHostHasDetailBack },
     '@shared/state': { useSessionStore: () => actor },

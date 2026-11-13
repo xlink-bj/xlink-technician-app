@@ -36,6 +36,12 @@ describe('H5 native input delivery after uni normalization', () => {
     field.validity.badInput = true; send(field, ''); binding.dispose()
     expect(valid.mock.calls.at(-1)).toEqual([true]); expect(emit).toHaveBeenCalledTimes(2)
   })
+  it('retains existing empty-string delivery for native consumers without the validity contract', () => {
+    const field = Object.assign(new Field(), { type: 'number', validity: { badInput: true } }), emit = vi.fn()
+    bindH5InputDelivery(field, { initialValue: '12', isDisabled: () => false, emit })
+    send(field, '')
+    expect(emit.mock.calls).toEqual([['']])
+  })
   it('recognizes a textarea and preserves multiline strings and a final clear', () => {
     const field = new Field(), emit = vi.fn(); field.tagName = 'TEXTAREA'
     bindH5InputDelivery(field, { initialValue: '', isDisabled: () => false, emit })
@@ -217,5 +223,28 @@ it('aggregates native validity across actual inputs and releases a removed field
   const field = Object.assign(root.children[0]!, { type: 'number', validity: { badInput: true } })
   send(field, ''); expect(valid.value).toBe(false); expect(emit).not.toHaveBeenCalled()
   show.value = false; await Vue.nextTick(); expect(valid.value).toBe(true); expect(emit).not.toHaveBeenCalled()
+  app.unmount()
+})
+
+it('keeps independent nested business scopes isolated when an unrelated field is invalid or removed', async () => {
+  const root = host('root'), showChild = Vue.ref(true), Actual = component('h5', 'AppInput')
+  let outer!: Vue.ComputedRef<boolean>, inner!: Vue.ComputedRef<boolean>
+  const Child = Vue.defineComponent({ setup() {
+    inner = inputValidity.useFormInputValidityScope()
+    return () => Vue.h(Actual, { modelValue: '12' })
+  } })
+  const app = renderer.createApp(Vue.defineComponent({ setup() {
+    outer = inputValidity.useFormInputValidityScope()
+    return () => Vue.h('view', {}, [Vue.h(Actual, { modelValue: '12' }), showChild.value ? Vue.h(Child) : null])
+  } }))
+  app.mount(root); await Vue.nextTick()
+  const fields = root.children[0]!.children.filter(n => n.tagName === 'INPUT' && n.type === 'input')
+  expect(fields).toHaveLength(2)
+  const a = Object.assign(fields[0]!, { type: 'number', validity: { badInput: true } })
+  const b = Object.assign(fields[1]!, { type: 'number', validity: { badInput: true } })
+  send(a, ''); expect(outer.value).toBe(false); expect(inner.value).toBe(true)
+  send(b, ''); expect(inner.value).toBe(false)
+  a.validity.badInput = false; send(a, '13'); expect(outer.value).toBe(true); expect(inner.value).toBe(false)
+  showChild.value = false; await Vue.nextTick(); expect(outer.value).toBe(true); expect(b.parent).toBeNull()
   app.unmount()
 })

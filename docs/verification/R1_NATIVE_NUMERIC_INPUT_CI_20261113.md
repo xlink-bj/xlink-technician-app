@@ -61,3 +61,21 @@ H5 使用仓库实际 App、工作流原始 opt-in 配置与原超时/重试设�
 | Verify ordinary configured per-field first creation and owned uploads | 7 |
 | Verify normal main Repeat Workspace completion and guards | 3 |
 | Verify normal Survey cause readonly experience in its Workspace | 7 |
+
+## 后续补漏：Generic 页面祖先与其他 binder 消费者
+
+独审指出首批四个 scope 只覆盖 R1FormFieldControl 的宿主，未覆盖另一 numeric AppInput 消费者 GenericDynamicFormActionContent。实际祖先 [action-workspace 页面](../../src/pages/work-orders/action-workspace.vue) 当时直接绑定 `workspace.saveDynamicForm`，完成仅依据业务值。既有 scalar QA 的 R1 forms 节点被执行围栏禁用，不能以其 PASS 推导其他可执行 Generic 路径安全。
+
+本批在该真实页面祖先接入同一临时 scope，保存/完成/Shell/确认框的 UI 资格与 handler 都检查有效性，DEV journey 继续及预约确认入口也沿同一门禁。scope 不进入 store/schema/API；原权限与 R1 forms/repeat 专用多记录围栏不变。角色提交 `9bd07929a4826547193b9cda0acf7ad4517c23b8` 保持原样，本批追加提交。
+
+源码搜索 `AppInput` 的 input-type/inputType 后仅两类 numeric 消费者：R1FormFieldControl 与 Generic；前者四宿主保留原接入，后者由页面覆盖。扩查共享 binder：AppTextarea、AppSearchBar 没有 numeric 类型；QuotationTextField 有独立原生 numeric 控件且未接此合同。故 binder 仅在调用方提供 onValidityChange 时保留 UI 中间态；未接合同的消费者恢复原有空字符串交付，避免首批无条件 suppress 改变其既有数量语义。本批不宣称其获得新的有效性 scope；原报价数量/编码回归仍需通过。
+
+新增 [浏览器 fixture](../../tests/h5-main-mock/fixtures/generic-numeric-workspace-harness.ts) 挂载真实页面、Shell、FormActions、Generic、AppInput 与实际 Workspace 控制器。独立 Pinia、合成 session、规范化 legacy Generic read/command/storage 端口是明确的测试初始条件；不改真实 App 路由的数据、不创建权限 grant、不把真实 R1 sourceNodeType=forms/repeat 改为可执行，不称其为生产 API 闭环。最初 fixture 漏 displayName 被现有选择器正确拒绝；补齐契约后才取得产品 RED。
+
+[现有 input-delivery H5 套件](../../tests/h5-main-mock/input-delivery.spec.ts) 新增 number/digit 两例，真实键盘操作：初值 12 → 实际保存 → 全选替换为 '-' → DOM badInput=true；修复前两例均在“完成按钮必须 aria-disabled=true”失败，实际 false。修复后保存/完成均禁用且强制点击不增加任何 command；修正 14 可保存；另检查明确清空再 '-' 零命令，修正 15 后保存并打开确认框，再次负号输入立即撤回确认资格、强制确认零命令；取消后修正 16 再保存及完成。ledger 精确为 save12/save14/save15/save16/complete，无 NaN、伪造负号值、外连或页面错误。两例首轮 GREEN 2/2，12.5 秒；已加入原 CI 执行的 input-delivery 文件，最终整组结果见本批交付。
+
+后续批次最终验证（含确认框与数字字面量回退）：input-delivery 11/11 PASS（38.4 秒），正常报价输入 7/7 PASS（46.8 秒），旧 R1 scalar 只读围栏与 Stage 2B 合计 2/2 PASS（24.3 秒）；各命令 exit 0。最终完整 Vitest 347 文件 / 6470 PASS，exit 0（其中本地 346 文件 / 6440 项，另有对象线原样 matcher 测试 30 项）；typecheck、boundary/module 负例自检、ownership、M1 I8、UI governance、源文件大小审计、链接及 whitespace 检查通过。静态绑定断言同步为“UI 有效性且原执行权限”；实际页面 SFC 加载器接真实 composable。移除已不反映接线的注释后，原先错误依赖注释文本的 Shell 测试改查实际 submitWorkspace 与预约分支调用；不提高大小阈值或隐藏源码。所有前述原生设备、生产和商业视觉边界继续有效。
+
+额外数字字面量回退：number 的 1.5、digit 的 1e2 可被浏览器接受但被现有 R1 normalizer 拒绝。补接前两例实际 UI 分别仍为 1.5/1e2，与旧模型 12 不一致；仅 numeric AppInput 接入已有 reconcile-on-commit 后立即恢复接受值，不改 phone/ID。既有存活父 scope 的输入卸载测试及新增嵌套 scope 测试分别证明标记清理与业务局部隔离；子组件整体卸载后不再读取已停止的 computed 当作当前 UI 状态。
+
+按主线程后续要求，[configured-record-edit](../../tests/h5-main-mock/configured-record-edit.spec.ts) 复用对象线 `963a2c8` 的 isWorkOrderInformationRead：严格匹配才返回合成 503；其原 FormDef 查询另外核对完整六参数、重复键、页码 1–4 及 URL，避免其他信息请求落入宽泛分支。H5 9/9 PASS（约 1.2 分钟），所有旧编辑/ACK/回读/权限断言保留。该 matcher 与其 30 项反例测试从 origin/main@0f16b0feea84b3ef055c5b5eac947750dd383ca1 原样临时读取作本地验证，不混入此提交、不修改对象线文件；集成依赖对象线 `963a2c8`。本地产品源码尚未同步对象资料批次，九例不宣称覆盖整合后的新增信息读取；该整合结果须由主线程后续 CI 确认。

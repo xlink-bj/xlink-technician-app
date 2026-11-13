@@ -14,7 +14,7 @@ export function bindH5InputDelivery(root: unknown, options: {
   readonly initialValue: string
   readonly isDisabled: () => boolean
   readonly emit: (value: string) => void
-  /** Native incomplete-number state is UI-only; do not publish it as empty. */
+  /** Opt into UI-only incomplete numbers; the host must gate its actions. */
   readonly onValidityChange?: (valid: boolean) => void
   /** Observe parent acceptance after Vue updates, including rejected no-op props. */
   readonly afterCommit?: () => void
@@ -32,7 +32,7 @@ export function bindH5InputDelivery(root: unknown, options: {
   reportValidity()
   const publish = () => {
     if (disposed || options.isDisabled() || typeof field.value !== 'string') return
-    if (!reportValidity()) return
+    if (!reportValidity() && options.onValidityChange) return
     if (field.value !== lastPublished) {
       lastPublished = field.value
       options.emit(field.value)

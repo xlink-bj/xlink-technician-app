@@ -91,7 +91,6 @@
     <AppButton class="workspace-state-action" @tap="reload">再次尝试</AppButton>
   </view>
 
-  <!-- Appointment path remains @submit="continueToConfirmation"; generic forms use the Runtime-gated handler. -->
   <ActionWorkspaceShell
     v-else-if="workspace.descriptor && (workspace.appointmentForm || workspace.dynamicForm)"
     :customer-name="workspace.detail?.customerName"
@@ -103,7 +102,7 @@
     :lifecycle="workspace.lifecycle"
     :draft-status="workspace.draftStatus"
     :transitioning="isNavigating"
-    :can-submit="workspace.canSubmit"
+    :can-submit="inputsValid && workspace.canSubmit"
     :business-feedback="feedback"
     :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
@@ -230,7 +229,7 @@
       <AppButton
         block
         variant="secondary"
-        :disabled="isNavigating"
+        :disabled="isNavigating || !inputsValid"
         data-testid="mock-journey-advance"
         @tap="advanceJourney"
       >{{ mockJourney.nextLabel }}</AppButton>
@@ -240,11 +239,11 @@
       <ActionWorkspaceFormActions
         :lifecycle="workspace.lifecycle"
         :save-state="workspace.dynamicFormSaveState"
-        :can-save="workspace.descriptor.execution === 'enabled'"
-        :can-submit="workspace.canSubmit"
+        :can-save="inputsValid && workspace.descriptor.execution === 'enabled'"
+        :can-submit="inputsValid && workspace.canSubmit"
         :transitioning="isNavigating"
         :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : '完成'"
-        @save="workspace.saveDynamicForm"
+        @save="inputsValid && workspace.saveDynamicForm()"
         :hint="workspace.descriptor.formPurpose === 'survey' && !workspace.canSubmit ? '当前填写或权限条件未满足，暂不能完成勘查' : undefined"
         @submit="requestSurveyCompletion"
       />
@@ -270,7 +269,7 @@
   </view>
 
   <SurveyCompleteConfirmation v-if="surveyConfirmOpen"
-    :can-submit="workspace.canSubmit"
+    :can-submit="inputsValid && workspace.canSubmit"
     :submitting="workspace.lifecycle === 'submitting'"
     @cancel="surveyConfirmOpen = false"
     @confirm="confirmSurveyCompletion"
@@ -278,6 +277,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
 import { computed, nextTick, ref, watch } from 'vue'
 import type { AppActionDraftStatus } from '@shared/ui/types'
 import { useNormalFormActionPage, formHostHasDetailBack } from '@features/work-orders/normal-form-action-page'
@@ -341,6 +341,7 @@ const createAStageMockQuoteOrderControllerForUi: AStageMockQuoteOrderControllerF
   createAStageMockQuoteOrderControllerForActor
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
+const inputsValid = useFormInputValidityScope()
 let mountedWorkspaceAction: typeof workspace.descriptor = null
 const workspacePageLease = {}
 const isNavigating = ref(false)
@@ -638,7 +639,7 @@ async function exit(): Promise<void> {
 
 async function advanceJourney(): Promise<void> {
   const context = mockJourney.value
-  if (!context || context.stage === 'quotation' || isNavigating.value) return
+  if (!inputsValid.value || !context || context.stage === 'quotation' || isNavigating.value) return
   const stage = context.stage
   isNavigating.value = true
   journeyFeedback.value = ''
@@ -689,29 +690,29 @@ async function openTimeSelection(): Promise<void> {
 }
 
 async function continueToConfirmation(): Promise<void> {
-  if (isNavigating.value) return
+  if (!inputsValid.value || isNavigating.value) return
   isNavigating.value = true
   const result = await workspace.continueToConfirmation()
   if (result.state !== 'succeeded') isNavigating.value = false
 }
 
 const surveyConfirmOpen = ref(false)
-
 function requestSurveyCompletion(): void {
   if (workspace.descriptor?.formPurpose === 'survey') {
-    if (workspace.canSubmit && workspace.lifecycle !== 'submitting') surveyConfirmOpen.value = true
+    if (inputsValid.value && workspace.canSubmit && workspace.lifecycle !== 'submitting') surveyConfirmOpen.value = true
     return
   }
   void submitWorkspace()
 }
 
 async function confirmSurveyCompletion(): Promise<void> {
-  if (!surveyConfirmOpen.value || !workspace.canSubmit || workspace.lifecycle === 'submitting') return
+  if (!inputsValid.value || !surveyConfirmOpen.value || !workspace.canSubmit || workspace.lifecycle === 'submitting') return
   surveyConfirmOpen.value = false
   await submitWorkspace()
 }
 
 async function submitWorkspace(): Promise<void> {
+  if (!inputsValid.value) return
   if (workspace.descriptor?.actionIntent === 'interact_with_form') {
     await workspace.completeDynamicForm()
     return

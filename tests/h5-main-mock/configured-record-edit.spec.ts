@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { test, expect } from '@playwright/test'
 import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 test.beforeEach(({},info)=>{test.skip(info.project.metadata.configuredRecordEdit!==true,'Dedicated fully intercepted configured-record edit mode')})
@@ -34,13 +35,23 @@ test(`normal configured existing-record editor ${mode}`,async({page,baseURL},inf
     if(req.method()!=='POST'){unexpected.push(req.method()+' '+url.pathname);return route.abort('blockedbyclient')}
     const path=url.pathname.slice('/xlink/wm/'.length),body=Object.fromEntries(new URLSearchParams(req.postData()??''));calls.push({path,body})
     const ok=(json:unknown)=>route.fulfill({json})
+    if(isWorkOrderInformationRead(req,baseURL!))return route.fulfill({status:503,json:{success:false,message:'Synthetic information configuration unavailable'}})
     if(path==='index/phoneLogin.do')return ok({success:true,status:1,data:{token:'synthetic-record-session',user:{_id:'u'},currentRole:{_id:'r'},capabilityNames:[]}})
     if(['function/changeRole','function/queryTreeByRoleId'].includes(path))return ok({data:{functionList:[{functionList:[{order:1,exts:{tabDisplay:'1'},action:'/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0'}]}]}})
     if(['basic/serviceAppointment/query','basic/serviceAppointment/querySAWorkflowNode'].includes(path))return ok({data:[{...node,data:sa}],total:1,page:1,rows:20})
     if(path==='basic/serviceAppointment/queryById/s')return ok({success:true,status:1,data:{serviceAppointment:sa,workflow:{_id:'w',tenantId:'t',formDataId:'s',state:0},workflowNode:[node]}})
     if(['code/query','biz/action/query.do'].includes(path))return ok({data:[],total:0,page:Number(body.page)||1,rows:Number(body.rows)||20})
     if(path==='biz/ext/queryById.do')return ok({_id:definitionId,tenantId:'t',state:1,type:isMap?'0':'1',colName:isMap?'configuredNotes':'survey'})
-    if(path==='biz/extField/query'){const p=Number(body.page);return ok({data:fields.slice((p-1)*50,p*50),total:fields.length,page:p,size:50})}
+    if(path==='biz/extField/query'){
+      const p=Number(body.page),params=new URLSearchParams(req.postData()??'')
+      const expected={extId:definitionId,'is:state|integer#and':'1',sortField:'order',sortOrder:'asc',page:String(p),rows:'50'}
+      if(url.search||url.hash||url.username||url.password||!Number.isSafeInteger(p)||p<1||p>4
+        ||Array.from(params).length!==Object.keys(expected).length
+        ||!Object.entries(expected).every(([key,value])=>params.getAll(key).length===1&&params.get(key)===value)){
+        unexpected.push('Unexpected ExtField request');return route.abort('blockedbyclient')
+      }
+      return ok({data:fields.slice((p-1)*50,p*50),total:fields.length,page:p,size:50})
+    }
     if(path==='biz/extForm/query/'+definitionId){
       if(stale)a.exts.opaque={keep:['changed-by-another-read']}
       const data=[a,b].filter(r=>!body['is:_id|string#and']||r._id===body['is:_id|string#and']).map(dates)
