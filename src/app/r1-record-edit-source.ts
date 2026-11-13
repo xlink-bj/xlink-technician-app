@@ -2,6 +2,8 @@ import { typedSurveyPropertyKind } from '@adapters/api/r1-typed-survey-preservat
 import { decodeR1ScopedJson } from '@adapters/api/r1-scoped-json'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
 import type { R1FileCreateStorage } from '@shared/form/r1-file-create-storage'
+import { R1_LOCAL_FORM_MAX_ROWS } from '@features/work-orders/r1-local-form-fields'
+import { classifyFieldType } from '@runtimes/dynamic-form'
 
 /** The query formats top-level Dates. Recognize only the existing inherited
  * audit slots, from TWO same-record server reads; never guess epoch/timezone
@@ -28,7 +30,7 @@ export function recordEditAuditProjection(raw:Readonly<Record<string,unknown>>,w
 export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: Readonly<Record<string, unknown>>,
   rawFields: readonly Readonly<Record<string, unknown>>[], tenantId: string, appointmentSubmitAllowed=false) {
   const fields = snapshot.definition.fields, fill = snapshot.fillableFieldIds, ro = snapshot.node.formFieldIdsReadOnly
-  if (!fields?.length || fields.length > 50 || fields.length !== rawFields.length || !Array.isArray(fill) || !Array.isArray(ro)
+  if (!fields?.length || fields.length > R1_LOCAL_FORM_MAX_ROWS || fields.length !== rawFields.length || !Array.isArray(fill) || !Array.isArray(ro)
     || new Set(fill).size !== fill.length || new Set(ro).size !== ro.length
     || new Set(fields.map(f => f.valueKey)).size !== fields.length || new Set(fields.map(f => f.fieldId)).size !== fields.length
     || [...fill, ...ro].some(id => !fields.some(f => f.fieldId === id)) || fill.some(id => ro.includes(id))
@@ -43,11 +45,18 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     const raw = rawFields.find(f => f._id === field.fieldId)
     const mapChoice=ext.type==='0'&&field.type==='radio'
     const mapTemporal=ext.type==='0'&&field.type==='datetime'
+    // Node-readonly Map values are retained from the full original, never
+    // normalized or patched. Their shared display/control type need not also
+    // be an approved writable codec. Unknown types/config still fail closed.
+    const preserveOnly=ext.type==='0'&&ro.includes(field.fieldId)
+      &&classifyFieldType(field.type).capability==='SUPPORTED_GENERIC'
     if (!raw || raw.extId !== ext._id || raw.tenantId !== tenantId || raw.state !== 1 || raw.colName !== ext.colName
-      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapTemporal)
+      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapTemporal||preserveOnly)
       || ![0, 1].includes(raw.preset as number) || field.preset !== (raw.preset === 1)
       || !['0', '1'].includes(String(raw.required)) || field.required !== (String(raw.required) === '1')
-      || raw.operationType !== '1' || raw.multiple !== undefined && raw.multiple !== false || field.multiple
+      || raw.operationType !== '1' || (preserveOnly
+        ? raw.multiple !== undefined && typeof raw.multiple !== 'boolean' || Boolean(raw.multiple) !== Boolean(field.multiple)
+        : raw.multiple !== undefined && raw.multiple !== false || field.multiple)
       || raw.enabled !== undefined && raw.enabled !== 1
       || raw.readOnly !== undefined && ![0, 1].includes(raw.readOnly as number)
       || raw.readonly !== undefined && ![0, 1].includes(raw.readonly as number)
@@ -55,13 +64,13 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
       || typeof field.readOnly !== 'boolean' || field.readOnly !== (raw.readOnly === 1 || raw.readonly === 1)
       || field.readOnly && fill.includes(field.fieldId) || !field.readOnly && !ro.includes(field.fieldId) && !fill.includes(field.fieldId)
       || !Array.isArray(raw.showList) || !raw.showList.includes('4') || field.visibility || field.unsupportedReason || field.presentationOnly
-      || !mapChoice&&(field.valueOption || field.options?.length || raw.valueOption) || raw.calculateConfig || raw.router
+      || !mapChoice&&!preserveOnly&&(field.valueOption || field.options?.length || raw.valueOption) || raw.calculateConfig || raw.router
       || raw.roleIds != null && (!Array.isArray(raw.roleIds) || raw.roleIds.length)
       || ['componentType', 'surveyTool', 'url', 'params'].some(k => Object.hasOwn(raw, k))
       || raw.showType !== undefined && raw.showType !== '1' || raw.showField || raw.showValue
       || raw.showFieldPreset !== undefined && raw.showFieldPreset !== 0
       || Object.hasOwn(raw, 'collectionName') && raw.collectionName !== '' && raw.collectionName !== ext.colName) return
-    if(mapChoice){
+    if(mapChoice&&!preserveOnly){
       // Options were resolved by the existing scoped reader, or came from this
       // exact inline metadata. No synthetic defaults or business-name mapping.
       const options=field.options
@@ -82,7 +91,11 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     }
     try {
       const cfg = raw.frontEndConfig == null || raw.frontEndConfig === '' ? {} : decodeR1ScopedJson(raw.frontEndConfig)
-      if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg) || Object.keys(cfg).length) return
+      // Explicit presentation mapping only; arbitrary validation/actions are
+      // not ignored merely because the read mapper accepts their JSON.
+      if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)
+        || Object.keys(cfg).some(key=>key!=='placeholder')
+        || Object.hasOwn(cfg,'placeholder') && typeof (cfg as Record<string,unknown>).placeholder!=='string') return
     } catch { return }
   }
   // SOURCE routing: type0 Map excludes special typed collections. No fallback.

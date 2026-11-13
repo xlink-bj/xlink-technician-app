@@ -15,9 +15,9 @@
     :mode="control" :model-value="scalarValue" :disabled="disabled"
     @update:model-value="emit('update:modelValue', $event)" />
   <AppTextarea reconcile-on-commit v-else-if="control === 'textarea'" :model-value="scalarValue"
-    :maxlength="4000" :disabled="disabled" placeholder="请填写现场信息"
+    :maxlength="4000" :disabled="disabled" :placeholder="field.placeholder ?? '请填写现场信息'"
     @update:model-value="emit('update:modelValue', $event)" />
-  <AppInput reconcile-on-commit v-else :model-value="scalarValue" :disabled="disabled" placeholder="请填写信息"
+  <AppInput reconcile-on-commit v-else :model-value="scalarValue" :disabled="disabled" :placeholder="field.placeholder ?? '请填写信息'"
     @update:model-value="emit('update:modelValue', $event)" />
   <AppButton v-if="!field.required && scalarValue && (control === 'rating' || control === 'date' || control === 'time' || control === 'datetime')"
     variant="text" size="compact" :disabled="disabled" @tap="emit('update:modelValue', '')">清空</AppButton>

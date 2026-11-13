@@ -123,6 +123,7 @@ export function projectR1RepeatFields(snapshot: R1NodeFormsSnapshot, values: Rea
     return { fieldId: field.fieldId, valueKey: field.valueKey, label: field.label, type: field.type,
       required: state.required, readOnly: state.readOnly, options: field.options ?? [], multiple: Boolean(field.multiple),
       visible: state.visible,
+      ...(field.presentation?.placeholder ? { placeholder: field.presentation.placeholder } : {}),
       supported: state.capability === 'SUPPORTED_GENERIC' && state.visible && !state.readOnly && (scalarTypes.has(field.type) || (field.valueKey === 'part' && supportsSurveyPartSubmission(snapshot))) && !field.multiple,
       ...(state.reason ? { reason: state.reason } : {}) }
   })

@@ -38,7 +38,10 @@ export function existingRecordFixture(alternate = false) {
       data: { serviceAppointment: { _id: scope.workOrderId, tenantId: scope.tenantId, state: 1, workflowId: scope.workflowRunId },
         workflow: { _id: scope.workflowRunId, tenantId: scope.tenantId, formDataId: scope.workOrderId, state: 0 }, workflowNode: [node] } })
     if (request.path === 'biz/ext/queryById.do') return structuredClone(ext)
-    if (request.path === 'biz/extField/query') return { data: structuredClone(fields), total: fields.length, page: 1, size: 50 }
+    if (request.path === 'biz/extField/query') {
+      const page = Number(request.body.page)
+      return { data: structuredClone(fields.slice((page - 1) * 50, page * 50)), total: fields.length, page, size: 50 }
+    }
     if (request.path === 'biz/extForm/findByIdWithWorkflow') {
       const selected=[record,other].find(r=>r._id===request.body.id)
       if(!selected)throw Error('No synthetic precise record')

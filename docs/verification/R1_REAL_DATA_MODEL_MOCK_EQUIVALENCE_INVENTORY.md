@@ -1,5 +1,7 @@
 # R1 真实数据模型与 DEV Mock 等价清单（v1.0）
 
+最新有限能力补充：[已有配置记录编辑预算、placeholder 与只读值保全纠偏（2026-11-13）](R1_CONFIGURED_EDIT_BOUNDED_DYNAMIC_CORRECTION_20261113.md)。本批只修正已确认的过度拒绝，不代表全域动态能力或真实写入验收完成。
+
 > 2026-11-05 Owner 决策；适用 `xlink-bj/xlink-technician-app` 当前技术工程师主流程。此文档是**建立 1:1 协议/模型 Mock 的执行清单**，不是 Production 原始数据导出、真实写入许可或已完成的 R1 全业务验收。
 
 ## 0. 权威来源与判定口径

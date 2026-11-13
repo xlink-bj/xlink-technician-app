@@ -105,8 +105,16 @@ export function r1SpecialFormUpsert(input: {
   if (!input.definitionId||!input.workOrderId||!input.workflowNodeId)throw new Error('R1 FormData identity missing')
   if(input.sourceNodeType==='repeat'&&!input.workflowRunId)throw new Error('R1 repeat requires actual workflow run identity')
   const forbidden=new Set(['_id','id','dataId','formDataId','state','nodeId','runtimeNodeId','workflowId','workflowRunId','runId','workflow','sid','workOrderId','smodule','dataStr','tenantId','userId','roleId','formDefId','formDefinitionId','definitionId','extId','exts','__proto__','prototype','constructor'])
+  // Existing configured editors retain a complete <=200-row source schema.
+  // The 50-row fetch page is not a full-record field count. Larger patches
+  // still require exact, unique storage keys; new/unconfigured writes retain
+  // their original budget. This serializer does not issue edit authority.
+  const largeExistingPatch = Boolean(input.existingFormDataId && input.fieldStorage
+    && input.fieldStorage.length <= 200
+    && new Set(input.fieldStorage.map(f=>f.valueKey)).size === input.fieldStorage.length
+    && Object.keys(input.formData ?? {}).every(key=>input.fieldStorage!.some(f=>f.valueKey===key)))
   if(!input.formData || typeof input.formData!=='object' || Array.isArray(input.formData)
-    || Object.keys(input.formData).length>50)throw new Error('Unbounded or invalid R1 form field patch')
+    || Object.keys(input.formData).length>(largeExistingPatch?200:50))throw new Error('Unbounded or invalid R1 form field patch')
   for(const [key,value] of Object.entries(input.formData)){
     if(!key.trim()||key.length>120||forbidden.has(key))
       throw new Error('R1 form field collides with server-owned identity')
