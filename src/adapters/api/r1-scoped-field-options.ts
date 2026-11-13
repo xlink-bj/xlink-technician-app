@@ -3,7 +3,7 @@ import type { FormFieldOptionRead, FormFieldRead } from '@shared/ports'
 import type { ApiReadTransport } from './technician-api'
 
 type Row = Record<string, unknown>
-type ProviderKind = 'code' | 'cascade'
+type ProviderKind = 'code' | 'cascade' | 'proj-package'
 interface FieldBinding {
   readonly tenantId: string
   readonly definitionId: string
@@ -11,6 +11,7 @@ interface FieldBinding {
   readonly fieldType: string
   readonly providerId: string
   readonly kind: ProviderKind
+  readonly params?: Readonly<Record<string,string|number>>
 }
 
 // Safety ceilings, not claims about any live provider's size or contents.
@@ -26,14 +27,22 @@ const text = (v: unknown, max = 256): string => typeof v === 'string'
   && v.length > 0 && v.length <= max && v.trim() === v && !/[\u0000-\u001f\u007f]/.test(v) ? v : fail()
 const providerId = (v: unknown): string => typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v) ? v : fail()
 
+/** An empty historical calculation shell has no executable rules. */
+export function isR1EmptyCalculationConfig(value:unknown):boolean {
+  if(value==null||value==='')return true
+  try{return Object.keys(row(decodeR1ScopedJson(value))).length===0}catch{return false}
+}
+
 /** Bind before transport, using raw ExtField evidence rather than the lenient
- * mapper's coerced aliases. Only ordinary Code/Cascade references are supported.
+ * mapper's coerced aliases. Code/Cascade and the bounded type0 projPackage
+ * mapping are supported; arbitrary URLs and pricing providers are not.
  * The caller has already checked the role-listed node and raw Ext ownership. */
 export function bindR1ScopedFieldOptions(input: {
   readonly rawField: unknown
   readonly field: FormFieldRead
   readonly tenantId: string
   readonly definitionId: string
+  readonly sourceType?: unknown
 }): FieldBinding | null {
   const raw = row(input.rawField), field = input.field
   const tenantId = text(input.tenantId), definitionId = text(input.definitionId)
@@ -52,6 +61,25 @@ export function bindR1ScopedFieldOptions(input: {
     return null
   }
   const reference = providerId(raw.valueOption)
+  if(field.type==='bizSelect'){
+    // Source-fixed R1 business selector; no arbitrary URL or pricing-provider
+    // substitution. This binds reading only, never record/field edit authority.
+    if(input.sourceType!=='0'||reference!=='projPackage'||reference!==field.valueOption
+      ||raw.options!==undefined||raw.items!==undefined||!isR1EmptyCalculationConfig(raw.calculateConfig)||raw.router)fail()
+    const cfg=row(decodeR1ScopedJson(raw.frontEndConfig))
+    if(Object.keys(cfg).some(k=>!['url','params','label','value','placeholder','errorMsg','sortField','sortOrder'].includes(k))
+      ||cfg.url!=='biz/projPackage/query.do'||cfg.label!=='name'||cfg.value!=='_id'
+      ||cfg.placeholder!==undefined&&typeof cfg.placeholder!=='string'
+      ||['errorMsg','sortField','sortOrder'].some(k=>cfg[k]!==undefined&&(typeof cfg[k]!=='string'||(cfg[k] as string).length>4000)))fail()
+    const params=row(decodeR1ScopedJson(cfg.params))
+    if(!Object.hasOwn(params,'_all')||![1,'1'].includes(params._all as string|number)
+      ||Object.keys(params).some(k=>!['_all','in:serviceType|array#and'].includes(k)))fail()
+    const filter=params['in:serviceType|array#and']
+    if(filter!==undefined&&(typeof filter!=='string'||!filter||filter.length>512
+      ||filter.split(',').some(v=>!/^[A-Za-z0-9_-]{1,128}$/.test(v))))fail()
+    return Object.freeze({tenantId,definitionId,fieldId:field.fieldId,fieldType:field.type,
+      providerId:reference,kind:'proj-package',params:Object.freeze({...params}) as Readonly<Record<string,string|number>>})
+  }
   if (reference !== field.valueOption || !['radio', 'select', 'checkbox', 'cascade'].includes(field.type)) fail()
   return Object.freeze({ tenantId, definitionId, fieldId: field.fieldId,
     fieldType: field.type, providerId: reference, kind: field.type === 'cascade' ? 'cascade' : 'code' })
@@ -62,6 +90,19 @@ export function bindR1ScopedFieldOptions(input: {
  * envelope, first match, invalid-row filtering, or global value flattening. */
 export function parseR1ScopedFieldOptions(raw: unknown, binding: Pick<FieldBinding, 'kind' | 'providerId' | 'tenantId'>): readonly FormFieldOptionRead[] {
   const expected = providerId(binding.providerId), tenantId = text(binding.tenantId)
+  if(binding.kind==='proj-package'){
+    if(expected!=='projPackage')return fail()
+    const envelope=row(decodeR1ScopedJson(raw))
+    if(!Array.isArray(envelope.data)||!Number.isSafeInteger(envelope.total)||envelope.total!==envelope.data.length
+      ||envelope.data.length>MAX_OPTIONS||envelope.page!==undefined&&envelope.page!==1)return fail()
+    const seen=new Set<string>()
+    return envelope.data.map(rawItem=>{
+      const item=row(rawItem),value=text(item._id),label=text(item.name,512)
+      if(item.tenantId!==tenantId||item.state!==1||seen.has(value)
+        ||Object.hasOwn(item,'id')&&item.id!==value)return fail()
+      seen.add(value);return {value,label}
+    })
+  }
   if (binding.kind !== 'code' && binding.kind !== 'cascade') return fail()
   const groups = binding.kind === 'code' ? decodeR1ScopedJson(raw) : raw
   if (!Array.isArray(groups) || groups.length !== 1) return fail()
@@ -106,6 +147,11 @@ export function parseR1ScopedFieldOptions(raw: unknown, binding: Pick<FieldBindi
 /** No cache or ambient tenant. The application's guarded raw transport checks
  * actor, generation and role-list membership before/after this provider await. */
 export async function readR1ScopedFieldOptions(binding: FieldBinding, transport: ApiReadTransport): Promise<readonly FormFieldOptionRead[]> {
+  if(binding.kind==='proj-package'){
+    const raw=await transport.execute({method:'POST',path:'biz/projPackage/query.do',body:{...binding.params,
+      tenantId:binding.tenantId,'is:state|integer#and':1}})
+    return parseR1ScopedFieldOptions(raw,binding)
+  }
   const raw = await transport.execute(binding.kind === 'code'
     ? { method: 'POST', path: 'i/code/selectCode.do', body: {
       jsonPara: JSON.stringify([{ codeId: binding.providerId, eleid: binding.providerId }]), tenantId: binding.tenantId,

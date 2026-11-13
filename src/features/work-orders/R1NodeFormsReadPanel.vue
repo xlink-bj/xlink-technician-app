@@ -262,9 +262,14 @@ function setValue(key: string,value: R1LocalFieldValue) {
   if (busy.value || draftBlocked.value || draftWorking.value || fileCancelling.value || !editableFields.value.some(f => f.valueKey === key && f.supported)) return
   if (!visibleSnapshot.value) return
   try {
-    if(actions.value?.updateCreateDraft)values.value=actions.value.updateCreateDraft(values.value as Record<string,R1LocalFieldValue>,key,value,editingId.value)
-    else if(actions.value?.fileMedia)values.value={...values.value,[key]:value}
-    else values.value = updateR1FormDraftValue(visibleSnapshot.value, values.value as Record<string,R1LocalFieldValue>, key, value)
+    let next:typeof values.value
+    if(actions.value?.updateCreateDraft)next=actions.value.updateCreateDraft(values.value as Record<string,R1LocalFieldValue>,key,value,editingId.value)
+    else if(actions.value?.fileMedia)next={...values.value,[key]:value}
+    else next=updateR1FormDraftValue(visibleSnapshot.value, values.value as Record<string,R1LocalFieldValue>, key, value)
+    // Validate choice intent against the proposed current draft before either
+    // value or intent can become visible as a successful editor transition.
+    if(editingId.value)actions.value?.recordFieldSelection?.(editingId.value,key,value,next)
+    values.value=next
   }
   catch { message.value = '当前字段或平面面积计算尚未核实，不能更新草稿。'; return }
   persistDraft()

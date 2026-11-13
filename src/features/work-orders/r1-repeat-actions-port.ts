@@ -18,6 +18,8 @@ export interface R1RepeatPageActions {
   canEdit?(recordId: string): boolean
   /** Starts one exact record/editor upload epoch; does not grant edit authority. */
   beginEdit?(recordId:string):boolean
+  /** Records an explicit current-editor choice; never accepts companion labels. */
+  recordFieldSelection?(recordId:string,key:string,value:unknown,draft?:Readonly<Record<string,unknown>>):void
   /** Business feedback from this record's existing capability/receipt only. */
   editProblem?(recordId: string): string | null
   canComplete?(): boolean

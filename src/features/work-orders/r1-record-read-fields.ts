@@ -15,7 +15,7 @@ export interface R1RecordReadField {
 }
 
 const scalarTypes = new Set(['text', 'textarea', 'phone', 'IDNumber', 'number', 'digit', 'date', 'time', 'datetime', 'switch', 'rate'])
-const choiceTypes = new Set(['select', 'radio', 'checkbox', 'cascade'])
+const choiceTypes = new Set(['select', 'radio', 'checkbox', 'cascade', 'bizSelect'])
 const scalar = (value: unknown): value is string | number | boolean =>
   typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))
 
@@ -24,7 +24,7 @@ function displayValue(field: FormFieldRead, value: FormFieldValue | undefined): 
   if (value === null || value === '') return '空值'
   // Scalar choice contracts cannot acquire multi-choice meaning from a saved
   // array. Keep malformed/empty arrays visibly unverified, never 'unsaved'.
-  if (Array.isArray(value) && (field.type === 'radio' || (field.type === 'select' && !field.multiple))) {
+  if (Array.isArray(value) && (field.type === 'radio' || (['select','bizSelect'].includes(field.type) && !field.multiple))) {
     const text = value.length && value.every(scalar) ? value.map(String).join(' / ') : '已保存的选项格式异常'
     return `${text}（选项未核实）`
   }
@@ -90,7 +90,14 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
     }
     const mediaText = !unsupported && isSurveyReadOnlyMediaField(definition, field)
       ? surveyReadOnlyMediaText(record.values?.[field.valueKey]) : undefined
-    const noCodec = mediaText === undefined && !scalarTypes.has(field.type) && !choiceTypes.has(field.type)
+    // Only the scoped type0 adapter resolves this R1 scalar provider with
+    // multiple=false. Do not render unresolved/DTO multi-value business data
+    // as a trusted single choice. This display projection grants no editing.
+    const scalarBusiness=field.type==='bizSelect'&&field.multiple===false&&field.valueOption==='projPackage'
+      &&Boolean(field.options?.length)&&new Set(field.options?.map(o=>o.value)).size===field.options?.length
+      &&field.options!.every(o=>Boolean(o.value&&o.label)&&!o.children?.length)
+    const noCodec = mediaText === undefined && (!scalarTypes.has(field.type) && !choiceTypes.has(field.type)
+      ||field.type==='bizSelect'&&!scalarBusiness)
     const unavailable = unsupported || noCodec
     result.push({ fieldId: field.fieldId, valueKey: field.valueKey, label: field.label,
       unavailable,

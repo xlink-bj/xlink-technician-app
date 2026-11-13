@@ -508,12 +508,15 @@ export function createNormalNodeFormsReader(input: {
       const bindings = (definition.fields ?? []).map(field =>
         isFieldApplicable(actionFormSchemaFor(field), ACTION_FORM_SURFACE)
           ? bindR1ScopedFieldOptions({ rawField: fields.find(raw => raw._id === field.fieldId),
-            field, tenantId: input.tenantId, definitionId })
+            field, tenantId: input.tenantId, definitionId, sourceType:ext.type })
           : null)
       const hydrated: FormFieldRead[] = []
       for (const [index, field] of (definition.fields ?? []).entries()) {
         const binding = bindings[index]
-        hydrated.push(binding ? { ...field, options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
+        // R1 onBizSelectConfirm writes item.value and `${field}Label` even when
+        // its metadata's multiple flag is true. Limit that scalar projection
+        // to this verified type0 provider; typed DTO multi-value controls stay unchanged.
+        hydrated.push(binding ? { ...field, ...(binding.kind==='proj-package'?{multiple:false}:{}), options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
       }
       const routeColName=ext.colName
       const routeFacts = node.sourceNodeType==='forms' && ext.type==='0'

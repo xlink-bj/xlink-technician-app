@@ -136,6 +136,17 @@ export function createConfiguredRecordEditActions(input: {
       const root=Object.hasOwn(e.original,f.valueKey),ext=object(ex)&&Object.hasOwn(ex,f.valueKey)
       if(root&&!f.slots.includes('root')||ext&&!f.slots.includes('exts')
         ||root&&ext&&stable(e.original[f.valueKey])!==stable(ex![f.valueKey]))refuse('字段 root/EXTS 存储位置或副本冲突。')
+      // A readonly selector still owns its historical companion. Another
+      // declared editable field must not overwrite that same root/EXTS key.
+      if(f.labelKey&&s.definition.fields!.some(field=>field.valueKey===f.labelKey&&grant.fieldIds.includes(field.fieldId)))
+        refuse('业务选择标签与可写声明字段冲突。')
+      if(f.labelKey&&grant.fieldIds.includes(f.fieldId)){
+        if(e.storage.kind!=='generic-map'||f.type!=='bizSelect'||f.labelKey!==f.valueKey+'Label'
+          ||reserved.has(f.labelKey)||/[.$\p{Cc}\p{Cf}]/u.test(f.labelKey)
+          ||s.definition.fields!.some(field=>field.valueKey===f.labelKey)
+          ||object(ex)&&Object.hasOwn(ex,f.labelKey)
+          ||Object.hasOwn(e.original,f.labelKey)&&typeof e.original[f.labelKey]!=='string')refuse('业务选择标签存储位置或字段身份冲突。')
+      }
       if(f.type==='file'&&grant.fieldIds.includes(f.fieldId)){
         const files=ext?ex![f.valueKey]:root?e.original[f.valueKey]:undefined
         if(!isR1RetainedFileArray(files)||files.length>f.max)refuse('已有附件原文不是可核实的文件数组。')
@@ -160,11 +171,14 @@ export function createConfiguredRecordEditActions(input: {
     for(const f of lease.definition.fields!){if(Object.hasOwn(ex,f.valueKey))values[f.valueKey]=copy(ex[f.valueKey]);else if(Object.hasOwn(e.original,f.valueKey))values[f.valueKey]=copy(e.original[f.valueKey])}
     return values
   }
+  let selectionRecord:string|undefined
+  const explicitSelections=new Map<string,unknown>()
   function beginEdit(id:string):boolean {
     if(!canEdit(id)||mediaSession?.busy())return false
     // A previous editor must complete explicit local cleanup before another
     // record can own new tasks. Never import durable queue tasks as receipts.
     if(mediaSession)return false
+    selectionRecord=id;explicitSelections.clear()
     if(!input.media)return true
     const baseline=initialValues(id),e=source(lease,id),originals:Record<string,readonly R1RetainedFileValue[]>={}
     for(const field of lease.definition.fields??[]){
@@ -215,7 +229,8 @@ export function createConfiguredRecordEditActions(input: {
           ||f.type==='checkbox'&&!hasDistinctR1ChoiceMembers(v)))refuse()
         if(f.type==='cascade'&&Array.isArray(v)&&v.length===0&&stable(v)!==stable(initial[f.valueKey]))refuse('级联清空规则尚未核实。')
       }else if(v!==undefined&&!(typeof v==='string'||typeof v==='number'&&Number.isFinite(v)))refuse()
-      if(['radio','select','phone','IDNumber','date','time'].includes(f.type)&&v!==undefined&&typeof v!=='string')refuse()
+      if(['radio','select','bizSelect','phone','IDNumber','date','time'].includes(f.type)&&v!==undefined&&typeof v!=='string')refuse()
+      if(f.type==='bizSelect'&&v===''&&initial[f.valueKey]!=='')refuse('业务选择清空合同尚未核实。')
       if(f.type==='phone'&&v!==undefined&&v!==''&&!isR1MobilePhone(v))refuse('手机号格式不符合要求。')
       if(f.type==='switch'&&v!==undefined&&!isR1DefaultSwitchValue(v)
         &&!(v===''&&initial[f.valueKey]===''))refuse('请明确选择是或否。')
@@ -241,6 +256,16 @@ export function createConfiguredRecordEditActions(input: {
       const value=result.value.values[key]??(!f.required&&f.type==='checkbox'&&Array.isArray(supplied)&&supplied.length===0?[]
         :!f.required&&values[key]===''&&!['number','digit'].includes(f.type)?'':undefined)
       if(value===undefined)continue
+      if(f.type==='bizSelect'){
+        // The shared control edits only the ID. Derive its R1 root companion
+        // from this same reader generation's verified options, never user text.
+        if(stable(value)===stable(initial[key])
+          &&!(selectionRecord===id&&explicitSelections.get(key)===value))continue
+        const storage=source(lease,id).storage.fields.find(field=>field.fieldId===f.fieldId)
+        const option=f.options?.find(option=>option.value===value)
+        if(!storage?.labelKey||typeof value!=='string'||!option)refuse('业务选择及标签来源尚未核实。')
+        patch[storage.labelKey]=option.label
+      }
       if(Array.isArray(value)&&['checkbox','cascade'].includes(f.type))patch[key]=Object.freeze([...value]) as readonly string[]
       else if(['string','number','boolean'].includes(typeof value))patch[key]=value as string|number|boolean
       else refuse()
@@ -263,6 +288,18 @@ export function createConfiguredRecordEditActions(input: {
     beginEdit,
     get fileMedia(){return mediaSession},
     initialValues(id){try{return canEdit(id)?initialValues(id):null}catch{return null}},
+    recordFieldSelection(id,key,value,draft){
+      if(selectionRecord!==id||!canEdit(id))refuse()
+      const f=lease.definition.fields?.find(f=>f.valueKey===key&&f.type==='bizSelect')
+      if(!f)return
+      if(draft!==undefined&&(!object(draft)||Object.keys(draft).some(key=>!lease.definition.fields!.some(f=>f.valueKey===key))))refuse()
+      const context={...initialValues(id),...draft,[key]:value}
+      verifyConditionValues(lease,context)
+      const state=evaluateFieldState(actionFormSchemaFor({...f,readOnly:f.readOnly||lease.node.formFieldIdsReadOnly?.includes(f.fieldId)===true}),
+        {values:context as never,surface:ACTION_FORM_SURFACE})
+      if(!grant.fieldIds.includes(f.fieldId)||state.capability!=='SUPPORTED_GENERIC'||!state.visible||state.readOnly||typeof value!=='string'||!f.options?.some(o=>o.value===value))refuse()
+      explicitSelections.set(key,value)
+    },
     // Existing editing has a reader-issued storage policy. Reuse the shared
     // runtime projection directly rather than a create-specific codec list.
     projectFields(values,id){if(!id||!canEdit(id))return[]
@@ -299,9 +336,9 @@ export function createConfiguredRecordEditActions(input: {
           request={method:'POST' as const,path:`biz/extForm/upsert/${encodeURIComponent(scope.formDefinitionId)}`,r1Special:true,body:{dataStr:JSON.stringify(expected)}}
         }else{
           // Keep the shared Map serializer's upload/first-create contracts strict.
-          // Only this reader-backed controller applies validated old file subsets.
-          const fileKeys=new Set(e.storage.fields.filter(f=>f.type==='file').map(f=>f.valueKey))
-          const scalarPatch=Object.fromEntries(Object.entries(patch).filter(([key])=>!fileKeys.has(key)))
+          // This reader-backed controller applies proven file values and paired root labels.
+          const projectedKeys=new Set([...e.storage.fields.filter(f=>f.type==='file').map(f=>f.valueKey),...e.storage.fields.flatMap(f=>f.labelKey?[f.labelKey]:[])])
+          const scalarPatch=Object.fromEntries(Object.entries(patch).filter(([key])=>!projectedKeys.has(key)))
           request=r1SpecialFormUpsert({sourceNodeType:'repeat',definitionId:lease.definition.id,formData:scalarPatch,fieldStorage:lease.definition.fields,
             authoritativeOriginal:e.wireOriginal,existingFormDataId:asOpaqueId<'FormDataId'>(id),workOrderId:asOpaqueId<'WorkOrderId'>(scope.workOrderId),workflowNodeId:lease.node.id,workflowRunId:lease.node.runId,state:1})
           expected=JSON.parse(String(request.body?.dataStr)) as Record<string,unknown>
@@ -309,6 +346,7 @@ export function createConfiguredRecordEditActions(input: {
             const target=slot==='root'?expected:expected.exts as Record<string,unknown>
             if(target&&Object.hasOwn(target,f.valueKey))target[f.valueKey]=copy(patch[f.valueKey])
           }
+          for(const f of e.storage.fields)if(f.labelKey&&Object.hasOwn(patch,f.labelKey))expected[f.labelKey]=patch[f.labelKey]
           request={...request,body:{...request.body,dataStr:JSON.stringify(expected)}}
         }
         if(!current()||!input.reader.isCurrentRecordEdit?.(lease,id,e))refuse()

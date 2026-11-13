@@ -10,6 +10,8 @@
 
 后续默认控件批次：[type0 Map switch／rate（2026-11-13）](R1_MAP_DEFAULT_SWITCH_RATE_INTEGRATION_20261113.md)。只接 R1 字面值和默认 1–5 量程，区分可选评分清空与 switch 原文保留；本地完整 6204 用例及 37 条核心 H5 通过，媒体与其他低代码配置仍另列缺口。
 
+后续业务选择批次：[type0 Map 已有记录 bizSelect 单值与 Label（2026-11-13）](R1_MAP_BIZSELECT_SCALAR_EDIT_20261113.md)。仅接已证明的有限 provider 与 scalar/根级 Label 保存；原项重选、条件草稿与只读字段重名均有回归。真实生产 provider、当前节点归属及持久化仍未验收。
+
 > 2026-11-05 Owner 决策；适用 `xlink-bj/xlink-technician-app` 当前技术工程师主流程。此文档是**建立 1:1 协议/模型 Mock 的执行清单**，不是 Production 原始数据导出、真实写入许可或已完成的 R1 全业务验收。
 
 ## 0. 权威来源与判定口径

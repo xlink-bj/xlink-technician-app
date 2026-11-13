@@ -16,6 +16,8 @@ export interface R1FileCreateStorage {
     readonly valueKey: string
     readonly type: string
     readonly max: number
+    /** R1 scalar bizSelect companion, root slot only; not an independent UI field. */
+    readonly labelKey?: string
     readonly slots: readonly ('root' | 'exts')[]
   }[]
 }

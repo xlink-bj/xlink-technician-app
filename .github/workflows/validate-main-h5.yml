@@ -309,6 +309,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/map-choice-datetime-edit.config.ts
+      - name: Verify normal Map business selector scalar identity labels and recovery
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/map-bizselect-scalar-edit.config.ts
       - name: Verify existing attachment identity removal cancellation and readback
         env:
           VITE_XLINK_ENVIRONMENT: 'test'
@@ -347,6 +352,7 @@ jobs:
             test-results/configured-record-edit/
             test-results/map-choice-datetime-edit/
             test-results/retained-attachment-edit/
+            test-results/map-bizselect-scalar-edit/
             test-results/normal-r1-file-upload/
             test-results/normal-r1-image-recovery/
             test-results/existing-image-upload/

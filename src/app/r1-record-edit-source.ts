@@ -1,3 +1,4 @@
+import { isR1EmptyCalculationConfig, bindR1ScopedFieldOptions } from '@adapters/api/r1-scoped-field-options'
 import { typedSurveyPropertyKind } from '@adapters/api/r1-typed-survey-preservation'
 import { decodeR1ScopedJson } from '@adapters/api/r1-scoped-json'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
@@ -49,6 +50,8 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     const raw = rawFields.find(f => f._id === field.fieldId)
     const retainedFile=field.type==='file'&&isR1DefaultImageFieldConfig(raw)
     const mapCheckbox=ext.type==='0'&&field.type==='checkbox'
+    let mapBusiness=false
+    if(ext.type==='0'&&field.type==='bizSelect'){try{mapBusiness=bindR1ScopedFieldOptions({rawField:raw,field,tenantId,definitionId:snapshot.definition.id,sourceType:ext.type})?.kind==='proj-package'}catch{return}}
     const mapChoice=ext.type==='0'&&['radio','checkbox','select'].includes(field.type)
     const mapScalar=ext.type==='0'&&['phone','IDNumber','date','time','datetime'].includes(field.type)
     const mapDefault=ext.type==='0'&&['switch','rate'].includes(field.type)
@@ -71,10 +74,12 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     const preserveOnly=ext.type==='0'&&ro.includes(field.fieldId)
       &&classifyFieldType(field.type).capability==='SUPPORTED_GENERIC'
     if (!raw || raw.extId !== ext._id || raw.tenantId !== tenantId || raw.state !== 1 || raw.colName !== ext.colName
-      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapScalar||mapDefault||mapCascade||retainedFile||preserveOnly)
+      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapBusiness||mapScalar||mapDefault||mapCascade||retainedFile||preserveOnly)
       || ![0, 1].includes(raw.preset as number) || field.preset !== (raw.preset === 1)
       || !['0', '1'].includes(String(raw.required)) || field.required !== (String(raw.required) === '1')
-      || raw.operationType !== '1' || (preserveOnly||mapCheckbox
+      || raw.operationType !== '1' || (mapBusiness
+        ? ![undefined,false,true,0,1,'0','1','true','false'].includes(raw.multiple as never)||field.multiple!==false
+        :preserveOnly||mapCheckbox
         ? raw.multiple !== undefined && typeof raw.multiple !== 'boolean' || Boolean(raw.multiple) !== Boolean(field.multiple)
         : raw.multiple !== undefined && raw.multiple !== false || field.multiple)
       || raw.enabled !== undefined && raw.enabled !== 1
@@ -84,7 +89,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
       || typeof field.readOnly !== 'boolean' || field.readOnly !== (raw.readOnly === 1 || raw.readonly === 1)
       || field.readOnly && fill.includes(field.fieldId) || !field.readOnly && !ro.includes(field.fieldId) && !fill.includes(field.fieldId)
       || !Array.isArray(raw.showList) || !raw.showList.includes('4') || field.visibility&&!mapCondition || field.unsupportedReason || field.presentationOnly
-      || !mapChoice&&!mapCascade&&!preserveOnly&&(field.valueOption || field.options?.length || raw.valueOption) || raw.calculateConfig || raw.router
+      || !mapChoice&&!mapBusiness&&!mapCascade&&!preserveOnly&&(field.valueOption || field.options?.length || raw.valueOption) || (mapBusiness?!isR1EmptyCalculationConfig(raw.calculateConfig):raw.calculateConfig) || raw.router
       || raw.roleIds != null && (!Array.isArray(raw.roleIds) || raw.roleIds.length)
       || ['componentType', 'surveyTool', 'url', 'params'].some(k => Object.hasOwn(raw, k))
       || !mapCondition&&(raw.showType !== undefined && raw.showType !== '1' || raw.showField || raw.showValue)
@@ -111,6 +116,12 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
         }
       }
     }
+    if(mapBusiness&&!preserveOnly){
+      const labelKey=field.valueKey+'Label'
+      if(labelKey.length>120||fields.some(f=>f.valueKey===labelKey)||!field.options?.length
+        ||field.options.length>5000||new Set(field.options.map(o=>o.value)).size!==field.options.length
+        ||field.options.some(o=>!o.value||!o.label||o.children?.length))return
+    }
     if(mapCascade&&!preserveOnly){
       // Tree shape/topology/tenant and its complete 5000-node/20-level budget
       // were validated by the normal scoped provider reader before issuance.
@@ -121,10 +132,10 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
       const cfg = raw.frontEndConfig == null || raw.frontEndConfig === '' ? {} : decodeR1ScopedJson(raw.frontEndConfig)
       // Explicit presentation mapping only; arbitrary validation/actions are
       // not ignored merely because the read mapper accepts their JSON.
-      if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)
+      if (!mapBusiness&&(!cfg || typeof cfg !== 'object' || Array.isArray(cfg)
         || Object.keys(cfg).some(key=>key!=='placeholder'&&!(retainedFile&&key==='max'))
         || retainedFile&&Object.hasOwn(cfg,'max')&&(!(typeof (cfg as Record<string,unknown>).max==='number')||!Number.isSafeInteger((cfg as Record<string,unknown>).max)||(cfg as Record<string,number>).max<0||(cfg as Record<string,number>).max>10)
-        || Object.hasOwn(cfg,'placeholder') && typeof (cfg as Record<string,unknown>).placeholder!=='string') return
+        || Object.hasOwn(cfg,'placeholder') && typeof (cfg as Record<string,unknown>).placeholder!=='string')) return
     } catch { return }
   }
   // SOURCE routing: type0 Map excludes special typed collections. No fallback.
@@ -143,7 +154,8 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     if(kind==='survey-dto'&&(f.preset||property)&&!(['number','digit'].includes(f.type)
       ?property==='double'||property==='integer':property==='string'))return
     const slots:('root'|'exts')[]=f.preset?['root']:kind==='generic-map'||property?['root','exts']:['exts']
-    storageFields.push(Object.freeze({fieldId:f.fieldId,valueKey:f.valueKey,type:f.type,max:0,slots:Object.freeze(slots)}))
+    storageFields.push(Object.freeze({fieldId:f.fieldId,valueKey:f.valueKey,type:f.type,max:0,slots:Object.freeze(slots),
+      ...(kind==='generic-map'&&f.type==='bizSelect'?{labelKey:f.valueKey+'Label'}:{})}))
   }
   return Object.freeze({kind,definitionId:String(snapshot.definition.id),colName:ext.colName,
     fields:Object.freeze(storageFields),...(conditions.length?{conditions:Object.freeze(conditions)}:{})}) satisfies R1FileCreateStorage
