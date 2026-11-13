@@ -343,6 +343,7 @@ import { isSigningReadOrderCandidate, unavailableSigningReadReason } from '@shar
 import type { QuotationOrderBrowseGroup, QuotationOrderBrowseKind } from '@shared/ports'
 import { useSessionStore } from '@shared/state'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
+import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
