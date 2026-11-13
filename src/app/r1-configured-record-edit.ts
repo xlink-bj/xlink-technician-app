@@ -3,7 +3,7 @@ import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RecordEditRead } from '@
 import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-actions-port'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from '@features/work-orders/action-form-schema'
 import { hasDistinctR1ChoiceMembers } from '@features/work-orders/r1-local-form-fields'
-import { evaluateFieldState, normalizeSubmission } from '@runtimes/dynamic-form'
+import { evaluateFieldState, normalizeFieldValue, normalizeSubmission } from '@runtimes/dynamic-form'
 import { evaluateNodeVisibility, isHandlerMatch } from '@runtimes/workflow/policy'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
@@ -26,6 +26,25 @@ const stable = (v: unknown): string => JSON.stringify(v, (_k, x) => object(x)
 const copy = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
 const schema = (s: R1NodeFormsSnapshot) => stable([s.workOrderId,s.node,s.definition,s.fillableFieldIds])
 const reserved = new Set('_id id dataId formDataId formDefId definitionId formDefinitionId extId tenantId userId roleId sid smodule state nodeId runtimeNodeId workOrderId workflowId workflowRunId runId workflow workflowNodeId orderId contractId contractdocNum sourceType serviceType serviceAppointmentNum externalSid optId optName dataStr exts __proto__ prototype constructor toJSON sessionRef createTime createDateTime createUser createUserName updateTime updateDateTime updateUser updateUserName orgId orgName belongTo etags _version _class'.split(' '))
+
+function conditionDependencies(s:R1NodeFormsSnapshot){
+  return (s.definition.fields??[]).filter(f=>f.visibility).map(f=>{
+    const rule=f.visibility!
+    if(!('path'in rule)||typeof rule.path!=='string')refuse('条件来源尚未核实。')
+    const dependency=s.definition.fields!.find(field=>field.valueKey===rule.path)
+    if(!dependency)refuse('条件字段来源缺失。')
+    return dependency
+  })
+}
+function verifyConditionValues(s:R1NodeFormsSnapshot,values:Readonly<Record<string,unknown>>){
+  for(const dependency of conditionDependencies(s)){
+    const key=dependency.valueKey,value=values[key]
+    if(!Object.hasOwn(values,key))refuse('条件依据缺失，不能默认隐藏字段。')
+    if(value===''||Array.isArray(value)&&value.length===0)continue // Known empty, not an unknown dependency.
+    const checked=normalizeFieldValue(dependency.type,value,dependency.options,dependency.multiple)
+    if(!checked.ok||stable(checked.value)!==stable(value))refuse('条件依据的值或选项尚未核实。')
+  }
+}
 
 function originalProblem(e: R1RecordEditRead): string | null {
   const raw = e.original
@@ -110,6 +129,16 @@ export function createConfiguredRecordEditActions(input: {
       if(root&&!f.slots.includes('root')||ext&&!f.slots.includes('exts')
         ||root&&ext&&stable(e.original[f.valueKey])!==stable(ex![f.valueKey]))refuse('字段 root/EXTS 存储位置或副本冲突。')
     }
+    const conditions:Record<string,unknown>={},dependencies=conditionDependencies(s),bindings=e.storage.conditions??[]
+    if(bindings.length!==(s.definition.fields??[]).filter(f=>f.visibility).length)refuse('条件来源绑定不完整。')
+    for(const binding of bindings){
+      const dependency=dependencies.find(f=>f.fieldId===binding.dependencyFieldId&&f.valueKey===binding.valueKey)
+      if(!dependency||!s.definition.fields?.some(f=>f.fieldId===binding.fieldId&&f.visibility))refuse('条件来源绑定已变化。')
+      const container=binding.slot==='root'?e.original:binding.slot==='exts'?ex:undefined
+      if(!object(container)||!Object.hasOwn(container,dependency.valueKey))refuse('条件依据的原始存储槽位缺失。')
+      conditions[dependency.valueKey]=container[dependency.valueKey]
+    }
+    verifyConditionValues(s,conditions)
     return e
   }
   const canEdit=(id:string)=>{try{return current()&&!ownRead&&Boolean(locks.has(id)&&!locks.get(id)!.locked&&source(lease,id))}catch{return false}}
@@ -123,26 +152,38 @@ export function createConfiguredRecordEditActions(input: {
     if(!canEdit(id)||!object(values))refuse()
     const initial=initialValues(id),fields=lease.definition.fields!,merged={...initial,...values}
     if(Object.keys(values).some(key=>!fields.some(f=>f.valueKey===key)))refuse()
+    verifyConditionValues(lease,merged)
     const writable=fields.filter(f=>grant.fieldIds.includes(f.fieldId)),schemas=writable.map(f=>actionFormSchemaFor(f))
     for(const f of fields){
       if(!grant.fieldIds.includes(f.fieldId)&&Object.hasOwn(values,f.valueKey)&&stable(values[f.valueKey])!==stable(initial[f.valueKey]))refuse()
     }
     for(const f of writable){const v=merged[f.valueKey]
-      if(f.type==='checkbox'){
-        if(v!==undefined&&(!Array.isArray(v)||v.length>30||v.some(x=>typeof x!=='string'||!x||x.length>256)||!hasDistinctR1ChoiceMembers(v)))refuse()
+      const state=evaluateFieldState(actionFormSchemaFor(f),{values:merged as never,surface:ACTION_FORM_SURFACE})
+      if(state.capability!=='SUPPORTED_GENERIC')refuse()
+      if(!state.visible){
+        if(Object.hasOwn(values,f.valueKey)&&stable(v)!==stable(initial[f.valueKey]))refuse('隐藏字段不能在本次编辑中修改。')
+        continue
+      }
+      if(f.type==='checkbox'||f.type==='cascade'){
+        if(v!==undefined&&(!Array.isArray(v)||v.length>30||v.some(x=>typeof x!=='string'||!x||x.length>256)
+          ||f.type==='checkbox'&&!hasDistinctR1ChoiceMembers(v)))refuse()
+        if(f.type==='cascade'&&Array.isArray(v)&&v.length===0&&stable(v)!==stable(initial[f.valueKey]))refuse('级联清空规则尚未核实。')
       }else if(v!==undefined&&!(typeof v==='string'||typeof v==='number'&&Number.isFinite(v)))refuse()
       if(f.type==='radio'&&v!==undefined&&typeof v!=='string')refuse()
       if(['number','digit'].includes(f.type)&&v==='')refuse()}
     const result=normalizeSubmission({fields:schemas,values:merged,surface:ACTION_FORM_SURFACE});if(!result.ok)refuse()
     const patch:Record<string,string|number|boolean|readonly string[]>={}
     for(const f of writable){const key=f.valueKey;if(!Object.hasOwn(values,key))continue
+      // Hidden values remain in the complete authoritative original. Even an
+      // optional []/empty-string sentinel must not accidentally clear them.
+      if(!evaluateFieldState(actionFormSchemaFor(f),{values:merged as never,surface:ACTION_FORM_SURFACE}).visible)continue
       const supplied=values[key]
       // Empty optional checkbox is an explicit clear, not absence. R1's
       // checkbox-group serializes []; omitting it would retain the old value.
       const value=result.value.values[key]??(!f.required&&f.type==='checkbox'&&Array.isArray(supplied)&&supplied.length===0?[]
         :!f.required&&values[key]===''&&!['number','digit'].includes(f.type)?'':undefined)
       if(value===undefined)continue
-      if(Array.isArray(value)&&f.type==='checkbox')patch[key]=Object.freeze([...value]) as readonly string[]
+      if(Array.isArray(value)&&['checkbox','cascade'].includes(f.type))patch[key]=Object.freeze([...value]) as readonly string[]
       else if(['string','number','boolean'].includes(typeof value))patch[key]=value as string|number|boolean
       else refuse()
     }
@@ -163,16 +204,18 @@ export function createConfiguredRecordEditActions(input: {
     initialValues(id){try{return canEdit(id)?initialValues(id):null}catch{return null}},
     // Existing editing has a reader-issued storage policy. Reuse the shared
     // runtime projection directly rather than a create-specific codec list.
-    projectFields(values,id){return id&&canEdit(id)?lease.definition.fields!.map(field=>{
+    projectFields(values,id){if(!id||!canEdit(id))return[]
+      const context={...initialValues(id),...values}
+      return lease.definition.fields!.map(field=>{
       const state=evaluateFieldState(actionFormSchemaFor({...field,
         readOnly:field.readOnly||lease.node.formFieldIdsReadOnly?.includes(field.fieldId)===true}),
-        {values:values as never,surface:ACTION_FORM_SURFACE})
+        {values:context as never,surface:ACTION_FORM_SURFACE})
       return {fieldId:field.fieldId,valueKey:field.valueKey,label:field.label,type:field.type,
         required:state.required,readOnly:state.readOnly,options:field.options??[],multiple:Boolean(field.multiple),visible:state.visible,
         supported:grant.fieldIds.includes(field.fieldId)&&state.capability==='SUPPORTED_GENERIC'&&state.visible&&!state.readOnly,
         ...(field.type==='checkbox'?{preserveSelectionOrder:true}:{}),
         ...(field.presentation?.placeholder?{placeholder:field.presentation.placeholder}:{}),...(state.reason?{reason:state.reason}:{})}
-    }):[]},
+    })},
     validateDraft(values,id){try{if(!id)return false;normalize(values,id);return true}catch{return false}},
     complete:async()=>refuse(),
     async saveOnly(values,selectedId){

@@ -2,7 +2,7 @@ import {defineConfig} from '@playwright/test'
 import base from './configured-record-edit.config'
 import {rootPath} from '../paths'
 const server=(base.webServer as {env:Record<string,string>}[])[0]
-export default defineConfig({...base,testMatch:'map-choice-datetime-edit.spec.ts',metadata:{mapChoiceDatetimeEdit:true},
+export default defineConfig({...base,testMatch:['map-choice-datetime-edit.spec.ts','map-conditional-cascade-edit.spec.ts'],metadata:{mapChoiceDatetimeEdit:true},
  outputDir:rootPath('test-results/map-choice-datetime-edit/attachments'),
  reporter:[['list'],['json',{outputFile:rootPath('test-results/map-choice-datetime-edit/results.json')}]],
  webServer:[{...server,env:{...server.env,UNI_OUTPUT_DIR:rootPath('unpackage/map-choice-datetime-edit-h5'),

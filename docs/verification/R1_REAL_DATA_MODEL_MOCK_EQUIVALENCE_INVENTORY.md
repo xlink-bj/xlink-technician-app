@@ -4,6 +4,8 @@
 
 后续功能批次：[type0 Map 已有记录 checkbox 协议贯通（2026-11-13）](R1_MAP_EXISTING_CHECKBOX_INTEGRATION_20261113.md)，覆盖显式空选、保序、完整原文与不确定保存保护；条件显示及 cascade 仍是独立待完成项。
 
+后续有限动态批次：[type0 Map 条件读取槽位与单路径 cascade（2026-11-13）](R1_MAP_CONDITION_CASCADE_INTEGRATION_20261113.md)。仅开放已证实的字符串 equals 子集和已有树 provider 路径；其他条件、多路径、未知清空与类型化模型仍按报告保留缺口。
+
 > 2026-11-05 Owner 决策；适用 `xlink-bj/xlink-technician-app` 当前技术工程师主流程。此文档是**建立 1:1 协议/模型 Mock 的执行清单**，不是 Production 原始数据导出、真实写入许可或已完成的 R1 全业务验收。
 
 ## 0. 权威来源与判定口径
