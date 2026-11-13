@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 import { test, expect } from '@playwright/test'
 test.skip(process.env.XLINK_H5_REPEAT_APPOINTMENT_EDIT !== 'true', 'Explicit fully intercepted normal repeat appointment edit only')
@@ -33,6 +34,7 @@ test(`normal repeat appointment ${mode} edits a by real UI and preserves b after
     if (req.method() !== 'POST') { unexpected.push(req.method() + ' ' + url.pathname); return route.abort('blockedbyclient') }
     const path = url.pathname.slice('/xlink/wm/'.length), body = Object.fromEntries(new URLSearchParams(req.postData() ?? ''))
     calls.push({ path, body }); const ok = (json: unknown) => route.fulfill({ json })
+    if (isWorkOrderInformationRead(req, baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
     if (path === 'index/phoneLogin.do') return ok({ success: true, status: 1, data: { token: 'synthetic-appointment-session', user: { _id: 'u', name: '合成预约技师' }, currentRole: { _id: 'r', name: '合成角色' }, capabilityNames: [] } })
     if (['function/changeRole', 'function/queryTreeByRoleId'].includes(path)) return ok({ data: { functionList: [{ functionList: [{ order: 1, exts: { tabDisplay: '1' }, action: '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0' }] }] } })
     if (['basic/serviceAppointment/query', 'basic/serviceAppointment/querySAWorkflowNode'].includes(path)) return ok({ data: [{ ...node, data: sa }], total: 1, page: 1, rows: 20 })
