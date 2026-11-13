@@ -104,3 +104,15 @@ create-lifecycle 的 23 个失败均停在已有 number 控件的 textbox 定位
 主 sweep session 82211 与复验 session 18011 均已退出，原 PID 18441、33751 已不存在；主驱动器 exit 0 是继续记录失败后的正常退出，六个仍失败的 Playwright 命令均 exit 1，不代表全套通过。首轮日志、复验日志及 final-results.json 均保留于前述忽略目录。
 
 本轮没有运行 nightly/manual/L3 的 r1-main-repeat-ui、h5-ux；scoped-form-integrations-h5 仅聚合状态，没有独立浏览器用例。configured-record-edit 的严格 matcher 仍待共享线接入，其 9 项通过不算严格请求覆盖；此处记录的是本轮基线状态，不能替代共享修复后的联合结果。Production/Beta 新资料读取仍关闭，Contacts 与角色条件的后续完成不由本轮测试夹具升级证明。
+
+## 共享 main 整合后的联合复验
+
+在 `e6eb7aca7aca0f3ba5490d0461ffa2f6d85bae85` 上安全整合已审 `525f75b`、`2ca42a4`，测试源码提交为 `bac130bc67fbfd24c7ec4c796ef1e4bff5018336`。自动合并无冲突；移除本线已审新增行后，所有夹具与共享 main 逐字节一致，numeric 与严格 matcher 改动完整保留。
+
+最新四个 push 分组 57/57 个 Playwright 步骤均 exit 0，共 283 通过、0 失败、0 跳过：existing-media 16 步/101 通过，create-lifecycle 18 步/79 通过，draft-lifecycle 6 步/33 通过，stage1b 17 步/70 通过。新增角色与 AppInput 场景也包含在本轮结果内。
+
+单独核实远端 e6eb 失败的 normal-appointment-experience 2/2、survey-59-read 6/6 均通过。原六组 numeric 失败在本轮全部实际复验通过：Switch/Rate 5/5、mixed 8/8、field plan 7/7、Repeat Workspace 3/3、typed primitive 1/1、Order fields 1/1，合计 25/25；上文旧基线的 25 个失败保留为历史记录，没有重新标记旧日志。
+
+configured-record-edit 已由共享线接入严格 matcher，本轮 9/9 通过，原待接入项闭合。专用 work-order-information H5 1/1 通过并实际查看本轮全隐藏、area/map 截图。按 CI 的 VITE_XLINK_ENVIRONMENT=test 环境执行完整单元测试，348 文件/6543 用例全部通过；首轮遗漏该环境导致的 7 个 Mock 用例失败日志另存，不计作通过。类型、架构边界、模块依赖及 ownership 检查全部通过。
+
+本次联合扫测没有启动重复批跑，主进程已正常退出；日志位于忽略的 .review/work-order-information-20261113/joint-h5-sweep/，单元日志为 joint-unit-ci-env.log。nightly/manual/L3 两组仍未运行。以上均为合成测试，不证明当前生产有效配置或线上授权；Production/Beta 新资料读取仍关闭，未新增独立 Contacts 读取。
