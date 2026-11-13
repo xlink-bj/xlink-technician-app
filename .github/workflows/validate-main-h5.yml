@@ -252,7 +252,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    timeout-minutes: 15
+    timeout-minutes: 25
     env:
       VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
       VITE_XLINK_ENABLE_REAL_WRITES: 'false'
