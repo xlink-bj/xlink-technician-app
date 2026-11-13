@@ -87,3 +87,20 @@ create-lifecycle 的 23 个失败均停在已有 number 控件的 textbox 定位
 已实际查看本轮 430×932 截图 `all-configured-fields-hidden-430x932.png` 与 `area-map-readonly-430x932.png`：有效全隐藏仅显示暂无可展示资料；成功区域/地图行分别显示已验证字典中文及合成地址，未显示坐标。截图为合成夹具，不是生产实证。
 
 所有日志与逐步结果保留在忽略的 `.review/work-order-information-20261113/h5-sweep/`。
+
+## 最终批跑结果（保留以上检查点）
+
+本轮基于 `0f16b0f` 加 `525f75b` 完成 56/56 个工作流 Playwright 步骤，原两组配置的 8 项 console error 修复复验全部通过（bizselect 5/5、signing 3/3，两个命令均 exit 0）。合并原复验结果后共 251 通过、25 个数字输入失败、0 跳过，不能表述为全绿。
+
+| 分组 | 完成步骤 | 最终通过 | 最终失败 |
+| --- | --- | --- | --- |
+| scoped-existing-media-h5 | 15/15 | 96 | 0 |
+| scoped-create-lifecycle-h5 | 18/18 | 56 | 23 |
+| draft-lifecycle-h5 | 6/6 | 33 | 0 |
+| stage1b-mock-h5 | 17/17 | 66 | 2 |
+
+25 项数字失败为：switch-rate-create（5）、forms-mixed-create（8）、ordinary-create-plan（7）、normal-repeat-workspace（3）的 textbox/spinbutton 定位差异，以及 stage2b-r1-primitive-fields 的 number 输入拒绝 fill('-')（1）、order-fields-flow 的 number 输入拒绝 fill('invalid')（1）。留给共享线修复后联合复验，本线未更改数字控件或这些断言。最后 Survey 59 六项全部通过。
+
+主 sweep session 82211 与复验 session 18011 均已退出，原 PID 18441、33751 已不存在；主驱动器 exit 0 是继续记录失败后的正常退出，六个仍失败的 Playwright 命令均 exit 1，不代表全套通过。首轮日志、复验日志及 final-results.json 均保留于前述忽略目录。
+
+本轮没有运行 nightly/manual/L3 的 r1-main-repeat-ui、h5-ux；scoped-form-integrations-h5 仅聚合状态，没有独立浏览器用例。configured-record-edit 的严格 matcher 仍待共享线接入，其 9 项通过不算严格请求覆盖；此处记录的是本轮基线状态，不能替代共享修复后的联合结果。Production/Beta 新资料读取仍关闭，Contacts 与角色条件的后续完成不由本轮测试夹具升级证明。
