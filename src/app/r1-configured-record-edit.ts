@@ -2,7 +2,7 @@ import { createR1ConfiguredFormFileSession } from './r1-normal-form-media'
 import type { MediaFilePickerPort, MediaUploadQueuePort } from '@shared/ports'
 import type { R1NormalFormFileSession } from '@features/work-orders/r1-normal-form-media-port'
 import { isR1RetainedFileArray, isR1RetainedFileSubset, type R1RetainedFileValue } from '@shared/form/r1-retained-file-values'
-import type { AuthSessionPort } from '@shared/ports'
+import type { AppointmentFormFieldRead, AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RecordEditRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-actions-port'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from '@features/work-orders/action-form-schema'
@@ -171,6 +171,12 @@ export function createConfiguredRecordEditActions(input: {
     for(const f of lease.definition.fields!){if(Object.hasOwn(ex,f.valueKey))values[f.valueKey]=copy(ex[f.valueKey]);else if(Object.hasOwn(e.original,f.valueKey))values[f.valueKey]=copy(e.original[f.valueKey])}
     return values
   }
+  // Display and selection events must use the same current node readonly policy.
+  function editorFieldState(field:AppointmentFormFieldRead,values:Readonly<Record<string,unknown>>) {
+    return evaluateFieldState(actionFormSchemaFor({...field,
+      readOnly:field.readOnly||lease.node.formFieldIdsReadOnly?.includes(field.fieldId)===true}),
+      {values:values as never,surface:ACTION_FORM_SURFACE})
+  }
   let selectionRecord:string|undefined
   const explicitSelections=new Map<string,unknown>()
   function beginEdit(id:string):boolean {
@@ -295,8 +301,7 @@ export function createConfiguredRecordEditActions(input: {
       if(draft!==undefined&&(!object(draft)||Object.keys(draft).some(key=>!lease.definition.fields!.some(f=>f.valueKey===key))))refuse()
       const context={...initialValues(id),...draft,[key]:value}
       verifyConditionValues(lease,context)
-      const state=evaluateFieldState(actionFormSchemaFor({...f,readOnly:f.readOnly||lease.node.formFieldIdsReadOnly?.includes(f.fieldId)===true}),
-        {values:context as never,surface:ACTION_FORM_SURFACE})
+      const state=editorFieldState(f,context)
       if(!grant.fieldIds.includes(f.fieldId)||state.capability!=='SUPPORTED_GENERIC'||!state.visible||state.readOnly||typeof value!=='string'||!f.options?.some(o=>o.value===value))refuse()
       explicitSelections.set(key,value)
     },
@@ -305,9 +310,7 @@ export function createConfiguredRecordEditActions(input: {
     projectFields(values,id){if(!id||!canEdit(id))return[]
       const context={...initialValues(id),...values}
       return lease.definition.fields!.map(field=>{
-      const state=evaluateFieldState(actionFormSchemaFor({...field,
-        readOnly:field.readOnly||lease.node.formFieldIdsReadOnly?.includes(field.fieldId)===true}),
-        {values:context as never,surface:ACTION_FORM_SURFACE})
+      const state=editorFieldState(field,context)
       return {fieldId:field.fieldId,valueKey:field.valueKey,label:field.label,type:field.type,
         required:state.required,readOnly:state.readOnly,options:field.options??[],multiple:Boolean(field.multiple),visible:state.visible,
         supported:grant.fieldIds.includes(field.fieldId)&&state.capability==='SUPPORTED_GENERIC'&&state.visible&&!state.readOnly,
