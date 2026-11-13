@@ -28,10 +28,13 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     const field = (key: string) => page.getByTestId('a-special-field-' + key)
     // These are completed-save reload checks. Starting a save is not its ACK
     // or local cleanup; interrupting either intentionally leaves a fence.
-    const saved = async () => {
+    const saved = async (id = 'mock-special-form-data-forms-1') => {
+      await expect(page.getByTestId('a-special-row-' + id)).toBeVisible()
       await expect(page.getByTestId('a-special-save')).toHaveText('保存记录')
       await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
       await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
+      await expect(page.getByTestId('a-special-cleanup-pending')).toHaveCount(0)
+      await expect(page.getByTestId('a-special-edit-' + id)).toHaveAttribute('aria-disabled', 'false')
     }
     await field('inspectionSummary').locator('textarea').fill('Stage2C 数组字段验证')
     await field('inspectionNote').locator('textarea').fill('清空前备注')
@@ -81,7 +84,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await expect(field('inspectionSummary')).toHaveCount(0)
     await field('note').locator('textarea').fill('第二表单独立备注')
     await page.getByTestId('a-special-save').click()
-    await saved()
+    await saved('mock-special-form-data-forms-2')
     const second = page.getByTestId('a-special-row-mock-special-form-data-forms-2')
     await expect(second).toBeVisible()
     await page.reload({ waitUntil: 'domcontentloaded' })
