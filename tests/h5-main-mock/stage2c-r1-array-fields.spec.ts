@@ -26,6 +26,13 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     const field = (key: string) => page.getByTestId('a-special-field-' + key)
+    // These are completed-save reload checks. Starting a save is not its ACK
+    // or local cleanup; interrupting either intentionally leaves a fence.
+    const saved = async () => {
+      await expect(page.getByTestId('a-special-save')).toHaveText('保存记录')
+      await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
+      await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
+    }
     await field('inspectionSummary').locator('textarea').fill('Stage2C 数组字段验证')
     await field('inspectionNote').locator('textarea').fill('清空前备注')
     await field('inspectionResult').locator('.app-choice').filter({ hasText: '可继续施工' }).click()
@@ -35,6 +42,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await field('inspectionLocation').locator('.app-cascade-selector__child').filter({ hasText: '排水口' }).click()
     await expect(page.getByTestId('a-special-save')).toHaveAttribute('aria-disabled', 'false')
     await page.getByTestId('a-special-save').click()
+    await saved()
     const row = page.getByTestId('a-special-row-mock-special-form-data-forms-1')
     await expect(row).toContainText('Stage2C 数组字段验证')
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
@@ -45,6 +53,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await field('inspectionLocation').locator('.app-cascade-selector__parent').filter({ hasText: '卫生间' }).click()
     await field('inspectionLocation').locator('.app-cascade-selector__child').filter({ hasText: '管道' }).click()
     await page.getByTestId('a-special-save').click()
+    await saved()
     await page.reload({ waitUntil: 'domcontentloaded' })
     await expect(row).toContainText('Stage2C 数组字段验证')
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
@@ -56,6 +65,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await field('inspectionNote').locator('textarea').fill('')
     await field('inspectionChecks').locator('.app-choice--selected').click()
     await page.getByTestId('a-special-save').click()
+    await saved()
     await expect(row).toContainText('Stage2C 数组字段验证')
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
@@ -71,6 +81,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await expect(field('inspectionSummary')).toHaveCount(0)
     await field('note').locator('textarea').fill('第二表单独立备注')
     await page.getByTestId('a-special-save').click()
+    await saved()
     const second = page.getByTestId('a-special-row-mock-special-form-data-forms-2')
     await expect(second).toBeVisible()
     await page.reload({ waitUntil: 'domcontentloaded' })

@@ -35,3 +35,9 @@ H5 全部业务 HTTP 严格合成拦截，外部请求拒绝。没有访问真�
 - `test-results/map-choice-datetime-edit/results.json`、`attachments/`：最终七条 H5、HTTP 台账、真实 App 截图和 trace。
 - 430×932 截图已检查选择区、日期控件及空选状态；未做 UI 重设计。Owner 商业视觉 gate 仍独立，截图生成不等于视觉签收。
 - 下一批继续条件显示及单路径 cascade：复用现有 runtime/provider，完整候选值评估；隐藏不默认清空，依赖不明不默认隐藏。未验证前仍明确拒绝，不能将本批 checkbox PASS 当作这些能力已完成。
+
+## 发布后 CI 纠正
+
+`09b96ad6bc55e328d161df4f9557bf0e7d5e16ab` 的 Validate 成功，但 H5 [run 43372428835](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43372428835) 失败。普通 Code choice 首次创建的三条用例收到 `['b','a']`，原合同为 `['a','b']`；本地原样复现三红三绿。原因是共享包装器按 type=checkbox 对所有入口打开了保序，影响了此次范围以外的既有创建路径。修正为由已有配置记录编辑的字段投影显式声明 `preserveSelectionOrder`，共享控件其他入口默认行为保持原样，不修改旧排序断言。
+
+同 run 的 Stage 2C 在第二次保存后立即刷新，重进选中数量断言失败；本地原用例未复现，不能归因为确定产品缺陷。其“已完成保存后刷新”验证缺少完成条件，现与既有 Stage 2B 一致，在保存、ACK 和本机清理完成后再刷新，全部原值、空选、级联和零外连断言保留，不加超时或重试。原失败仍保留在 hosted artifact `14013036645` 与本地 `.review/ci-checkbox-regression-20261113/` 诊断中；后续 exact-SHA CI 另行确认，不把原失败改写为 PASS。

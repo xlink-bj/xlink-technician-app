@@ -21,7 +21,7 @@ it.each([undefined, false, true])('edits a source-bound checkbox array in select
   const h = fixture(false, false, multiple), sibling = structuredClone(h.other), original = structuredClone(h.record)
   const a = h.provider().forSnapshot(await h.load())
   expect(a).not.toBeNull()
-  expect(a!.projectFields!({}, 'saved-edit').find(f => f.valueKey === 'contactMode')).toMatchObject({ supported: true })
+  expect(a!.projectFields!({}, 'saved-edit').find(f => f.valueKey === 'contactMode')).toMatchObject({ supported: true, preserveSelectionOrder: true })
   await a!.saveOnly({ ...a!.initialValues!('saved-edit'), contactMode: ['remote', 'onsite'] }, 'saved-edit')
   expect(h.record.contactMode).toEqual(['remote', 'onsite'])
   expect(h.record.exts).toEqual({ ...original.exts, contactMode: ['remote', 'onsite'] })

@@ -20,6 +20,7 @@ export interface R1LocalField {
   readonly supported: boolean
   readonly reason?: string
   readonly placeholder?: string
+  readonly preserveSelectionOrder?: boolean
 }
 const scalar = new Set(['text','textarea','phone','IDNumber','number','digit','date','time','datetime','switch','rate'])
 const choices = new Set(['select','radio','checkbox','cascade','bizSelect'])

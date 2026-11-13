@@ -170,6 +170,7 @@ export function createConfiguredRecordEditActions(input: {
       return {fieldId:field.fieldId,valueKey:field.valueKey,label:field.label,type:field.type,
         required:state.required,readOnly:state.readOnly,options:field.options??[],multiple:Boolean(field.multiple),visible:state.visible,
         supported:grant.fieldIds.includes(field.fieldId)&&state.capability==='SUPPORTED_GENERIC'&&state.visible&&!state.readOnly,
+        ...(field.type==='checkbox'?{preserveSelectionOrder:true}:{}),
         ...(field.presentation?.placeholder?{placeholder:field.presentation.placeholder}:{}),...(state.reason?{reason:state.reason}:{})}
     }):[]},
     validateDraft(values,id){try{if(!id)return false;normalize(values,id);return true}catch{return false}},
