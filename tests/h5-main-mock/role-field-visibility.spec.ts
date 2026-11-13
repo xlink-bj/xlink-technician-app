@@ -1,9 +1,10 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { test, expect } from '@playwright/test'
 import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 test.beforeEach(({}, info) => test.skip(info.config.metadata.roleFieldVisibility !== true, 'Dedicated intercepted readonly role visibility'))
 for (const mode of ['selected-r', 'selected-other', 'invalid-list', 'old-condition', 'session-switch'] as const) test(`normal readonly role fields ${mode}`, async ({ page, baseURL }, info) => {
   let role = mode === 'selected-other' ? 'other' : 'r'
-  const calls: string[] = [], unexpected: string[] = [], errors: string[] = []
+  const calls: string[] = [], definitionReads: string[] = [], unexpected: string[] = [], errors: string[] = []
   const fields: Record<string, unknown>[] = [
     { _id: 'include-row', name: 'sameName', nameDisp: '指定角色可见', showType: '4' },
     { _id: 'exclude-row', name: 'sameName', nameDisp: '其他角色可见', showType: '5' },
@@ -26,13 +27,24 @@ for (const mode of ['selected-r', 'selected-other', 'invalid-list', 'old-conditi
     }
     const path = url.pathname.slice('/xlink/wm/'.length), body = Object.fromEntries(new URLSearchParams(req.postData() ?? ''))
     calls.push(path); const ok = (json: unknown) => route.fulfill({ json })
+    if (isWorkOrderInformationRead(req, baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
     if (path === 'index/phoneLogin.do') return ok({ status: 1, success: true, data: { token: 'synthetic-role-session', user: { _id: 'u', roles: ['r', 'other'] }, currentRole: { _id: role }, capabilityNames: [] } })
     if (['function/changeRole', 'function/queryTreeByRoleId'].includes(path)) return ok({ data: { functionList: [{ functionList: [{ order: 1, exts: { tabDisplay: '1' }, action: '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0' }] }] } })
     if (['basic/serviceAppointment/query', 'basic/serviceAppointment/querySAWorkflowNode'].includes(path)) return ok({ data: [{ ...node, data: sa }], total: 1, page: 1, rows: 20 })
     if (path === 'basic/serviceAppointment/queryById/s') return ok({ success: true, status: 1, data: { serviceAppointment: sa, workflow: { _id: 'w', tenantId: 't', formDataId: 's', state: 0 }, workflowNode: [node] } })
     if (['code/query', 'biz/action/query.do'].includes(path)) return ok({ data: [], total: 0, page: Number(body.page) || 1, rows: Number(body.rows) || 20 })
     if (path === 'biz/ext/queryById.do') return ok({ _id: 'e', tenantId: 't', state: 1, type: '0', colName: 'syntheticRole' })
-    if (path === 'biz/extField/query') return ok({ data: fields, total: 2, page: 1, size: 50 })
+    if (path === 'biz/extField/query') {
+      const params = new URLSearchParams(req.postData() ?? '')
+      const expected = { extId: 'e', 'is:state|integer#and': '1', sortField: 'order', sortOrder: 'asc', page: '1', rows: '50' }
+      if (req.method() !== 'POST' || url.search || url.hash || url.username || url.password
+        || Array.from(params).length !== Object.keys(expected).length
+        || !Object.entries(expected).every(([key, value]) => params.getAll(key).length === 1 && params.get(key) === value)) {
+        unexpected.push('Unexpected ExtField request'); return route.abort('blockedbyclient')
+      }
+      definitionReads.push(role)
+      return ok({ data: fields, total: fields.length, page: 1, size: 50 })
+    }
     if (path === 'biz/extForm/query/e') return ok({ data: [record], total: 1, page: 1, size: Number(body.rows), dataCount: 1 })
     unexpected.push(path); return route.abort('blockedbyclient')
   })
@@ -63,11 +75,11 @@ for (const mode of ['selected-r', 'selected-other', 'invalid-list', 'old-conditi
       await expect(rows).toHaveCount(1); await expect(rows).toContainText('SYNTHETIC-ROLE-VALUE')
       await expect(page.getByText('其他角色可见', { exact: true })).toBeVisible()
       await expect(page.getByText('指定角色可见', { exact: true })).toHaveCount(0)
-      expect(calls.filter(path => path === 'biz/extField/query')).toHaveLength(2)
+      expect(definitionReads).toEqual(['r', 'other'])
     }
     await expect(page.getByTestId('r1-normal-edit-a')).toHaveCount(0)
     expect(calls.some(path => /upsert|updateExts|process|upload/.test(path))).toBe(false)
     expect(unexpected).toEqual([]); expect(errors).toEqual([])
     await page.screenshot({ path: info.outputPath('role-fields.png') })
-  } finally { await info.attach('role-read-ledger', { body: JSON.stringify({ mode, role, calls, unexpected, errors, realBackend: 'NOT_RUN' }), contentType: 'application/json' }) }
+  } finally { await info.attach('role-read-ledger', { body: JSON.stringify({ mode, role, calls, definitionReads, unexpected, errors, realBackend: 'NOT_RUN' }), contentType: 'application/json' }) }
 })

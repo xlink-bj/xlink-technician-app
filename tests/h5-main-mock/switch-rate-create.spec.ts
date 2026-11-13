@@ -1,7 +1,9 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace, leaveNormalFormForList } from '../support/normal-form-workspace-entry'
 import {test,expect,type Page} from '@playwright/test'
 test.skip(process.env.XLINK_H5_SWITCH_RATE_CREATE!=='true','Opt-in synthetic ordinary Switch/Rate create; synthetic only')
 async function fixture(page:Page,baseURL:string,mode:string){
+ let definitionReadCount=0
  const state={saved:null as any,calls:[] as string[],writes:[] as string[],payloads:[] as any[],unexpected:[] as string[],errors:[] as string[]}
  const fields:any[]=[['arbitraryToggle','switch'],['arbitraryScore','rate'],['memo','text'],['zeroProof','number'],['codeProof','select']].map(([name,type],i)=>({_id:'field-'+i,name,nameDisp:name,type,tenantId:'t',extId:'e',colName:'syntheticSwitchRate',state:1,required:mode==='required-score'&&type==='rate'?'1':'0',preset:i===0||i===3?1:0,multiple:false,readOnly:0,operationType:'1',showList:['4'],frontEndConfig:'{}',customizeFlag:1,showType:'1',...(type==='select'?{valueOption:'SYN_CODES'}:{})}))
  if(mode==='renamed')for(const f of fields)f.name=f.nameDisp='other_'+f.name
@@ -13,13 +15,23 @@ async function fixture(page:Page,baseURL:string,mode:string){
   const req=route.request(),u=new URL(req.url());if(u.origin!==baseURL){state.unexpected.push('external');return route.abort()}
   if(!u.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['xhr','fetch'].includes(req.resourceType()))return route.continue();state.unexpected.push('unexpected local');return route.abort()}
   const path=u.pathname.slice('/xlink/wm/'.length),body=Object.fromEntries(new URLSearchParams(req.postData()??'')),ok=(json:unknown)=>route.fulfill({json});state.calls.push(path)
+  if(isWorkOrderInformationRead(req,baseURL))return route.fulfill({status:503,json:{success:false,message:'Synthetic information configuration unavailable'}})
   if(path==='index/phoneLogin.do')return ok({success:true,status:1,data:{token:'synthetic-choice-session',user:{_id:'u',tenantId:'t'},currentRole:{_id:'r'},capabilityNames:[]}})
   if(['function/changeRole','function/queryTreeByRoleId'].includes(path))return ok({data:{functionList:[{functionList:[{order:1,exts:{tabDisplay:'1'},action:'/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0'}]}]}})
   if(['basic/serviceAppointment/query','basic/serviceAppointment/querySAWorkflowNode'].includes(path))return ok({data:[{...node,data:sa}],total:1,page:1,rows:20})
   if(path==='basic/serviceAppointment/queryById/s')return ok({success:true,status:1,data:{serviceAppointment:sa,workflow:{_id:'w',tenantId:'t',formDataId:'s',state:0},workflowNode:[node]}})
   if(['code/query','biz/action/query.do'].includes(path))return ok({data:[],total:0,page:1,rows:20})
   if(path==='biz/ext/queryById.do')return ok({_id:'e',tenantId:'t',state:1,type:'0',colName:'syntheticSwitchRate'})
-  if(path==='biz/extField/query'){if(mode==='permission-drift'&&state.calls.filter(p=>p===path).length>1)fields[0].readOnly=1;return ok({data:fields,total:fields.length,page:1,size:Number(body.rows)})}
+  if(path==='biz/extField/query'){
+   const params=new URLSearchParams(req.postData()??''),expected={extId:'e','is:state|integer#and':'1',sortField:'order',sortOrder:'asc',page:'1',rows:'50'}
+   if(req.method()!=='POST'||u.search||u.hash||u.username||u.password||Array.from(params).length!==Object.keys(expected).length
+    ||!Object.entries(expected).every(([key,value])=>params.getAll(key).length===1&&params.get(key)===value)){
+    state.unexpected.push('Unexpected ExtField request');return route.abort('blockedbyclient')
+   }
+   definitionReadCount++
+   if(mode==='permission-drift'&&definitionReadCount>1)fields[0].readOnly=1
+   return ok({data:fields,total:fields.length,page:1,size:Number(body.rows)})
+  }
   if(path==='i/code/selectCode.do')return ok([{codeId:'SYN_CODES',eleid:'SYN_CODES',options:{a:'合成甲',b:'合成乙',c:'合成丙'}}])
   if(path==='biz/extForm/query/e')return ok({data:state.saved?[state.saved]:[],total:state.saved?1:0,page:1,size:Number(body.rows),dataCount:state.saved?1:0})
   if(path==='biz/extForm/upsert/e'){

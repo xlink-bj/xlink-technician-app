@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { test, expect } from '@playwright/test'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 test.beforeEach(({}, info) => test.skip(info.config.metadata.identitySubmission !== true, 'Dedicated intercepted identity submission'))
@@ -25,13 +26,23 @@ for (const [type, invalid] of [['phone', '123'], ['IDNumber', 'bad-id']] as cons
     const path = url.pathname.slice('/xlink/wm/'.length), body = Object.fromEntries(new URLSearchParams(req.postData() ?? ''))
     calls.push(path)
     const ok = (json: unknown) => route.fulfill({ json })
+    if (isWorkOrderInformationRead(req, baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
     if (path === 'index/phoneLogin.do') return ok({ status: 1, success: true, data: { token: 'synthetic-identity-session', user: { _id: 'u' }, currentRole: { _id: 'r' }, capabilityNames: [] } })
     if (['function/changeRole', 'function/queryTreeByRoleId'].includes(path)) return ok({ data: { functionList: [{ functionList: [{ order: 1, exts: { tabDisplay: '1' }, action: '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0' }] }] } })
     if (['basic/serviceAppointment/query', 'basic/serviceAppointment/querySAWorkflowNode'].includes(path)) return ok({ data: [{ ...node, data: sa }], total: 1, page: 1, rows: 20 })
     if (path === 'basic/serviceAppointment/queryById/s') return ok({ success: true, status: 1, data: { serviceAppointment: sa, workflow: { _id: 'w', tenantId: 't', formDataId: 's', state: 0 }, workflowNode: [node] } })
     if (['code/query', 'biz/action/query.do'].includes(path)) return ok({ data: [], total: 0, page: Number(body.page) || 1, rows: Number(body.rows) || 20 })
     if (path === 'biz/ext/queryById.do') return ok({ _id: 'e', tenantId: 't', state: 1, type: '0', colName: 'syntheticIdentity' })
-    if (path === 'biz/extField/query') return ok({ data: fields, total: 1, page: 1, size: 50 })
+    if (path === 'biz/extField/query') {
+      const params = new URLSearchParams(req.postData() ?? '')
+      const expected = { extId: 'e', 'is:state|integer#and': '1', sortField: 'order', sortOrder: 'asc', page: '1', rows: '50' }
+      if (req.method() !== 'POST' || url.search || url.hash || url.username || url.password
+        || Array.from(params).length !== Object.keys(expected).length
+        || !Object.entries(expected).every(([key, value]) => params.getAll(key).length === 1 && params.get(key) === value)) {
+        unexpected.push('Unexpected ExtField request'); return route.abort('blockedbyclient')
+      }
+      return ok({ data: fields, total: fields.length, page: 1, size: 50 })
+    }
     if (path === 'biz/extForm/query/e') return ok({ data: [record], total: 1, page: 1, size: Number(body.rows), dataCount: 1 })
     if (path === 'biz/extForm/upsert/e') {
       writes.push(path); record = JSON.parse(body.dataStr)

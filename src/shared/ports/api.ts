@@ -112,7 +112,14 @@ export interface WorkflowNodeVisibilityEvidence {
   readonly evidenceState: WorkflowNodeVisibilityEvidenceState
 }
 
+export interface WorkOrderInformationFieldRead {
+  readonly field: FormFieldRead
+  readonly value?: FormFieldValue
+}
+
 export interface WorkOrderDetail {
+  /** Configured ServiceAppointment information only; absent means verified legacy fallback. */
+  readonly informationFields?: readonly WorkOrderInformationFieldRead[]
   readonly id: WorkOrderId
   readonly workflowRunId?: WorkflowRunId
   readonly displayNumber?: string

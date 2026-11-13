@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import{test,expect}from'@playwright/test'
 test.skip(process.env.XLINK_H5_SURVEY_FIRST_MEDIA_SAVE!=='true','Explicit fully intercepted synthetic typed media run only')
@@ -19,6 +20,7 @@ for(const scenario of ['success','ack-conflict']as const)test(`normal App typed 
   if(url.origin!==baseURL){unexpected.push(req.method()+' '+url.origin);return route.abort()}
   if(!url.pathname.startsWith('/xlink/wm/')){if(req.method()==='GET'&&!['xhr','fetch'].includes(req.resourceType()))return route.continue();unexpected.push(url.pathname);return route.abort()}
   const path=url.pathname.slice('/xlink/wm/'.length),b=Object.fromEntries(new URLSearchParams(req.postData()??''));if(req.method()!=='POST'){unexpected.push(path);return route.abort()}
+  if(isWorkOrderInformationRead(req,baseURL!))return route.fulfill({status:503,json:{success:false,message:'Synthetic information configuration unavailable'}})
   if(path==='index/phoneLogin.do')return ok({success:true,status:1,data:{token:'synthetic-no-live-authority',user:{_id:actor,name:'隔离技师'},currentRole:{_id:role,name:'技师'},capabilityNames:[]}})
   if(['function/changeRole','function/queryTreeByRoleId'].includes(path))return ok({data:{functionList:[{functionList:[{order:1,exts:{tabDisplay:'1'},action:'/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0'}]}]}})
   if(['basic/serviceAppointment/query','basic/serviceAppointment/querySAWorkflowNode'].includes(path))return ok({data:[{...node,data:sa}],total:1,page:1,rows:20})

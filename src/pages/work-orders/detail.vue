@@ -192,22 +192,31 @@
         </view>
 
         <view v-else-if="activeTab === 'customer'" class="tab-panel customer-info-panel">
-          <view class="detail-row customer-info-row">
-            <text class="row-label">客户姓名</text>
-            <text class="row-value customer-info-value">{{ detail.customerName || '—' }}</text>
-          </view>
-          <view class="detail-row customer-info-row customer-info-row--address">
-            <text class="row-label">服务地址</text>
-            <text class="row-value customer-info-value customer-info-value--address">{{ customerServiceAddress }}</text>
-          </view>
-          <view class="detail-row customer-info-row">
-            <text class="row-label">工单编号</text>
-            <text class="row-value customer-info-value">{{ detail.displayNumber ? workOrderNumberDisplay(detail.displayNumber) : '—' }}</text>
-          </view>
-          <view class="detail-row customer-info-row">
-            <text class="row-label">联系电话</text>
-            <text class="row-value customer-info-value">{{ detail.contact?.displayMask || '—' }}</text>
-          </view>
+          <template v-if="detail.informationFields !== undefined">
+            <view v-for="row in detail.informationFields" :key="row.field.fieldId" class="detail-row customer-info-row" data-testid="configured-information-row">
+              <text class="row-label">{{ row.field.label }}</text>
+              <text class="row-value customer-info-value customer-info-value--address">{{ row.field.unsupportedReason ? '该内容暂不支持展示' : r1ReadFieldDisplayValue(row.field, row.value) }}</text>
+            </view>
+            <text v-if="!detail.informationFields.length" class="tab-empty-copy">暂无可展示资料</text>
+          </template>
+          <template v-else>
+            <view class="detail-row customer-info-row">
+              <text class="row-label">客户姓名</text>
+              <text class="row-value customer-info-value">{{ detail.customerName || '—' }}</text>
+            </view>
+            <view class="detail-row customer-info-row customer-info-row--address">
+              <text class="row-label">服务地址</text>
+              <text class="row-value customer-info-value customer-info-value--address">{{ customerServiceAddress }}</text>
+            </view>
+            <view class="detail-row customer-info-row">
+              <text class="row-label">工单编号</text>
+              <text class="row-value customer-info-value">{{ detail.displayNumber ? workOrderNumberDisplay(detail.displayNumber) : '—' }}</text>
+            </view>
+            <view class="detail-row customer-info-row">
+              <text class="row-label">联系电话</text>
+              <text class="row-value customer-info-value">{{ detail.contact?.displayMask || '—' }}</text>
+            </view>
+          </template>
         </view>
 
         <view v-else-if="activeTab === 'order'" class="tab-panel order-info-panel">
@@ -312,6 +321,7 @@
 </template>
 
 <script setup lang="ts">
+import { r1ReadFieldDisplayValue } from '@features/work-orders/r1-record-read-fields'
 import { computed, inject as injectHistoryReader, onBeforeUnmount, ref, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 

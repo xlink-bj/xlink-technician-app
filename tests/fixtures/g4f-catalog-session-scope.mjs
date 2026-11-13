@@ -13,6 +13,7 @@ const vite = await createServer({
       '@': resolve(root, 'src'),
       '@shared': resolve(root, 'src/shared'),
       '@adapters': resolve(root, 'src/adapters'),
+      '@runtimes': resolve(root, 'src/runtimes'),
     },
   },
   server: { middlewareMode: true },

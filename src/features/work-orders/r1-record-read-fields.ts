@@ -19,7 +19,7 @@ const choiceTypes = new Set(['select', 'radio', 'checkbox', 'cascade', 'bizSelec
 const scalar = (value: unknown): value is string | number | boolean =>
   typeof value === 'string' || typeof value === 'boolean' || (typeof value === 'number' && Number.isFinite(value))
 
-function displayValue(field: FormFieldRead, value: FormFieldValue | undefined): string {
+export function r1ReadFieldDisplayValue(field: FormFieldRead, value: FormFieldValue | undefined): string {
   if (value === undefined) return '未保存'
   if (value === null || value === '') return '空值'
   // Scalar choice contracts cannot acquire multi-choice meaning from a saved
@@ -103,7 +103,7 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
       unavailable,
       text: unsupported ? '字段规则尚未完整核实，暂不展示内容'
         : noCodec ? (field.type === 'file' ? '附件内容暂不支持在此查看' : '该字段类型暂不支持在此查看')
-          : mediaText ?? displayValue(field, record.values?.[field.valueKey]),
+          : mediaText ?? r1ReadFieldDisplayValue(field, record.values?.[field.valueKey]),
     })
   }
   return result

@@ -1,3 +1,4 @@
+import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 import { enterNormalFormWorkspace } from '../support/normal-form-workspace-entry'
 import { test, expect } from '@playwright/test'
 
@@ -44,6 +45,7 @@ for (const mode of ['save', 'provider-drift', 'wrong-readback'] as const) {
       calls.push(path)
       const body = Object.fromEntries(new URLSearchParams(req.postData() ?? ''))
       const ok = (json: unknown) => route.fulfill({ json })
+      if (isWorkOrderInformationRead(req, baseURL!)) return route.fulfill({ status: 503, json: { success: false, message: 'Synthetic information configuration unavailable' } })
       if (path === 'index/phoneLogin.do') return ok({ success: true, status: 1, data: { token: 'synthetic-part-session', user: { _id: 'u', tenantId: 't' }, currentRole: { _id: 'r' }, capabilityNames: [] } })
       if (['function/changeRole', 'function/queryTreeByRoleId'].includes(path)) return ok({ data: { functionList: [{ functionList: [{ order: 1, exts: { tabDisplay: '1' }, action: '/pages/serviceAppointment/serviceAppointments?type=SANode&orderState=0' }] }] } })
       if (['basic/serviceAppointment/query', 'basic/serviceAppointment/querySAWorkflowNode'].includes(path)) return ok({ data: [{ ...node, data: sa }], total: 1, page: 1, rows: 20 })
