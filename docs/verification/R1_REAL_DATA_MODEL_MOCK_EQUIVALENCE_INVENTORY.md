@@ -6,6 +6,8 @@
 
 后续有限动态批次：[type0 Map 条件读取槽位与单路径 cascade（2026-11-13）](R1_MAP_CONDITION_CASCADE_INTEGRATION_20261113.md)。仅开放已证实的字符串 equals 子集和已有树 provider 路径；其他条件、多路径、未知清空与类型化模型仍按报告保留缺口。
 
+后续简单字段批次：[type0 Map phone／IDNumber／date／time／单值 select（2026-11-13）](R1_MAP_REMAINING_SCALARS_INTEGRATION_20261113.md)。复用校验与控件，不推广 typed DTO、复杂配置或真实写入；本地完整 6152 用例及 32 条核心 H5 路径通过，最终按独立提交 CI 核验。
+
 > 2026-11-05 Owner 决策；适用 `xlink-bj/xlink-technician-app` 当前技术工程师主流程。此文档是**建立 1:1 协议/模型 Mock 的执行清单**，不是 Production 原始数据导出、真实写入许可或已完成的 R1 全业务验收。
 
 ## 0. 权威来源与判定口径

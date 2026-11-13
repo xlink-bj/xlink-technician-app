@@ -1,4 +1,5 @@
 import type { LoginFormInput } from './login'
+import { isR1MobilePhone } from '@shared/form/r1-mobile-phone'
 
 /**
  * M1-S1 L01 — R1 business/subpackages/login/loginAuth.vue:300-323.
@@ -14,7 +15,7 @@ export function r1ManualLoginIssue(input: LoginFormInput): R1ManualLoginIssue | 
   const phone = input.phoneNumber.trim()
   const code = input.verificationCode.trim()
   if (!phone) return 'phone_required'
-  if (!/^1[3-9]\d{9}$/.test(phone)) return 'phone_format'
+  if (!isR1MobilePhone(phone)) return 'phone_format'
   if (!code) return 'code_required'
   if (!/^\d{6}$/.test(code)) return 'code_format'
   return null

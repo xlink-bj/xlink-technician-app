@@ -45,8 +45,8 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
   for (const field of fields) {
     const raw = rawFields.find(f => f._id === field.fieldId)
     const mapCheckbox=ext.type==='0'&&field.type==='checkbox'
-    const mapChoice=ext.type==='0'&&['radio','checkbox'].includes(field.type)
-    const mapTemporal=ext.type==='0'&&field.type==='datetime'
+    const mapChoice=ext.type==='0'&&['radio','checkbox','select'].includes(field.type)
+    const mapScalar=ext.type==='0'&&['phone','IDNumber','date','time','datetime'].includes(field.type)
     const mapCascade=ext.type==='0'&&field.type==='cascade'&&!field.multiple
     const rule=field.visibility
     const dependency=rule&&'path'in rule&&typeof rule.path==='string'?fields.find(f=>f.valueKey===rule.path):undefined
@@ -65,7 +65,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     const preserveOnly=ext.type==='0'&&ro.includes(field.fieldId)
       &&classifyFieldType(field.type).capability==='SUPPORTED_GENERIC'
     if (!raw || raw.extId !== ext._id || raw.tenantId !== tenantId || raw.state !== 1 || raw.colName !== ext.colName
-      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapTemporal||mapCascade||preserveOnly)
+      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapScalar||mapCascade||preserveOnly)
       || ![0, 1].includes(raw.preset as number) || field.preset !== (raw.preset === 1)
       || !['0', '1'].includes(String(raw.required)) || field.required !== (String(raw.required) === '1')
       || raw.operationType !== '1' || (preserveOnly||mapCheckbox

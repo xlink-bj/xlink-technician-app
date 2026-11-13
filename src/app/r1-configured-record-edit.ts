@@ -3,6 +3,7 @@ import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RecordEditRead } from '@
 import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-actions-port'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from '@features/work-orders/action-form-schema'
 import { hasDistinctR1ChoiceMembers } from '@features/work-orders/r1-local-form-fields'
+import { isR1MobilePhone } from '@shared/form/r1-mobile-phone'
 import { evaluateFieldState, normalizeFieldValue, normalizeSubmission } from '@runtimes/dynamic-form'
 import { evaluateNodeVisibility, isHandlerMatch } from '@runtimes/workflow/policy'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
@@ -169,7 +170,8 @@ export function createConfiguredRecordEditActions(input: {
           ||f.type==='checkbox'&&!hasDistinctR1ChoiceMembers(v)))refuse()
         if(f.type==='cascade'&&Array.isArray(v)&&v.length===0&&stable(v)!==stable(initial[f.valueKey]))refuse('级联清空规则尚未核实。')
       }else if(v!==undefined&&!(typeof v==='string'||typeof v==='number'&&Number.isFinite(v)))refuse()
-      if(f.type==='radio'&&v!==undefined&&typeof v!=='string')refuse()
+      if(['radio','select','phone','IDNumber','date','time'].includes(f.type)&&v!==undefined&&typeof v!=='string')refuse()
+      if(f.type==='phone'&&v!==undefined&&v!==''&&!isR1MobilePhone(v))refuse('手机号格式不符合要求。')
       if(['number','digit'].includes(f.type)&&v==='')refuse()}
     const result=normalizeSubmission({fields:schemas,values:merged,surface:ACTION_FORM_SURFACE});if(!result.ok)refuse()
     const patch:Record<string,string|number|boolean|readonly string[]>={}
