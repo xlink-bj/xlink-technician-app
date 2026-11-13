@@ -56,7 +56,7 @@ export function projectR1LocalFields(
       fieldId: field.fieldId, valueKey: field.valueKey, type: field.type,
       required: field.required, readOnly: field.readOnly, multiple: field.multiple,
       showList: field.showList, state: field.state, fixed: field.fixed,
-      operationType: field.operationType, visibility: field.visibility,
+      operationType: field.operationType, visibility: field.visibility, roleVisibilityContext: field.roleVisibilityContext,
       mobileDetailHidden: field.mobileDetailHidden, presentationOnly: field.presentationOnly,
       valueOption: field.valueOption, unsupportedReason: field.unsupportedReason,
       ...(field.options ? { inlineOptions: field.options } : {}),
@@ -71,7 +71,7 @@ export function projectR1LocalFields(
       && sibling.capability === 'SUPPORTED_GENERIC' && sibling.optionProvider.state !== 'unsupported'
       // Static surface exclusion short-circuits state evaluation. Inspect each
       // original rule too, so hidden unknown configuration never grants a key.
-      && evaluateVisibility(row.visibility, values).state !== 'unsupported')
+      && evaluateVisibility(row.visibility, values, row.roleVisibilityContext).state !== 'unsupported')
       && siblings.filter(({ state: sibling }) => sibling.visible).length === 1)
     const supported = unique && locallySupported(field) && state.capability==='SUPPORTED_GENERIC'
       && state.visible && !state.readOnly && field.valueKey.trim().length>0

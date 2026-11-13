@@ -178,3 +178,12 @@ it('allows at most one command for simultaneous clicks and never replays a verif
   expect(h.writes).toHaveLength(1)
   const next=h.provider().forSnapshot(await h.load())!;expect(next.canEdit!('saved-edit')).toBe(false)
 })
+
+it.each(['4', '5'])('role visibility %s never expands the existing v6 write capability', async showType => {
+  const h = existingRecordFixture(true); h.mapRoute()
+  Object.assign(h.fields[1]!, { showType, roleIds: showType === '4' ? [h.scope.roleId] : ['excluded-role'] })
+  const s = await h.load()
+  expect(s.definition.fields![1]!.roleVisibilityContext).toBeDefined()
+  expect(h.provider().forSnapshot(s)).toBeNull()
+  expect(h.writes).toHaveLength(0)
+})

@@ -1,3 +1,4 @@
+import { isRoleVisibilityList } from '@shared/form/selected-role-visibility'
 import { assertSurveyReadRecord } from '../survey-form-codec'
 import { surveyHeightConditionIssue } from './survey-height-condition'
 import { appointmentReplacementContextFromRead } from '@shared/form/appointment-replacement-context'
@@ -169,10 +170,18 @@ function formFieldVisibility(record: AdapterRecord): {
   // frontEndConfig.showField expression is present. Do not reinterpret an
   // unrelated showValue as a condition in that mode.
   if (showType === '1' && !configShowField && !directShowField) return {}
-  if (!showField) return { unsupportedReason: 'Conditional field visibility is missing its source field' }
   if (showType === '4' || showType === '5') {
-    return { unsupportedReason: 'Role-based field visibility is unavailable in this Action Content' }
+    // Fixed R1 role rules use root roleIds, independent of showField. The old
+    // frontEndConfig.showField branch takes precedence; mixed metadata is not
+    // part of this proved subset and must not fall through to a root role rule.
+    const roles = record.roleIds
+    if (!['4', '5', 4, 5].includes(record.showType as string | number)
+      || (rawConfig != null && !(typeof rawConfig === 'string' && !rawConfig.trim()) && !config)
+      || config && ['showField', 'showValue', 'showType'].some(key => Object.hasOwn(config, key))
+      || !isRoleVisibilityList(roles)) return { unsupportedReason: 'Role field visibility metadata is unavailable' }
+    return { visibility: { kind: 'role', mode: showType === '4' ? 'include' : 'exclude', roleIds: Object.freeze([...roles]) } }
   }
+  if (!showField) return { unsupportedReason: 'Conditional field visibility is missing its source field' }
   if (showType !== undefined && showType !== '2' && showType !== '3' && showValue !== '$exist') {
     return { unsupportedReason: `Unsupported field visibility mode: ${showType}` }
   }

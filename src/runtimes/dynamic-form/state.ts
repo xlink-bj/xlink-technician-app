@@ -52,7 +52,7 @@ export function evaluateFieldState(
     }
   }
 
-  const visibility = evaluateVisibility(field.visibility, context.values ?? {})
+  const visibility = evaluateVisibility(field.visibility, context.values ?? {}, field.roleVisibilityContext)
   if (visibility.state === 'unsupported') {
     return {
       capability: 'UNSUPPORTED',

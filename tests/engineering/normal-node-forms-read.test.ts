@@ -373,3 +373,29 @@ describe('read identity continuity without extending source or write authority',
   h.reader.clear();expect(identity.isSameActor()).toBe(false)
  })
 })
+
+describe('normal reader selected-role visibility without write grants', () => {
+  it.each([['4', ['role'], true], ['4', ['other'], false], ['5', ['role'], false], ['5', ['other'], true]] as const)(
+    'binds root showType %s and list %j to current-role visibility %s', async (showType, roleIds, visible) => {
+      const h = harness(); Object.assign(h.field, { showType, roleIds, showList: ['4'] })
+      const s = await h.reader.load('work', 'node')
+      const rows = projectR1RecordReadFields(s.definition, s.records[0]!)
+      expect(rows).toHaveLength(visible ? 1 : 0)
+      if (visible) expect(rows[0]).toMatchObject({ unavailable: false, text: 'Yes' })
+      expect(h.calls.some(path => /upsert|process|upload/.test(path))).toBe(false)
+    },
+  )
+  it.each(['role', 'session', 'clear', 'unlist', 'reread'] as const)('invalidates cached role-visible values after %s', async kind => {
+    const h = harness(); Object.assign(h.field, { showType: '5', roleIds: ['excluded'], showList: ['4'] })
+    const s = await h.reader.load('work', 'node')
+    expect(projectR1RecordReadFields(s.definition, s.records[0]!)[0]?.unavailable).toBe(false)
+    if (kind === 'role') h.changeRole()
+    else if (kind === 'session') h.changeSession()
+    else if (kind === 'clear') h.reader.clear()
+    else if (kind === 'unlist') h.unlist()
+    else await h.reader.load('work', 'node')
+    const old = projectR1RecordReadFields(s.definition, s.records[0]!)
+    expect(old.every(row => row.unavailable)).toBe(true)
+    expect(old.some(row => row.text === 'Yes')).toBe(false)
+  })
+})

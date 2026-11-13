@@ -1,3 +1,4 @@
+import type { SelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import type { CompatibilityEntry } from '@shared/config'
 import type { FormFieldVisibility, FormFieldVisibilityPath } from '@shared/ports'
 import type { LocalMediaRef, MediaValueRef } from '@shared/types'
@@ -61,6 +62,7 @@ export interface FormFieldSchema {
   readonly presentationOnly?: boolean
   readonly multiple?: boolean
   readonly visibility?: VisibilityExpression
+  readonly roleVisibilityContext?: SelectedRoleVisibilityContext
   readonly valueOption?: string
   readonly inlineOptions?: readonly FormOption[]
   readonly unsupportedReason?: string

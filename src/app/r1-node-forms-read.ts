@@ -1,3 +1,4 @@
+import { createSelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import { isR1RetainedFileArray } from '@shared/form/r1-retained-file-values'
 import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {bindR1ConfiguredFileReadDisplay} from '@shared/form/r1-configured-file-read-evidence'
@@ -517,6 +518,20 @@ export function createNormalNodeFormsReader(input: {
         // its metadata's multiple flag is true. Limit that scalar projection
         // to this verified type0 provider; typed DTO multi-value controls stay unchanged.
         hydrated.push(binding ? { ...field, ...(binding.kind==='proj-package'?{multiple:false}:{}), options: await readR1ScopedFieldOptions(binding, { execute }) } : field)
+      }
+      // A role expression alone cannot reveal a field. Bind only to this live
+      // selected session/reader generation; values, handlers and all-role lists
+      // never supply the role. No write eligibility is issued here.
+      if (hydrated.some(field => field.visibility?.kind === 'role')) {
+        const roleVisibilityContext = createSelectedRoleVisibilityContext(() => {
+          const now = input.auth.getCurrentSession()
+          return ticket === generation && fingerprint() === identity && now?.currentRole
+            && input.read.isWorkOrderListedForCurrentSession?.(workOrderId) === true
+            ? { sessionKey: identity, roleId: now.currentRole.id } : null
+        })
+        for (let index = 0; index < hydrated.length; index++) {
+          if (hydrated[index]!.visibility?.kind === 'role') hydrated[index] = { ...hydrated[index]!, roleVisibilityContext }
+        }
       }
       const routeColName=ext.colName
       const routeFacts = node.sourceNodeType==='forms' && ext.type==='0'

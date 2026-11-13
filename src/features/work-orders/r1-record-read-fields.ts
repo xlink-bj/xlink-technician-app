@@ -66,7 +66,7 @@ export function projectR1RecordReadFields(definition: FormDefinitionRead, record
   for (const field of fields) {
     const schema = actionFormSchemaFor(field)
     if (!isFieldApplicable(schema, ACTION_FORM_SURFACE) || field.presentationOnly) continue
-    const visibility = evaluateVisibility(field.visibility, values)
+    const visibility = evaluateVisibility(field.visibility, values, field.roleVisibilityContext)
     if (visibility.state === 'hidden') continue
     const unsupported = Boolean(field.unsupportedReason) || visibility.state === 'unsupported'
     if (leakage?.triggerField.fieldId === field.fieldId) continue

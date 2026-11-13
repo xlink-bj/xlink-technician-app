@@ -1,3 +1,4 @@
+import type { SelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import type { AppointmentReplacementContext } from '@shared/form/appointment-replacement-context'
 import type {
   CustomerContactId,
@@ -245,6 +246,8 @@ export interface FormFieldRead {
   readonly options?: readonly FormFieldOptionRead[]
   /** Adapter-normalized conditional visibility; raw frontEndConfig never crosses the port. */
   readonly visibility?: FormFieldVisibility
+  /** Reader-issued selected-role context; never populated from backend values. */
+  readonly roleVisibilityContext?: SelectedRoleVisibilityContext
   /** Adapter-normalized option provider identity, when evidenced by the field. */
   readonly valueOption?: string
   /** Safe structural presentation metadata; raw frontEndConfig stays Adapter-owned. */
@@ -295,6 +298,7 @@ export interface FormValueCodec {
 export type FormFieldVisibilityPath = string | readonly string[]
 
 export type FormFieldVisibility =
+  | { readonly kind: 'role'; readonly mode: 'include' | 'exclude'; readonly roleIds: readonly string[] }
   | { readonly kind: 'equals'; readonly path: FormFieldVisibilityPath; readonly value: FormFieldValue }
   | { readonly kind: 'oneOf'; readonly path: FormFieldVisibilityPath; readonly values: readonly FormFieldValue[] }
   | { readonly kind: 'includes'; readonly path: FormFieldVisibilityPath; readonly value: FormFieldValue }

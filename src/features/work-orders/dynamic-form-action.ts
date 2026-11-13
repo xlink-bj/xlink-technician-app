@@ -106,7 +106,7 @@ export function dynamicActionUnsupportedFieldsFor(form: DynamicFormRead): readon
     // so its `visible` bit is false by construction. Re-evaluate the verified
     // visibility contract: only an explicitly hidden field is non-blocking;
     // an unresolvable expression remains fail-closed and blocks.
-    const visibility = evaluateVisibility(field.visibility, actionFormConditionValues(form))
+    const visibility = evaluateVisibility(field.visibility, actionFormConditionValues(form), field.roleVisibilityContext)
     return visibility.state !== 'hidden'
   })
 }

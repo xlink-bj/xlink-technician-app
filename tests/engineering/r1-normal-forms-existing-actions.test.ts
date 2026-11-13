@@ -1,3 +1,4 @@
+import { createSelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createNormalFormsActionProvider, parseR1FormsGrant } from '@app/r1-forms-authorization'
 import type { R1NodeFormsSnapshot } from '@features/work-orders/r1-node-forms-read'
@@ -9,7 +10,7 @@ const scope = { tenantId: 't', userId: 'u', roleId: 'r', workOrderId: 's', workf
 const origin = 'http://127.0.0.1:5189'
 const grant = { version: 2, scope, expiresAt: '2099-01-01T00:00:00Z', fieldIds: ['area'], operations: ['create', 'append', 'edit', 'save_finish', 'complete'], recordIds: ['a', 'b'] }
 
-function fixture(nodeTitle?: string, identityType?: 'phone' | 'IDNumber') {
+function fixture(nodeTitle?: string, identityType?: 'phone' | 'IDNumber', roleMode?: 'include' | 'exclude' | 'missing-context') {
   let session = { sessionRef: 'synthetic', user: { id: 'u' }, currentRole: { id: 'r' } }
   let exts: any = { formList: [{ _id: 'a', formDefId: 'e', state: 1, unknownRow: { keep: ['a'] } }, { _id: 'deleted', formDefId: 'e', state: -1, unknownDeleted: true }, { _id: 'b', formDefId: 'e', state: 1 }], unknownNode: { keep: [1, 'yes'] } }
   const raw = (id: string, area: number) => ({ _id: id, tenantId: 't', sid: 's', nodeId: 'n', workflowId: 'w', formDefId: 'e', smodule: 'serviceAppointment', state: 1, area, exts: { area, retainedNested: { keep: true } }, retainedTop: ['keep'] })
@@ -22,6 +23,10 @@ function fixture(nodeTitle?: string, identityType?: 'phone' | 'IDNumber') {
   function snapshot(): R1NodeFormsSnapshot {
     const active = exts.formList.filter((slot: any) => slot.state !== -1).map((slot: any) => rows.get(slot._id)).filter(Boolean)
     const s = { workOrderId: 's', node: { id: 'n', runId: 'w', formDefinitionId: 'e', sourceNodeType: 'forms', nodeTypeEvidence: 'runtime_node_def', lifecycle: 'active', handlers: [{ kind: 'user', userId: 'u' }], visibility: { evidenceState: 'verified', viewableRoleIds: ['r'] }, formFieldIdsReadOnly: [] }, definition: { id: 'e', fields: [{ fieldId: 'area', valueKey: 'area', type: identityType ?? 'digit', label: 'Area', required: true, readOnly: false }] }, fillableFieldIds: ['area'], records: active.map((r: any) => ({ id: r._id, definitionId: 'e', workflowRunId: 'w', values: { area: r.exts?.area ?? r.area } })) } as unknown as R1NodeFormsSnapshot
+    if (roleMode) Object.assign(s.definition.fields![0]!, {
+      visibility: { kind: 'role', mode: roleMode === 'exclude' ? 'exclude' : 'include', roleIds: roleMode === 'exclude' ? ['excluded'] : ['r'] },
+      ...(roleMode === 'missing-context' ? {} : { roleVisibilityContext: createSelectedRoleVisibilityContext(() => ({ sessionKey: session.sessionRef, roleId: session.currentRole.id })) }),
+    })
     if (nodeTitle !== undefined) Object.assign(s.node, { displayName: nodeTitle })
     originals.set(s, new Map(active.map((r: any) => [r._id, structuredClone(r)])))
     return s
@@ -295,6 +300,22 @@ describe('normal forms v2 existing-record actions with synthetic transport', () 
     expect(paths()).toEqual(['biz/extForm/upsert/e', 'workflowNode/updateExts/n', 'workflow/process'])
     expect(h.rows.get('a').area).toBe(valid)
     expect(h.reader.confirmFormsCompletion).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([['phone', '123'], ['IDNumber', 'bad-id']] as const)('role-visible %s still rejects explicit submission before all commands', async (type, invalid) => {
+    for (const mode of ['include', 'exclude'] as const) {
+      const h = fixture(undefined, type, mode), action = h.provider().forSnapshot(h.base)!
+      expect(action).toBeTruthy()
+      await expect(action.saveAndComplete!({ area: invalid }, 'a')).rejects.toThrow('格式不符合要求')
+      expect(paths()).toEqual([])
+      expect(h.reader.confirmFormsCompletion).not.toHaveBeenCalled()
+    }
+  })
+  it.each(['phone', 'IDNumber'] as const)('missing role context cannot format-bypass %s explicit submission', async type => {
+    const h = fixture(undefined, type, 'missing-context'), action = h.provider().forSnapshot(h.base)!
+    await expect(action.saveAndComplete!({ area: 'invalid' }, 'a')).rejects.toThrow()
+    expect(paths()).toEqual([])
+    expect(h.reader.confirmFormsCompletion).not.toHaveBeenCalled()
   })
 
 })
