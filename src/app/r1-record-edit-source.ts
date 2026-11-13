@@ -43,7 +43,8 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     || ['preScriptContent', 'scriptContent'].some(k => ext[k] != null && ext[k] !== '')) return
   for (const field of fields) {
     const raw = rawFields.find(f => f._id === field.fieldId)
-    const mapChoice=ext.type==='0'&&field.type==='radio'
+    const mapCheckbox=ext.type==='0'&&field.type==='checkbox'
+    const mapChoice=ext.type==='0'&&['radio','checkbox'].includes(field.type)
     const mapTemporal=ext.type==='0'&&field.type==='datetime'
     // Node-readonly Map values are retained from the full original, never
     // normalized or patched. Their shared display/control type need not also
@@ -54,7 +55,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
       || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapTemporal||preserveOnly)
       || ![0, 1].includes(raw.preset as number) || field.preset !== (raw.preset === 1)
       || !['0', '1'].includes(String(raw.required)) || field.required !== (String(raw.required) === '1')
-      || raw.operationType !== '1' || (preserveOnly
+      || raw.operationType !== '1' || (preserveOnly||mapCheckbox
         ? raw.multiple !== undefined && typeof raw.multiple !== 'boolean' || Boolean(raw.multiple) !== Boolean(field.multiple)
         : raw.multiple !== undefined && raw.multiple !== false || field.multiple)
       || raw.enabled !== undefined && raw.enabled !== 1

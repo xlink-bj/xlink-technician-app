@@ -1,5 +1,6 @@
 <template>
   <AppMultiChoiceGroup v-if="control === 'multi-choice'" :options="field.options"
+    :preserve-selection-order="field.type === 'checkbox'"
     :model-value="listValue" :disabled="disabled" @update:model-value="emit('update:modelValue', $event)" />
   <AppCascadeSelector leaf-layout-for-deep-trees v-else-if="control === 'cascade-inline'" :options="field.options"
     :model-value="listValue" :disabled="disabled"

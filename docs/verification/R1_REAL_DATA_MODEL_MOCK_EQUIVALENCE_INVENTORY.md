@@ -2,6 +2,8 @@
 
 最新有限能力补充：[已有配置记录编辑预算、placeholder 与只读值保全纠偏（2026-11-13）](R1_CONFIGURED_EDIT_BOUNDED_DYNAMIC_CORRECTION_20261113.md)。本批只修正已确认的过度拒绝，不代表全域动态能力或真实写入验收完成。
 
+后续功能批次：[type0 Map 已有记录 checkbox 协议贯通（2026-11-13）](R1_MAP_EXISTING_CHECKBOX_INTEGRATION_20261113.md)，覆盖显式空选、保序、完整原文与不确定保存保护；条件显示及 cascade 仍是独立待完成项。
+
 > 2026-11-05 Owner 决策；适用 `xlink-bj/xlink-technician-app` 当前技术工程师主流程。此文档是**建立 1:1 协议/模型 Mock 的执行清单**，不是 Production 原始数据导出、真实写入许可或已完成的 R1 全业务验收。
 
 ## 0. 权威来源与判定口径

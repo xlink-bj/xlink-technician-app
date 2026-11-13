@@ -27,8 +27,9 @@ const props = withDefaults(
     readonly options: readonly AppChoiceOption[]
     readonly modelValue: readonly string[]
     readonly disabled?: boolean
+    readonly preserveSelectionOrder?: boolean
   }>(),
-  { disabled: false },
+  { disabled: false, preserveSelectionOrder: false },
 )
 
 const emit = defineEmits<{
@@ -42,6 +43,7 @@ function toggle(option: AppChoiceOption): void {
   const next = new Set(selectedValues.value)
   if (next.has(option.value)) next.delete(option.value)
   else next.add(option.value)
-  emit('update:modelValue', props.options.map((item) => item.value).filter((value) => next.has(value)))
+  emit('update:modelValue', props.preserveSelectionOrder ? [...next]
+    : props.options.map((item) => item.value).filter((value) => next.has(value)))
 }
 </script>

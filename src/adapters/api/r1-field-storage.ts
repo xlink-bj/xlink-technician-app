@@ -3,6 +3,8 @@ export interface R1FieldStorage {
   readonly fieldId: string
   readonly valueKey: string
   readonly preset?: boolean
+  readonly type?: string
+  readonly required?: boolean
 }
 
 /** R1 saveForm copies non-preset business values to exts, retaining the root

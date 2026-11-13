@@ -116,12 +116,16 @@ export function r1SpecialFormUpsert(input: {
   if(!input.formData || typeof input.formData!=='object' || Array.isArray(input.formData)
     || Object.keys(input.formData).length>(largeExistingPatch?200:50))throw new Error('Unbounded or invalid R1 form field patch')
   for(const [key,value] of Object.entries(input.formData)){
+    const sources=input.fieldStorage?.filter(field=>field.valueKey===key)
+    const optionalCheckboxClear=Boolean(input.existingFormDataId&&sources?.length===1
+      &&sources[0]!.type==='checkbox'&&sources[0]!.required===false)
     if(!key.trim()||key.length>120||forbidden.has(key))
       throw new Error('R1 form field collides with server-owned identity')
     if(!((typeof value==='string'&&value.length<=4000)
       || (typeof value==='number'&&Number.isFinite(value))
       || typeof value==='boolean'
       // Legacy extForm sends checkbox IDs and cascade paths as JSON arrays.
+      || (Array.isArray(value)&&value.length===0&&optionalCheckboxClear)
       || (Array.isArray(value)&&value.length>0&&value.length<=30
         && value.every(part=>typeof part==='string'&&part.length>0&&part.length<=256))
       || (Array.isArray(value)&&value.length>0&&isR1FileWireArray(value))))

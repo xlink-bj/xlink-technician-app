@@ -1,9 +1,9 @@
 import type { AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RecordEditRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-actions-port'
-import { projectR1RepeatFields } from '@features/work-orders/r1-repeat-form'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from '@features/work-orders/action-form-schema'
-import { normalizeSubmission } from '@runtimes/dynamic-form'
+import { hasDistinctR1ChoiceMembers } from '@features/work-orders/r1-local-form-fields'
+import { evaluateFieldState, normalizeSubmission } from '@runtimes/dynamic-form'
 import { evaluateNodeVisibility, isHandlerMatch } from '@runtimes/workflow/policy'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
@@ -127,16 +127,24 @@ export function createConfiguredRecordEditActions(input: {
     for(const f of fields){
       if(!grant.fieldIds.includes(f.fieldId)&&Object.hasOwn(values,f.valueKey)&&stable(values[f.valueKey])!==stable(initial[f.valueKey]))refuse()
     }
-    for(const f of writable){const v=merged[f.valueKey];if(v!==undefined&&!(typeof v==='string'||typeof v==='number'&&Number.isFinite(v)))refuse()
+    for(const f of writable){const v=merged[f.valueKey]
+      if(f.type==='checkbox'){
+        if(v!==undefined&&(!Array.isArray(v)||v.length>30||v.some(x=>typeof x!=='string'||!x||x.length>256)||!hasDistinctR1ChoiceMembers(v)))refuse()
+      }else if(v!==undefined&&!(typeof v==='string'||typeof v==='number'&&Number.isFinite(v)))refuse()
       if(f.type==='radio'&&v!==undefined&&typeof v!=='string')refuse()
       if(['number','digit'].includes(f.type)&&v==='')refuse()}
     const result=normalizeSubmission({fields:schemas,values:merged,surface:ACTION_FORM_SURFACE});if(!result.ok)refuse()
-    const patch:Record<string,string|number|boolean>={}
+    const patch:Record<string,string|number|boolean|readonly string[]>={}
     for(const f of writable){const key=f.valueKey;if(!Object.hasOwn(values,key))continue
-      const value=result.value.values[key]??(!f.required&&values[key]===''&&!['number','digit'].includes(f.type)?'':undefined)
+      const supplied=values[key]
+      // Empty optional checkbox is an explicit clear, not absence. R1's
+      // checkbox-group serializes []; omitting it would retain the old value.
+      const value=result.value.values[key]??(!f.required&&f.type==='checkbox'&&Array.isArray(supplied)&&supplied.length===0?[]
+        :!f.required&&values[key]===''&&!['number','digit'].includes(f.type)?'':undefined)
       if(value===undefined)continue
-      if(!['string','number','boolean'].includes(typeof value))refuse()
-      patch[key]=value as string|number|boolean
+      if(Array.isArray(value)&&f.type==='checkbox')patch[key]=Object.freeze([...value]) as readonly string[]
+      else if(['string','number','boolean'].includes(typeof value))patch[key]=value as string|number|boolean
+      else refuse()
     }
     return patch
   }
@@ -153,7 +161,17 @@ export function createConfiguredRecordEditActions(input: {
       try{source(lease,id);return null}catch{return '记录的完整信息尚未核实，暂不能编辑。'}
     },
     initialValues(id){try{return canEdit(id)?initialValues(id):null}catch{return null}},
-    projectFields(values,id){return id&&canEdit(id)?projectR1RepeatFields(lease,values).map(f=>({...f,supported:f.supported&&grant.fieldIds.includes(f.fieldId)})):[]},
+    // Existing editing has a reader-issued storage policy. Reuse the shared
+    // runtime projection directly rather than a create-specific codec list.
+    projectFields(values,id){return id&&canEdit(id)?lease.definition.fields!.map(field=>{
+      const state=evaluateFieldState(actionFormSchemaFor({...field,
+        readOnly:field.readOnly||lease.node.formFieldIdsReadOnly?.includes(field.fieldId)===true}),
+        {values:values as never,surface:ACTION_FORM_SURFACE})
+      return {fieldId:field.fieldId,valueKey:field.valueKey,label:field.label,type:field.type,
+        required:state.required,readOnly:state.readOnly,options:field.options??[],multiple:Boolean(field.multiple),visible:state.visible,
+        supported:grant.fieldIds.includes(field.fieldId)&&state.capability==='SUPPORTED_GENERIC'&&state.visible&&!state.readOnly,
+        ...(field.presentation?.placeholder?{placeholder:field.presentation.placeholder}:{}),...(state.reason?{reason:state.reason}:{})}
+    }):[]},
     validateDraft(values,id){try{if(!id)return false;normalize(values,id);return true}catch{return false}},
     complete:async()=>refuse(),
     async saveOnly(values,selectedId){

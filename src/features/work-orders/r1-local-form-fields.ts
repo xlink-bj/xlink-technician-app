@@ -27,6 +27,11 @@ const choices = new Set(['select','radio','checkbox','cascade','bizSelect'])
 // Keep the transport's payload bound separate from the source-backed row bound.
 export const R1_LOCAL_FORM_MAX_ROWS = 200
 const MAX_VALUES = 50
+/** Shared frontend safety rule. R1's direct onChange assignment does not
+ * independently prove that the server rejects duplicate checkbox members. */
+export function hasDistinctR1ChoiceMembers(values: readonly unknown[]): boolean {
+  return new Set(values).size === values.length
+}
 function locallySupported(field: FormFieldRead): boolean {
   return (field.type === 'file' || scalar.has(field.type)
     || (choices.has(field.type) && !!field.options?.length
@@ -101,7 +106,7 @@ export function normalizeR1LocalFieldPatch(
   if((field.type==='checkbox'||field.type==='cascade')
     && (!Array.isArray(raw)||!raw.every(x=>typeof x==='string'))) return null
   if((field.type==='checkbox'||(field.type==='bizSelect'&&field.multiple))
-    && Array.isArray(raw) && new Set(raw).size!==raw.length) return null
+    && Array.isArray(raw) && !hasDistinctR1ChoiceMembers(raw)) return null
   if(field.type==='bizSelect' && field.multiple
     && (!Array.isArray(raw)||!raw.every(x=>typeof x==='string'))) return null
   const normalized=normalizeFieldValue(field.type,raw,field.options,field.multiple)
