@@ -61,6 +61,8 @@ export interface QuotationOrderBrowseItem {
   /** Sanitized R1 initial-sign guard; missing fields are NOT assumed false. */
   readonly hasExts?: boolean
   readonly isAgain?: number
+  /** Source projection of the complete returned EXTS; never a signing grant. */
+  readonly isAgainState?: 'absent' | 'present' | 'invalid'
   readonly updateTime?: string
   readonly originPrice?: number
   readonly totalPrice?: number

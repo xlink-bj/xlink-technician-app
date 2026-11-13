@@ -60,7 +60,7 @@ export interface R1SigningIntentContext {
   readonly workOrderId: string
   readonly selectedOrderId: string
   readonly officialOrder: Pick<QuotationOrderBrowseItem, 'id' | 'type' | 'serviceAppointmentId' | 'state' | 'processState'>
-    & { readonly isAgain?: number; readonly hasExts?: boolean } | null
+    & { readonly isAgain?: number; readonly hasExts?: boolean; readonly isAgainState?: 'absent'|'present'|'invalid' } | null
   readonly contractState: 'idle' | 'loading' | 'succeeded' | 'failed_retryable' | 'failed_terminal'
   readonly contracts: readonly R1ScopedContractSummary[]
   readonly selectedContractId?: string
@@ -154,7 +154,8 @@ export function reviewR1SigningIntent(
   } else {
     if (order?.processState !== 0) reasons.push('正式订单不是 R1 允许首次签约的 processState=0')
     // extension metadata is intentionally not projected in existing Order precheck.
-    if (order?.hasExts !== true || order.isAgain === undefined) {
+    if (order?.hasExts !== true || order.isAgainState==='invalid'
+      || order.isAgain===undefined&&order.isAgainState!=='absent') {
       reasons.push('尚未核验正式订单扩展字段 exts.isAgain')
     } else if (order.isAgain === 1) {
       reasons.push('R1 exts.isAgain=1 禁止首次签约')

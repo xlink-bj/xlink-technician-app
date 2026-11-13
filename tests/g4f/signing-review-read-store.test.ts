@@ -99,7 +99,7 @@ describe('M1 engineering first: main App official Order → Signing read store',
     const f = fixture()
     f.current.value = null
     expect((await f.store.load(wo, orderId)).state).toBe('failed_terminal')
-    f.current.value = { ...session(), roleVersion: undefined }
+    f.current.value = { ...session(), sessionRef: '' as any }
     expect((await f.store.load(wo, orderId)).state).toBe('failed_terminal')
     expect(f.listTypeOneOrdersForWorkOrder).not.toHaveBeenCalled()
   })

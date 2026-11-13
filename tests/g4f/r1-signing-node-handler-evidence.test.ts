@@ -81,7 +81,7 @@ describe('M1 I6 R1 active WorkflowNode handler read evidence, never signing righ
       expect(reviewR1ActivePlaceOrderHandler(bad,session(),wo).verified).toBe(false)
     }
     expect(reviewR1ActivePlaceOrderHandler(clean,null,wo).verified).toBe(false)
-    expect(reviewR1ActivePlaceOrderHandler(clean,{...session(),roleVersion:undefined},wo).verified).toBe(false)
+    expect(reviewR1ActivePlaceOrderHandler(clean,{...session(),roleVersion:undefined},wo).verified).toBe(true)
   })
 
   function setup(options: {

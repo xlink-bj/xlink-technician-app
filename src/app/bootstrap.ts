@@ -1,3 +1,4 @@
+import { isProductionReadOnlyRuntime } from '@shared/config'
 import { surveyLeakageCauseReadKey } from '@features/work-orders/survey-leakage-cause-read'
 import { resolveAStageDynamicFormMockWorkspace } from './a-stage-dynamic-form-mock-ui'
 import { createR1NormalFormDraftProvider } from './r1-normal-form-drafts'
@@ -167,7 +168,8 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
         && String(workOrderDetailStore.detail?.id ?? '') === id
         && workOrderListStore.items.some((item) => String(item.id) === id)),
     apiRead,
-    isDevSyntheticContractReadPreviewEnabled,
+    id=>!isProductionReadOnlyRuntime()&&(isDevSyntheticContractReadPreviewEnabled(id)
+      || apiRead.isWorkOrderListedForCurrentSession?.(id)===true),
     localSigningRead.enabled() ? localSigningRead : undefined,
   )
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)

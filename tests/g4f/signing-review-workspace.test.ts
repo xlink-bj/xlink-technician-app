@@ -103,9 +103,9 @@ describe('M1-I6 scoped signing-read handoff — no Contract or signature authori
     }
   })
 
-  it('denies a missing role/version, invisible WorkOrder, invalid IDs, and no scoped signing capability', async () => {
+  it('denies a missing role/session, invisible WorkOrder, invalid IDs, and no scoped signing capability', async () => {
     const s = setup()
-    s.changeSession({ ...session(), roleVersion: undefined })
+    s.changeSession({ ...session(), currentRole: undefined })
     expect((await s.workspace.load(wo, order)).state).toBe('failed_terminal')
     s.changeSession(null)
     expect((await s.workspace.load(wo, order)).state).toBe('failed_terminal')

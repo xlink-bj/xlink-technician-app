@@ -12,6 +12,8 @@
 
 后续业务选择批次：[type0 Map 已有记录 bizSelect 单值与 Label（2026-11-13）](R1_MAP_BIZSELECT_SCALAR_EDIT_20261113.md)。仅接已证明的有限 provider 与 scalar/根级 Label 保存；原项重选、条件草稿与只读字段重名均有回归。真实生产 provider、当前节点归属及持久化仍未验收。
 
+当前只读能力：[正常App签约前条件核验（2026-11-13）](R1_NORMAL_SIGNING_READONLY_ELIGIBILITY_20261113.md)，保持零签署dispatch。实际隔离证据见[本地真实集成实证对账](R1_LOCAL_REAL_INTEGRATION_EVIDENCE_20261113.md)：正式Order创建、Survey完成、bizSelect C及真实Java token/实际App合成存储链分别计账，不将旧正文的未验标签泛化，也不推广为Production。
+
 > 2026-11-05 Owner 决策；适用 `xlink-bj/xlink-technician-app` 当前技术工程师主流程。此文档是**建立 1:1 协议/模型 Mock 的执行清单**，不是 Production 原始数据导出、真实写入许可或已完成的 R1 全业务验收。
 
 ## 0. 权威来源与判定口径

@@ -314,6 +314,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/map-bizselect-scalar-edit.config.ts
+      - name: Verify normal signing readonly eligibility and late identity revocation (3 cases)
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/normal-signing-eligibility.config.ts
       - name: Verify existing attachment identity removal cancellation and readback
         env:
           VITE_XLINK_ENVIRONMENT: 'test'
@@ -353,6 +358,7 @@ jobs:
             test-results/map-choice-datetime-edit/
             test-results/retained-attachment-edit/
             test-results/map-bizselect-scalar-edit/
+            test-results/normal-signing-eligibility/
             test-results/normal-r1-file-upload/
             test-results/normal-r1-image-recovery/
             test-results/existing-image-upload/

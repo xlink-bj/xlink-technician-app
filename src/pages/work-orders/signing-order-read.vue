@@ -128,6 +128,15 @@
           </view>
         </view>
       </AppRecordCard>
+      <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-eligibility">
+        <AppSectionHeading title="签约信息核对" />
+        <text data-testid="signing-eligibility-result">{{ eligibilityFeedback.summary }}</text>
+        <text v-if="review.handlerSnapshot.reason" data-testid="signing-handler-reason">{{ eligibilityFeedback.handler }}</text>
+        <AppButton block variant="secondary" data-testid="signing-handler-check"
+          :disabled="productionReadOnly || review.handlerSnapshot.state === 'loading'" @tap="review.loadNodeHandlerEvidence()">核对操作条件</AppButton>
+        <text v-for="reason in eligibilityFeedback.notes" :key="reason" class="signing-read-help" data-testid="signing-eligibility-reason">{{ reason }}</text>
+        <text class="signing-read-help">{{ eligibilityFeedback.notice }}</text>
+      </AppRecordCard>
       <navigator class="signing-read-return xl-craft__action-secondary" open-type="navigateBack" :delta="1"
         data-testid="signing-order-read-return">
         返回
@@ -155,10 +164,12 @@ import { useSigningReviewReadStore } from '@features/work-orders/signing/signing
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
 import { reconcileR1SigningRead } from '@features/work-orders/signing/r1-signing-read-reconciliation'
+import { signingEligibilityFeedback } from '@features/work-orders/signing/r1-signing-ui-rules'
 import { signingReviewProgress } from '@features/work-orders/signing/signing-review-progress'
 
 const session = useSessionStore()
 const review = useSigningReviewReadStore()
+const eligibilityFeedback = computed(() => signingEligibilityFeedback(review.initialSigningIntent.assessment, review.handlerSnapshot.state))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const signingStage = computed(() => reconcileR1SigningRead(
   review.snapshot.state === 'ready' ? review.snapshot.review?.order : null,

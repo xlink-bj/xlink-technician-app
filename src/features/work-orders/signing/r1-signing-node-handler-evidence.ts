@@ -1,4 +1,5 @@
 import type { SessionSnapshot, WorkOrderDetail } from '@shared/ports'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { isHandlerMatch, type WorkflowActor } from '@runtimes/workflow'
 
 /**
@@ -13,8 +14,8 @@ export function reviewR1ActivePlaceOrderHandler(
   session: SessionSnapshot | null,
   expectedWorkOrderId: string,
 ): { readonly verified: boolean; readonly reason: string } {
-  if (!session?.currentRole?.id || !session.roleVersion) {
-    return { verified: false, reason: '当前角色版本/会话身份缺失' }
+  if (!session?.currentRole?.id || !sessionAuthorizationFingerprint({sessionRef:session.sessionRef,userId:session.user.id,roleId:session.currentRole.id,roleVersion:session.roleVersion})) {
+    return { verified: false, reason: '当前会话/用户/角色身份缺失' }
   }
   if (!detail || String(detail.id) !== expectedWorkOrderId || !Array.isArray(detail.workflowNodes)) {
     return { verified: false, reason: '新读取的工单与工作流节点归属未核验' }

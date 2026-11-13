@@ -70,3 +70,21 @@ export function r1ContractStatusReadNotice(status: string | undefined): string {
   if (status === '-3') return 'R1 合同记录：签署异常（状态 -3）；再次签约效果待核验'
   return 'R1 合同状态尚未核验；不能推断已签署或可发起'
 }
+
+/** Technician-facing copy only. Internal diagnostic reasons stay in the review
+ * model and are never used as display strings by this card. */
+export function signingEligibilityFeedback(
+  assessment: 'candidate' | 'blocked' | 'source_conflict',
+  handlerState: 'idle' | 'loading' | 'verified' | 'blocked',
+) {
+  return {
+    summary: assessment === 'candidate'
+      ? '条件已核对，此处仅查看，不会发起签约。'
+      : '当前操作条件尚未确认，请重新读取订单信息。',
+    handler: handlerState === 'verified'
+      ? '当前处理信息已核对。'
+      : '当前处理信息尚未确认，请重新读取订单信息。',
+    notes: ['如需更新，请重新读取当前订单后再核对。'],
+    notice: '此处仅供查看，不会发起签约或发送消息。',
+  } as const
+}

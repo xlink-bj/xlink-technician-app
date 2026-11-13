@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import type { QuotationOrderReadPort, ScopedSigningOrderReviewRead, SessionSnapshot, TechnicianApiReadPort } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
 import { asOpaqueId, createOperationError } from '@shared/types'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
+import { reviewR1SigningIntent } from './r1-signing-command-intents'
 import { reviewR1ActivePlaceOrderHandler } from './r1-signing-node-handler-evidence'
 import {
   createSigningReviewReadWorkspace,
@@ -30,7 +32,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
   const handlerSnapshot = ref<{ readonly state: 'idle' | 'loading' | 'verified' | 'blocked'; readonly reason?: string }>({ state: 'idle' })
   let handlerAttempt = 0
   let handlerApi: TechnicianApiReadPort | null = null
-  let allowSyntheticNodeRead: (id: string) => boolean = () => false
+  let allowCurrentNodeRead: (id: string) => boolean = () => false
   let contractAttempt = 0
   let contractPort: QuotationOrderReadPort | null = null
   let workspace: ReturnType<typeof createSigningReviewReadWorkspace> | null = null
@@ -49,10 +51,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
       try { return readAuthority.currentKey() ?? '' } catch { return '' }
     }
     const session = getSession()
-    if (!session?.currentRole?.id || !session.roleVersion) return ''
-    return JSON.stringify([
-      session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion,
-    ])
+    return sessionAuthorizationFingerprint(session?{sessionRef:session.sessionRef,userId:session.user.id,roleId:session.currentRole?.id,roleVersion:session.roleVersion}:null)??''
   }
 
   function clear(): void {
@@ -75,7 +74,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     sessionProvider: () => SessionSnapshot | null,
     isCurrentWorkOrderListedForSession: (id: string) => boolean,
     nodeReadApi?: TechnicianApiReadPort,
-    allowSyntheticCurrentNodeRead: (id: string) => boolean = () => false,
+    allowCurrentNodeReadPolicy: (id: string) => boolean = () => false,
     scopedReadAuthority?: SigningReadAuthority,
   ): void {
     stopWatch?.()
@@ -85,7 +84,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     getSession = sessionProvider
     contractPort = port
     handlerApi = nodeReadApi ?? null
-    allowSyntheticNodeRead = allowSyntheticCurrentNodeRead
+    allowCurrentNodeRead = allowCurrentNodeReadPolicy
     isCurrentWorkOrderListed = isCurrentWorkOrderListedForSession
     workspace = createSigningReviewReadWorkspace({
       port,
@@ -212,7 +211,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
 
 
   /**
-   * Explicit DEV-only, user-triggered fresh WorkOrder detail read. It does not
+   * Explicit policy-scoped, user-triggered fresh WorkOrder detail read. It does not
    * use the Detail page's potentially stale cached workflow projection.
    * This read can prove R1 isHandler display eligibility but never signing ACL.
    */
@@ -224,7 +223,7 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     const generationAtStart = generation
     if (current.state !== 'ready' || !current.workOrderId || !current.orderId
       || !key || !safeListed(current.workOrderId)
-      || !handlerApi || !allowSyntheticNodeRead(current.workOrderId)) return
+      || !handlerApi || !allowCurrentNodeRead(current.workOrderId)) return
     handlerSnapshot.value = { state: 'loading' }
     try {
       const result = await handlerApi.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(current.workOrderId))
@@ -262,5 +261,14 @@ export const useSigningReviewReadStore = defineStore('signingReviewRead', () => 
     } catch { return false }
   }
 
-  return { canReadContracts, snapshot, contractSnapshot, handlerSnapshot, configure, load, loadContracts, loadNodeHandlerEvidence, clear }
+  const initialSigningIntent=computed(()=>{
+    const selected=snapshot.value,ready=selected.state==='ready',id=selected.workOrderId??''
+    return reviewR1SigningIntent('electronic',{workOrderId:id,selectedOrderId:selected.orderId??'',
+      officialOrder:ready?selected.review?.order??null:null,contractState:contractSnapshot.value.state,
+      contracts:contractSnapshot.value.items,currentIdentityVerified:Boolean(scopeKey()),
+      currentRoleWorkOrderVerified:ready&&Boolean(scopeKey())&&safeListed(id),
+      currentNodeHandlerVerified:ready&&handlerSnapshot.value.state==='verified'})
+  })
+
+  return { initialSigningIntent, canReadContracts, snapshot, contractSnapshot, handlerSnapshot, configure, load, loadContracts, loadNodeHandlerEvidence, clear }
 })

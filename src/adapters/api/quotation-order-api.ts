@@ -433,6 +433,11 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
   const rawGroups = products?.orderList
   const groups = Array.isArray(rawGroups) ? rawGroups.map(browseGroup) : []
   const exts = optionalRecord(record.exts)
+  const rawAgain=exts?.isAgain
+  // Do not let generic Number coercion turn null/false/blank into a legal 0.
+  const parsedAgain=typeof rawAgain==='number'?rawAgain
+    :typeof rawAgain==='string'&&/^\d+$/.test(rawAgain)?Number(rawAgain):undefined
+  const isAgain=typeof parsedAgain==='number'&&Number.isSafeInteger(parsedAgain)&&parsedAgain>=0?parsedAgain:undefined
   const pdfValue = typeof exts?.bjdPDFurl === 'string' ? exts.bjdPDFurl.trim() : ''
   const contractId = consistentWireIdentity(record, ['contractId'], 'Quotation Order Contract reference')
   return {
@@ -443,9 +448,10 @@ function quotationOrderBrowseItem(raw: unknown): QuotationOrderBrowseItem {
     ...(optionalString(record, ['orderNumber']) ? { displayNumber: optionalString(record, ['orderNumber']) } : {}),
     ...(optionalSignedInteger(record, ['state']) !== undefined ? { state: optionalSignedInteger(record, ['state']) } : {}),
     ...(optionalSignedInteger(record, ['processState']) !== undefined ? { processState: optionalSignedInteger(record, ['processState']) } : {}),
-    ...(exts ? { hasExts: true } : {}),
-    ...(exts && optionalNonNegativeInteger(exts, ['isAgain']) !== undefined
-      ? { isAgain: optionalNonNegativeInteger(exts, ['isAgain']) }
+    ...(exts ? { hasExts: true, isAgainState: !Object.hasOwn(exts,'isAgain') ? 'absent' as const
+      : isAgain!==undefined ? 'present' as const : 'invalid' as const } : {}),
+    ...(isAgain !== undefined
+      ? { isAgain }
       : {}),
     ...(optionalString(record, ['updateTime']) ? { updateTime: optionalString(record, ['updateTime']) } : {}),
     ...(browseAmount(record, ['originPrice']) === undefined ? {} : { originPrice: browseAmount(record, ['originPrice']) }),

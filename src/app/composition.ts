@@ -52,7 +52,6 @@ import { loadApplicationRuntimeConfig } from './runtime-config'
 import { isBusinessMockMode, isDevSyntheticContractReadPreviewEnabled } from './business-mock'
 import {
   sessionAuthorizationFingerprint,
-  versionedSessionAuthorizationFingerprint,
 } from '@shared/session-authorization'
 
 function configurationFailure<T>(message: string): OperationSnapshot<T> {
@@ -314,15 +313,6 @@ export function createDefaultQuotationOrderReadPort(
       roleVersion: session.roleVersion,
     } : null)
   }
-  const signingAuthorizationIdentity = (): string | null => {
-    const session = authSession.getCurrentSession()
-    return versionedSessionAuthorizationFingerprint(session ? {
-      sessionRef: session.sessionRef,
-      userId: session.user.id,
-      roleId: session.currentRole?.id,
-      roleVersion: session.roleVersion,
-    } : null)
-  }
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
     blockRealRequests: config.value.authOnlyMockBusiness,
@@ -335,11 +325,11 @@ export function createDefaultQuotationOrderReadPort(
     },
   })
   // Ordinary role-scoped browsing uses the real session/user/role identity;
-  // R1 may omit roleVersion. Signing review keeps the stricter versioned gate.
+  // R1 may omit roleVersion. Readonly signing review uses the same nullable identity; it grants no signing commands.
   return createQuotationOrderReadAdapter(
     transport,
     isWorkOrderListedForCurrentSession,
-    signingAuthorizationIdentity,
+    authorizationIdentity,
     isDevSyntheticContractReadPreviewEnabled,
   )
 }

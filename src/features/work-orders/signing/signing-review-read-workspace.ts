@@ -5,6 +5,7 @@ import type {
 } from '@shared/ports'
 import type { OperationSnapshot } from '@shared/types'
 import { createOperationError } from '@shared/types'
+import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { isSigningReadOrderCandidate } from '@shared/signing-order-read-policy'
 
 /**
@@ -37,8 +38,7 @@ type RuntimeScope = {
 }
 
 function authKey(session: SessionSnapshot | null): string | null {
-  if (!session?.currentRole?.id || !session.roleVersion) return null
-  return JSON.stringify([session.sessionRef, session.user.id, session.currentRole.id, session.roleVersion])
+  return sessionAuthorizationFingerprint(session?{sessionRef:session.sessionRef,userId:session.user.id,roleId:session.currentRole?.id,roleVersion:session.roleVersion}:null)
 }
 
 function validId(value: string): boolean {

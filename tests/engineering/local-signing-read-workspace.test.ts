@@ -25,7 +25,7 @@ function fixture(injected = true) {
 }
 beforeEach(() => setActivePinia(createPinia()))
 describe('optional scoped signing read authority, without invented roleVersion', () => {
-  it('default path still rejects a versionless session before any read', async () => {
+  it('default path rejects an unlisted WorkOrder before any read, even with a valid nullable-version identity', async () => {
     const f = fixture(false); expect((await f.store.load(sid, oid)).state).toBe('failed_terminal'); expect(f.list).not.toHaveBeenCalled(); expect(f.prepare).not.toHaveBeenCalled()
   })
   it('fresh preparation can rebuild cold membership and allows only capability-false review', async () => {
@@ -53,7 +53,7 @@ describe('optional scoped signing read authority, without invented roleVersion',
   it('late order response after role loss cannot become ready', async () => {
     const f = fixture(), d = deferred(); f.read.mockImplementationOnce(async () => { await d.promise; return { state: 'succeeded', data: { order, contractReadAuthorized: false, signingAuthorized: false } } }); const run = f.store.load(sid, oid); await vi.waitFor(() => expect(f.read).toHaveBeenCalledOnce()); f.session.value = null; d.resolve(); await run; expect(f.store.snapshot.state).toBe('idle')
   })
-  it('reconfiguration back to defaults cannot retain scoped authority', async () => {
-    const f = fixture(); await f.store.load(sid, oid); f.configure(false); expect((await f.store.load(sid, oid)).state).toBe('failed_terminal'); expect(f.store.canReadContracts(sid, oid)).toBe(false)
+  it('reconfiguration back to defaults retains listed read access but discards scoped contract authority', async () => {
+    const f = fixture(); await f.store.load(sid, oid); f.configure(false); expect((await f.store.load(sid, oid)).state).toBe('succeeded'); expect(f.prepare).toHaveBeenCalledTimes(1); expect(f.store.canReadContracts(sid, oid)).toBe(false)
   })
 })
