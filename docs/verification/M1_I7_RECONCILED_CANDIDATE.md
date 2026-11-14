@@ -1,5 +1,7 @@
 # M1 I7 — Reconciled integration Draft gate (no release)
 
+> 历史快照：保留以下原文供既有门禁与 manifest 核对，不代表当前 main 状态。当前入口见 [verification 导航](README.md)。
+
 **Date:** 2026-10-12. This document records an **independent, unmerged integration candidate**; it does not approve a PR merge, any Production/Beta write, or a new I7 acceptance.
 
 ## Exact source evidence and merge construction

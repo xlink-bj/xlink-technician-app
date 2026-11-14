@@ -1,5 +1,7 @@
 # M1 / DS-07.C8 — Main Integration Preflight (Review Only)
 
+> 历史快照：保留以下原文供既有门禁与 manifest 核对，不代表当前 main 状态。当前入口见 [verification 导航](README.md)。
+
 **State:** `ENGINEERING_PREFLIGHT`; **MAIN MERGE HOLD / PRODUCTION HOLD**. This is **not** a replacement for the earlier [M1 main Draft #116](https://github.com/xlink-bj/xlink-technician-app/pull/116), and deliberately does not create a second unreviewed PR targeted directly at `main`.
 
 ## Exact source and branch relationship, 2026-10-18

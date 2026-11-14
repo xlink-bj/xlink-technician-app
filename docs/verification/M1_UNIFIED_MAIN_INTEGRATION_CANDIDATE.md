@@ -1,5 +1,7 @@
 # M1｜统一主干工程候选（DRAFT / 不代表发布就绪）
 
+> 历史快照：保留以下原文供既有门禁与 manifest 核对，不代表当前 main 状态。当前入口见 [verification 导航](README.md)。
+
 **2026-10-13 source snapshot.** This is the first deliberately visible **PR to main** for all M1 engineering work. It does NOT approve merging. Existing Issue #33 is authoritative for formal iteration DoD and the 2026-10-12 Owner “engineering first, UX Phase 2” decision.
 
 ## Immutable reference and scope
