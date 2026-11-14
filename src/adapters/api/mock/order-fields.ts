@@ -1,6 +1,3 @@
-import type { FormFieldOptionRead } from '@shared/ports'
-/** Bounded synthetic static area data; not a nationwide/current Production provider. */
-export const mockOrderAreaOptions: readonly FormFieldOptionRead[] = [{ value: '110000', label: '北京市', children: [{ value: '110100', label: '北京市城区', children: [{ value: '110101', label: '东城区' }] }] }]
 /** Synthetic contents with R1 ExtField/Code wire shapes. No Production schema claim. */
 export function mockOrderFieldsRead(route: string, body: Readonly<Record<string, unknown>>): unknown | undefined {
   if (route === 'biz/extField/query' && body.colName === 'order'

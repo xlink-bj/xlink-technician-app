@@ -3,6 +3,8 @@ import type { StoragePort } from '@shared/ports'
 const mock = vi.hoisted(() => ({ read: vi.fn() }))
 vi.mock('@adapters/api/mock/router', () => ({ tryMockRead: mock.read }))
 import { createMockOrderFieldSession } from '../../src/app/mock-order-field-session'
+import wire from '../../contracts/production/technician-role-readonly-20261105/effective-order-wire.json'
+import { evaluateOrderExtFields } from '../../src/features/work-orders/quotation/order-extfield-runtime'
 
 function storage() {
   let value: unknown = null
@@ -16,6 +18,28 @@ function schema() {
 }
 afterEach(() => vi.clearAllMocks())
 describe('scoped Mock Order field draft session', () => {
+  it.each(['unverified-area-provider', { unexpected: true }])('rejects unverified area provider metadata before another request: %j', async valueOption => {
+    const field = wire.fieldResponse.data.find(row => row.name === 'projectArea')!
+    mock.read.mockResolvedValue({ total: 1, data: [{ ...field, valueOption }] })
+    const session = createMockOrderFieldSession(storage(), () => true, 'actor:unsupported-area')
+    expect(await session.load(wire.context.serviceType, 'submitOrder')).toBeNull()
+    expect(mock.read).toHaveBeenCalledTimes(1)
+  })
+  it('binds the pinned area dictionary to the captured submit-stage field without a Code request', async () => {
+    const field = wire.fieldResponse.data.find(row => row.name === 'projectArea')!
+    mock.read.mockResolvedValue({ total: 1, data: [field] })
+    const session = createMockOrderFieldSession(storage(), () => true, 'actor:captured-area')
+    const draft = await session.load(wire.context.serviceType, 'submitOrder')
+    expect(draft).not.toBeNull()
+    const path = ['440000', '440300', '440305']
+    const input = { ...draft!.input, values: { projectArea: path } }
+    expect(evaluateOrderExtFields(input, 'submit')).toMatchObject({ state: 'ready', exts: { projectArea: path } })
+    expect(evaluateOrderExtFields({ ...input, values: { projectArea: ['440000', '440300', '110101'] } }, 'submit').state).toBe('blocked')
+    expect(mock.read).toHaveBeenCalledTimes(1)
+    expect(mock.read.mock.calls[0][0]).toBe('biz/extField/query')
+    expect(await session.save({ projectArea: path }, 0)).toBe(1)
+    expect(await session.verifyCurrent()).toBe(true)
+  })
   it('restores the same schema/context and rejects stale cross-session updates', async () => {
     schema()
     const port = storage()

@@ -1,5 +1,5 @@
 import { decodeOrderMedia } from '@features/work-orders/quotation/order-extfield-wire'
-import { mockOrderAreaOptions } from '@adapters/api/mock/order-fields'
+import { r1OrderAreaOptions } from '@adapters/api/reference/order-area-options'
 import { withScopedDraftLock } from '@adapters/storage/scoped-draft-lock'
 import { dynamicCodeOptions, cascadeCodeOptions } from '@adapters/api/read-models/code-options'
 import { tryMockRead } from '@adapters/api/mock/router'
@@ -49,8 +49,10 @@ export function createMockOrderFieldSession(storage: StoragePort, authorized: ()
           seen.add(row._id)
           rows.push({ ...row, rowId: row._id, valueKey: row.name })
           labels[row._id] = row.nameDisp
-          if (row.type === 'area') optionsByRowId[row._id] = mockOrderAreaOptions
-          if (typeof row.valueOption === 'string' && row.valueOption) {
+          if (row.type === 'area') {
+            if (row.valueOption !== undefined && row.valueOption !== null && row.valueOption !== '') return null
+            optionsByRowId[row._id] = r1OrderAreaOptions
+          } else if (typeof row.valueOption === 'string' && row.valueOption) {
             const cascade = row.type === 'cascade'
             const response = await tryMockRead(cascade ? 'i/code/selectMultistageCode.do' : 'i/code/selectCode.do', cascade
               ? { types: row.valueOption, tenantId: 'synthetic-qa-tenant' }
