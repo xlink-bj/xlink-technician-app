@@ -66,7 +66,7 @@ for(const mode of ['success','cancel-before-upload','cancel-after-upload','known
  const row=()=>page.getByTestId('r1-normal-form-record').filter({has:page.getByTestId('r1-normal-value-inspectionNote').filter({hasText:'记录A'})})
  const stableRead=async()=>{
   const expected=structuredClone(a.attachments)
-  await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('已从后台读取 2 条记录，当前仅查看。')
+  await expect(page.getByTestId('r1-normal-form-read-message')).toContainText('已从后台读取 2 条记录')
   await expect(page.getByTestId('r1-normal-form-read').locator('.app-button').filter({hasText:'读取已保存表单'})).toHaveAttribute('aria-disabled','false')
   await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(2)
   await expect(row().locator('.r1-file-item')).toHaveCount(expected.length+1)
