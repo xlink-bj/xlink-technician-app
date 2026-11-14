@@ -15,7 +15,9 @@ export default defineConfig({
   expect: { timeout: 20_000 },
   reporter: [['list']],
   webServer: {
-    command: 'pnpm run dev:h5',
+    // Offline acceptance owns its synthetic profile, independently of the
+    // ordinary local-backend entry and private environment migration.
+    command: './node_modules/.bin/uni -p h5',
     url: baseURL,
     cwd: repositoryRoot,
     timeout: 120_000,
@@ -23,6 +25,8 @@ export default defineConfig({
     stdout: 'pipe',
     stderr: 'pipe',
     env: {
+      XLINK_DEV_PROFILE: '',
+      UNI_CUSTOM_CONTEXT: '{"XLINK_DEV_QA":true}',
       VITE_XLINK_H5_OFFLINE_SMOKE: 'true',
       VITE_XLINK_ENVIRONMENT: 'dev',
       VITE_XLINK_PLATFORM: 'mp-weixin',
