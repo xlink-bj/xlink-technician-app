@@ -73,6 +73,58 @@ The MP-WEIXIN compile check is available locally with:
 pnpm run build:mp-weixin
 ```
 
+## Development environments
+
+| Target | H5 | MP-WEIXIN | Private profile |
+| --- | --- | --- | --- |
+| Local backend (default) | `pnpm dev:h5` | `pnpm dev:mp-weixin` | `.env.local`: environment `dev`, API `http://127.0.0.1:5189/xlink/wm`, Mock `false` |
+| Explicit Beta | `pnpm dev:h5:beta` | `pnpm dev:mp-weixin:beta` | `.env.beta.local`, mode `beta`, application environment `test` |
+| Pure frontend Mock | `pnpm dev:h5:mock` | `pnpm dev:mp-weixin:mock-ux` | Existing inert synthetic launcher; API/auth and both write flags pinned closed |
+| Production read-only | `pnpm dev:h5:prod-readonly` | `pnpm dev:mp-weixin:prod-readonly` | Existing `.env.prod.local`, mode `prod`; existing read-only guards remain authoritative |
+
+Default H5 owns `127.0.0.1:5189` and transparently proxies `/xlink` to
+`http://127.0.0.1:18080`, preserving the path. An occupied port is an error.
+If an integration window already owns 5189 with its proxy and compiler on
+5188, keep it unchanged; do not start a second server. MP compilation does
+not independently start this proxy and is not native-device acceptance.
+
+After active windows release their configuration, migrate the old Beta values
+from `.env.local` to `.env.beta.local` locally, then set `.env.local` to the
+local target. Private environment files, credentials and grants must not be
+committed. Backend selection grants no permissions; existing local scopes and
+runtime policies stay unchanged.
+
+Vite loads `.env` → `.env.local` → `.env.<mode>` → `.env.<mode>.local`, with
+shell variables taking precedence. `--mode beta` alone does not isolate local
+credentials. Remote mode files must explicitly define or blank all ten keys:
+
+```text
+VITE_XLINK_ENVIRONMENT
+VITE_XLINK_API_BASE_URL
+VITE_XLINK_MOCK
+VITE_XLINK_AUTH_API_BASE_URL
+VITE_XLINK_AUTH_TENANT
+VITE_XLINK_AUTH_METHOD
+VITE_XLINK_QUICK_LOGIN_PHONE
+VITE_XLINK_QUICK_LOGIN_CODE
+VITE_XLINK_ENABLE_REAL_WRITES
+VITE_XLINK_ENABLE_R1_SPECIAL_WRITES
+```
+
+For Beta use environment `test` and API `https://xlinkbeta.fsgo365.cn/fsgo/wm/`;
+for local use the `dev`/5189 values above. Real backends use Mock `false`.
+`VITE_XLINK_AUTH_API_BASE_URL=` means the selected API; a nonempty value must
+match it. Quick-login phone/code can both be blank for manual login. Fill each
+profile's actual tenant/method privately; do not copy accounts between targets.
+Both remote write flags must be `false`. Explicitly blank inherited local
+`*_GRANT`, `VITE_XLINK_LOCAL_SESSION_RESTORE` and `VITE_XLINK_LOCAL_SIGNING_READ`.
+Clear exported auth/tenant/quick-login values before remote startup: the entry
+rejects nonempty shell credential overrides without printing their values.
+
+Checks apply only to named entries using `XLINK_DEV_PROFILE`. Existing bare
+`uni` integration/Playwright launchers retain their reviewed settings. No new
+proxy framework, runtime permission or release channel is introduced.
+
 ## Beta read-only contract discovery
 
 For local inspection-contract discovery, use the R1-compatible Beta login
@@ -85,7 +137,8 @@ pnpm run inspect:inspection-contract:beta
 ```
 
 The command automatically reuses the App quick-login configuration from the
-local `.env.local`: `VITE_XLINK_QUICK_LOGIN_PHONE`, `VITE_XLINK_AUTH_TENANT`,
+explicit `.env.beta` / `.env.beta.local` profile, never `.env.local`:
+`VITE_XLINK_QUICK_LOGIN_PHONE`, `VITE_XLINK_AUTH_TENANT`,
 `VITE_XLINK_AUTH_METHOD`, and the optional
 `VITE_XLINK_QUICK_LOGIN_CODE`. It is available only when
 `VITE_XLINK_ENVIRONMENT` is explicitly non-production, and uses the same

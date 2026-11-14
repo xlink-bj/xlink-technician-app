@@ -25,3 +25,4 @@ export declare function createBetaReadClient(options: Record<string, unknown>): 
 }
 export declare const DEFAULT_BETA_API_BASE_URL: string
 export declare const DEFAULT_BETA_TENANT_ID: string
+export function betaProfileEnvironment(root?: string, shell?: Record<string, string | undefined>): Record<string, string | undefined>

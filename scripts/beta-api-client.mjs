@@ -118,9 +118,8 @@ function parseLocalEnv(filePath) {
   return values
 }
 
-function localRuntimeEnv() {
-  const localEnvPath = resolve(dirname(fileURLToPath(import.meta.url)), '../.env.local')
-  return { ...parseLocalEnv(localEnvPath), ...process.env }
+export function betaProfileEnvironment(root = resolve(dirname(fileURLToPath(import.meta.url)), '..'), shell = process.env) {
+  return { ...parseLocalEnv(resolve(root, '.env.beta')), ...parseLocalEnv(resolve(root, '.env.beta.local')), ...shell }
 }
 
 async function requestJson(options, path, body) {
@@ -203,7 +202,7 @@ export function betaDefaults(env = process.env) {
   }
 }
 
-export function betaLocalDefaults(env = localRuntimeEnv()) {
+export function betaLocalDefaults(env = betaProfileEnvironment()) {
   const environment = env.VITE_XLINK_ENVIRONMENT?.trim()
   if (!environment || environment === 'prod') {
     throw new BetaApiClientError(

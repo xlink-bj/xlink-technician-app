@@ -20,3 +20,9 @@ the actual repository root; the tool otherwise defaults to the config folder.
 `pnpm check:config-layout` guards the layout and all currently referenced
 package/CI config files. Browser visual baselines and production business
 read/write fences remain unchanged.
+
+Named development entries and private profile migration are documented in
+[Development environments](../README.md#development-environments).
+`vite/dev-profile.ts` validates launch selection and diagnoses dotenv inheritance;
+the local H5 entry uses Vite's built-in `/xlink` proxy to the existing Java port.
+It does not change runtime policies or existing explicit integration launchers.
