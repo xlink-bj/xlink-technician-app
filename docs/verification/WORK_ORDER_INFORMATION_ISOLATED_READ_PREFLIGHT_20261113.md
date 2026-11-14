@@ -32,7 +32,7 @@
 
 **仅旧 72c 的观察**：当时对象 adapter 省略非空 roleIds，projection 未传可信角色 context，所以 4/5 保守隐藏。03c4ec 将它写为“当前缺口”有基线时效问题；该判断不再代表最新 main，下面以实际 2b0064a diff 更正。
 
-**最新 2b0064a 已实现**：对象 mapper 只放行共享已验证的 root showType 4/5 角色子集；projection 接受可信 roleContext，覆盖原包 token 并将角色行设为只读，调用 evaluateVisibility 第三个参数。technician-api 在既有 DEV、身份、实时 tenant、当前单角色、列表对象资格及读取代次均有效时发行 context，新列表/详情读取或身份变化主动撤销。composition 提供实时 tenant；页面订阅撤销并再次过滤可见行。缺失、伪造、复制或撤销 context 仍隐藏，不使用 user.roleIds 并集。详见已发布的[对象单角色贯通记录](WORK_ORDER_INFORMATION_SELECTED_ROLE_20261113.md)。本轮没有改这些实现。
+**最新 2b0064a 已实现**：对象 mapper 只放行共享已验证的 root showType 4/5 角色子集；projection 接受可信 roleContext，覆盖原包 token 并将角色行设为只读，调用 evaluateVisibility 第三个参数。technician-api 在既有 DEV、身份、实时 tenant、当前单角色、列表对象资格及读取代次均有效时发行 context，新列表/详情读取或身份变化主动撤销。composition 提供实时 tenant；页面订阅撤销并再次过滤可见行。缺失、伪造、复制或撤销 context 仍隐藏，不使用 user.roleIds 并集。详见已发布的[对象单角色贯通记录](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/WORK_ORDER_INFORMATION_SELECTED_ROLE_20261113.md)。本轮没有改这些实现。
 
 **最新源码的本地针对性复验**：五个文件 178/178 通过，命令仍使用 CI 的 VITE_XLINK_ENVIRONMENT=test：对象资料 88、对象角色 15、严格 matcher 30、共享角色 26、P0 契约 19。两个专用 H5 配置顺序运行，普通资料 1/1、对象角色 5/5 均 exit 0；后者覆盖包含/排除四象限、全角色并集无效、伪造/畸形规则、迟到 A、新 B、注销后其他角色及缺 currentRole。vue-tsc exit 0。
 

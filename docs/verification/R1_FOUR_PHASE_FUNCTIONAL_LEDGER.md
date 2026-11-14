@@ -2,7 +2,7 @@
 
 > **2026-11-13 实证口径补充：** [本地真实集成实证对账](R1_LOCAL_REAL_INTEGRATION_EVIDENCE_20261113.md)记录已封存的正常H5正式type1 Order创建/回读、Survey create＋Process后继、新bizSelect C真实编辑及真实Java token接实际App合成存储后取消（0保存）。独立type0工具箱报价与真实签署仍另列；以下早期正文不再作为这些能力的当前未验结论。Production/Beta写入与#201 HOLD不变。
 
-> **2026-11-09 现状校正：以下正文保留的是早期离线阶段记录，不再作为当前完成状态。** 普通 forms 的受限追加、同 ID 编辑及显式完成已在 `cc362b8da5206648834d9b43ff31de1a2cfa2d05` 进入主干，之后另有真实隔离本地样本及 `959d5104` 历史冷回读验收。其证据范围、原件索引与精确 `d12b30fb` CI 见 [最新前端集成收口索引](R1_FRONTEND_INTEGRATION_CLOSEOUT_20261109.md)。本文旧“unimplemented / unauthorized / only synthetic”只描述当时切片；不应据此否认后续已批准的本地结果，也不把该本地结果推广为 Production/Beta、全部 forms/repeat 或 59 字段通过。
+> **2026-11-09 现状校正：以下正文保留的是早期离线阶段记录，不再作为当前完成状态。** 普通 forms 的受限追加、同 ID 编辑及显式完成已在 `cc362b8da5206648834d9b43ff31de1a2cfa2d05` 进入主干，之后另有真实隔离本地样本及 `959d5104` 历史冷回读验收。其证据范围、原件索引与精确 `d12b30fb` CI 见 [最新前端集成收口索引](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/R1_FRONTEND_INTEGRATION_CLOSEOUT_20261109.md)。本文旧“unimplemented / unauthorized / only synthetic”只描述当时切片；不应据此否认后续已批准的本地结果，也不把该本地结果推广为 Production/Beta、全部 forms/repeat 或 59 字段通过。
 >
 > 下面的旧阶段结果、失败边界和数字原样保留，便于追溯；当前权限和剩余范围以上述索引及对应新报告为准。
 

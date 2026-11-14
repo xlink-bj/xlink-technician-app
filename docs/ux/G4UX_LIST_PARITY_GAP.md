@@ -44,7 +44,7 @@ Method:
 | R1 `pages/serviceAppointment/serviceAppointments.vue` | Role-visible list menu use, search/filter inputs, counts, read-path selection, and contact affordance evidence. |
 | R1 `resources/js/common.js` (`getSAMenu`) | Role-visible Work Order function projection and raw action parameter extraction. |
 | R1 `resources/js/identityContext.js` | Legacy persistence of role/menu context; evidence only, not an implementation pattern. |
-| New App `docs/verification/G4B_AU02_WORK_ORDER_LIST.md` | Accepted V1 meaning: one role-visible Work Orders list; no unsupported My/Assigned claim, tabs, or counts. |
+| New App [docs/verification/G4B_AU02_WORK_ORDER_LIST.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4B_AU02_WORK_ORDER_LIST.md) | Accepted V1 meaning: one role-visible Work Orders list; no unsupported My/Assigned claim, tabs, or counts. |
 | New App `src/shared/ports/api.ts` and `src/adapters/api/technician-api.ts` | Current semantic list contract and adapter-owned raw mapping boundary. |
 
 ## Fixed R2 structural reference

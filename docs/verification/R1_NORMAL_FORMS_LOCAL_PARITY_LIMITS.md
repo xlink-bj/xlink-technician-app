@@ -1,6 +1,6 @@
 # 普通 forms 正常页面集成：范围、证据与继承风险
 
-> **2026-11-09 范围更新：本文保留首条创建 create-only 批次的实现与风险证据，不代表当前正常 forms 仅能创建第一条。** 后续 `cc362b8da5206648834d9b43ff31de1a2cfa2d05` 增加单一定义、活动节点、明确授权范围下的追加、同 ID 编辑和显式完成；随后另有隔离本地样本执行回执。见 [已有记录切片](R1_FORMS_EXISTING_RECORD_NEXT_SLICE_20261108.md)与 [最新收口索引](R1_FRONTEND_INTEGRATION_CLOSEOUT_20261109.md)。
+> **2026-11-09 范围更新：本文保留首条创建 create-only 批次的实现与风险证据，不代表当前正常 forms 仅能创建第一条。** 后续 `cc362b8da5206648834d9b43ff31de1a2cfa2d05` 增加单一定义、活动节点、明确授权范围下的追加、同 ID 编辑和显式完成；随后另有隔离本地样本执行回执。见 [已有记录切片](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/R1_FORMS_EXISTING_RECORD_NEXT_SLICE_20261108.md)与 [最新收口索引](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/R1_FRONTEND_INTEGRATION_CLOSEOUT_20261109.md)。
 >
 > 原首条创建测试、权限边界及继承风险原样保留。后续通过不等于泛化写授权、完整 59 字段、后台事务治理或 Production/Beta 验收；保存与完成分离的显式意图不变。
 

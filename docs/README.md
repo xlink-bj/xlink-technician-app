@@ -59,7 +59,7 @@
 
 ## C1：发行产物历史诊断与后续修复
 
-- [C1 H5 / 微信小程序发行边界历史诊断](verification/C1_RELEASE_ARTIFACT_AUDIT_20261030.md)：在 `17ba721` 上发现 QA 路由仍被打包；**这是修复前的证据，不是现在的发布状态**。
+- [C1 H5 / 微信小程序发行边界历史诊断](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/C1_RELEASE_ARTIFACT_AUDIT_20261030.md)：在 `17ba721` 上发现 QA 路由仍被打包；**这是修复前的证据，不是现在的发布状态**。
 - [C1 修复 PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238)：以 DEV 专用编译条件排除 H5/MP QA 路由并加入产物断言；CI 与商用/DEV 隔离回归已通过。APP 原生包仍待 #240。
 - [C1 诊断时的产物哈希与路径清单](governance/C1_RELEASE_ARTIFACT_FACTS_20261030.json)：保留原始文件大小、SHA-256 和机器校验结果，**不覆盖**修复前快照。
 

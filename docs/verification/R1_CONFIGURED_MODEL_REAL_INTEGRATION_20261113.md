@@ -10,7 +10,7 @@
 - `c8374537c2174df4cc815b9dfb89d5d1afbde0e3`：8 路径增量，只有 3 个产品文件；Map 增加来源绑定的单选与本地日期时间。六字段专有预约和 typed Survey 边界保留，没有新增第二个保存器或 Order 保存策略。
 - `6e21141030779f774f6c1c9526ffb85018b1aa15`：仅修复一个 Stage 2B 测试的时序。原测试点击保存即刷新，打断事务后正确留下不确定保护；现在等待保存完成及无待核对回执，再执行原有全部刷新、值和零外连断言。没有改变产品、超时、重试或权限。
 
-代码说明见[已有记录编辑](R1_CONFIGURED_RECORD_EDIT_20261113.md)、[Map 单选和日期时间](R1_MAP_CHOICE_DATETIME_EDIT_20261113.md)。[首次新增草稿与生命周期](R1_NORMAL_FORM_DRAFT_RECOVERY_20261112.md)是已保留的独立成果，不代替本次三模型验收。
+代码说明见[已有记录编辑](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/R1_CONFIGURED_RECORD_EDIT_20261113.md)、[Map 单选和日期时间](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/R1_MAP_CHOICE_DATETIME_EDIT_20261113.md)。[首次新增草稿与生命周期](R1_NORMAL_FORM_DRAFT_RECOVERY_20261112.md)是已保留的独立成果，不代替本次三模型验收。
 
 ## 2. 三类真实业务接口
 

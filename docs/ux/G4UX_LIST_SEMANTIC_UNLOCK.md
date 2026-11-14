@@ -35,8 +35,8 @@ counts, or navigation destinations.
   `docs/discovery/API_CONTRACT_BASELINE.md`,
   `docs/discovery/API_EVIDENCE_TRACEABILITY.md`,
   `docs/discovery/API_P0_READ_VERIFICATION.md`,
-  `docs/verification/G4B_AU02_WORK_ORDER_LIST.md`, and
-  `docs/verification/G4B_WORK_ORDER_DATA_FIDELITY.md`.
+  [docs/verification/G4B_AU02_WORK_ORDER_LIST.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4B_AU02_WORK_ORDER_LIST.md), and
+  [docs/verification/G4B_WORK_ORDER_DATA_FIDELITY.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4B_WORK_ORDER_DATA_FIDELITY.md).
 - Current new-App boundary:
   `src/shared/ports/api.ts` and `src/adapters/api/technician-api.ts`.
 

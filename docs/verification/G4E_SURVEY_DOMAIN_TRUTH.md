@@ -9,8 +9,8 @@ Issue: `#21`
 This note separates the three business concepts that were historically mixed
 in the Legacy inspection page. It is the domain-truth companion to the
 earlier form/runtime evidence in
-`docs/verification/G4E_FORM_SCHEMA_DEV_READ.md` and
-`docs/verification/G4E_ONSITE_INSPECTION_EVIDENCE.md`.
+[docs/verification/G4E_FORM_SCHEMA_DEV_READ.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4E_FORM_SCHEMA_DEV_READ.md) and
+[docs/verification/G4E_ONSITE_INSPECTION_EVIDENCE.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4E_ONSITE_INSPECTION_EVIDENCE.md).
 
 ## 1. Executive Business Conclusion
 

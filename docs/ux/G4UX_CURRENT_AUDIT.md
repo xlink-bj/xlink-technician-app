@@ -50,7 +50,7 @@ R2 evidence was read, not inferred from component names, across the complete cur
 - `src/features/session/login.ts`, `src/shared/state/session.ts` — bounded session behavior.
 - `src/app/bootstrap.ts` — composition and bootstrap entry.
 - `src/pages.json`, `src/manifest.json` — page/navigation and safe target configuration.
-- `docs/verification/G4C_DETAIL_CONTACT.md` — accepted contact and Detail Interaction Rule.
+- [docs/verification/G4C_DETAIL_CONTACT.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4C_DETAIL_CONTACT.md) — accepted contact and Detail Interaction Rule.
 
 ## Current screen audit
 

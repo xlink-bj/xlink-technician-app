@@ -39,7 +39,7 @@
 | 渗漏原因：底部 `van-popup`，左分组右多选、返回表单 | Survey 专用的 `LeakageCauseExperience`，继承聚焦、分组、多选体验，不把提供者规则下沉到通用表单 |
 | 编辑：高度约 90% 的底部 `van-popup` + 顶部“提交”，且历史保存/提交流程耦合 | **不照搬**。新 App 单独全页编辑、底部安全区固定动作、`保存表单`/`完成勘查` 分离、明确失败与恢复 |
 
-**R1 视觉核验缺口：** 已审阅源代码及项目 `G4E_R1_MOBILE_UX_BASELINE.md`，**尚未有当前运行中的 R1 勘查界面多状态截图**。真实视觉对比作为设计评审的输入门禁；不可宣称已做到 R1 高保真或可直接复刻。若不能以既有获批环境只读获取截图，需要用户提供 R1 现有截图；不得为视觉任务扩大生产权限。
+**R1 视觉核验缺口：** 已审阅源代码及项目 [G4E_R1_MOBILE_UX_BASELINE.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4E_R1_MOBILE_UX_BASELINE.md)，**尚未有当前运行中的 R1 勘查界面多状态截图**。真实视觉对比作为设计评审的输入门禁；不可宣称已做到 R1 高保真或可直接复刻。若不能以既有获批环境只读获取截图，需要用户提供 R1 现有截图；不得为视觉任务扩大生产权限。
 
 ## 3. 推荐首批设计数量：6 张代表性高保真移动界面
 
@@ -121,5 +121,5 @@ ActionWorkspaceShell                         # 通用外壳：页面导航、工
 ## 来源清单（commit-pinned）
 
 - R1 代码：`xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d` `business_jishi/subpackages2/inspectionAppointment/inspectionAppointment.vue`；`business_jishi/app.css`。
-- S2 新 App 项目：`docs/verification/G4E_R1_MOBILE_UX_BASELINE.md`；`G4E_SURVEY_DOMAIN_TRUTH.md`；`G4E_SURVEY_MEDIA_CONTRACT.md`；`docs/discovery/DYNAMIC_FORM_CAPABILITY_MATRIX.md`；`docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md`；`docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md`；`contracts/beta/survey/historical.json`。
+- S2 新 App 项目：[docs/verification/G4E_R1_MOBILE_UX_BASELINE.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4E_R1_MOBILE_UX_BASELINE.md)；`G4E_SURVEY_DOMAIN_TRUTH.md`；`G4E_SURVEY_MEDIA_CONTRACT.md`；`docs/discovery/DYNAMIC_FORM_CAPABILITY_MATRIX.md`；`docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md`；`docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md`；`contracts/beta/survey/historical.json`。
 - 当前项目已验收基线：Appointment 新设计/新 App `ActionWorkspaceShell`、共享 Dynamic Form Runtime 的字段契约；并非当前生产 Survey UI 的像素级证据。

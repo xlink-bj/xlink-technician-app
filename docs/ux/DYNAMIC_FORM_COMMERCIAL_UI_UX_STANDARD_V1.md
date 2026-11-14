@@ -70,6 +70,6 @@
 ## 5. 来源和关联
 
 - 本对话中用户明确认可的 **S01 现场勘查主表单**以及 **S02–S05 局部交互设计图**；用户决议“现场照片/现场测量可在主表单直接填写，无需另开弹窗”。
-- R1 `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`；本仓库 `docs/verification/G4E_R1_MOBILE_UX_BASELINE.md`。
+- R1 `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`；本仓库 [docs/verification/G4E_R1_MOBILE_UX_BASELINE.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4E_R1_MOBILE_UX_BASELINE.md)。
 - `docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md`；`docs/ux/APP_UI_DESIGN_SYSTEM.md`；`docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md`；`contracts/beta/survey/historical.json`（脱敏、历史、非活动）。
 - 本标准替代 `docs/ux/M1_S2_SURVEY_AND_DYNAMIC_FORM_DESIGN_PLAN_V01.md` 中关于 S01–S06 新设计数量及“照片管理必经弹层”的任何可能误解；原计划保留为早期证据/备查。

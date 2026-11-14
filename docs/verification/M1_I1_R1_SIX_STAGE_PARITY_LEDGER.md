@@ -31,14 +31,14 @@
 | W01 **R1 的另一业务页** `business/subpackages2/workOrder/workOrders.vue:690–705` 请求 `basic/workOrder/query.do`；`business/pages.json:868` 对应 WorkOrder 页代码目前在注释中 | 新 App 当前主工单列表为 ServiceAppointment（同 W00），无单独专用 WorkOrder 列表 | **ALTERNATE_ROUTE_SCOPE_NOT_YET_EVIDENCED** | R1 仓库中存在另一套 WorkOrder 接口，但**不能假定它是当前技术员主流程的必需能力**。只在 R1 实际可达角色/导航证明后纳入差异，不擅自增加页面或改后台 |
 | W02 R1 `workOrders.vue:793,875` 查询 `basic/workOrder/queryWorkflowNode.do` 和 `querySAWorkflowNode.do` | `src/features/work-orders/list-actions.ts`、`detail-workflow.ts`、`src/adapters/api/technician-api.ts` | IMPLEMENTED_UNVERIFIED | 状态/节点/当前操作者必须由 R1 工作流事实决定，不可仅凭标签显示接单按钮 |
 | W03 R1 `workOrders.vue:1046–1070`：`workflow/process` 传 `sid,smodule=workOrder,workflowNodeId` 及 `currentOrgId` 或 `handlerId` | `src/features/work-orders/list-actions.ts` 生成 accept action；`src/features/work-orders/action-workspace.ts` | PARTIAL | 不同承接类型与工作流节点的操作有效性需核对；现有生产写入限制不变 |
-| W04 R1 `workOrders.vue:1180–1196`：`basic/winnerlook/getMiddleNumberBySid` 后平台拨号 | `src/pages/work-orders/detail.vue`; G4-D 联系/预约合同记录 `docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md` | IMPLEMENTED_UNVERIFIED | 直接/中间号、拒绝授权/拨号失败、设备电话能力分别复核 |
+| W04 R1 `workOrders.vue:1180–1196`：`basic/winnerlook/getMiddleNumberBySid` 后平台拨号 | `src/pages/work-orders/detail.vue`; G4-D 联系/预约合同记录 [docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md) | IMPLEMENTED_UNVERIFIED | 直接/中间号、拒绝授权/拨号失败、设备电话能力分别复核 |
 | W05 R1 `business/subpackages/serviceAppointment/serviceAppointment.vue:6183–6199`：`basic/serviceAppointment/queryById/{id}` 加载工单及工作流 | `src/adapters/api/technician-api.ts:1447`；`src/pages/work-orders/detail.vue` | SOURCE_MAPPED / IMPLEMENTED_UNVERIFIED | 当前工单详情、可见任务及离开/重新进入需要已获准的 readback 证据 |
 
 ## 03 预约与标准表单
 
 | R1 场景及源定位 | 新 App 现存实现 | 对照状态 | 用户可见后果、I1 后续证据 |
 | --- | --- | --- | --- |
-| A01 R1 `serviceAppointment.vue` 的接单→联系→预约动态表单/节点处理；源审计 `docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md` | `src/features/work-orders/appointment-form-runtime.ts`、`appointment-validation.ts`、`action-workspace.ts` | PARTIAL | 基于真实 Workflow Node 和 FormDef 进入标准表单，不按固定工单状态猜动作 |
+| A01 R1 `serviceAppointment.vue` 的接单→联系→预约动态表单/节点处理；源审计 [docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/G4D_ACCEPT_CONTACT_APPOINTMENT_EVIDENCE.md) | `src/features/work-orders/appointment-form-runtime.ts`、`appointment-validation.ts`、`action-workspace.ts` | PARTIAL | 基于真实 Workflow Node 和 FormDef 进入标准表单，不按固定工单状态猜动作 |
 | A02 R1 预约 `need` 的值分支与 `datetime` 适用性（参照 G4-D 源合同） | `src/features/work-orders/appointment-form-runtime.ts:35–100` | IMPLEMENTED_UNVERIFIED | 必选/不需上门时对时间字段显示/保存行为需同案例验证；当前实现存在显式适用性规则 |
 | A03 R1 预约 form 写入及 `workflow/process` 节点完成（G4-D 源审计），`serviceAppointment.vue:7583–7618` 显示 `nodeFormDataId` / 节点身份区分 | `src/pages/work-orders/action-time.vue`、`action-workspace.vue`；Form Runtime | PARTIAL / BLOCKED_ENV | “本地填写成功”与“已成功预约并流转”不能混为一谈；真实写入只在授权环境验证 |
 | A04 预约返回、重新进入及表单状态恢复：R1 主页面 `serviceAppointment.vue` 按当前节点刷新 | `src/features/work-orders/action-workspace.ts`、本地表单/状态存储 | IMPLEMENTED_UNVERIFIED | 需补充软键盘、后退、重进及角色切换导致草稿泄漏的负例 |

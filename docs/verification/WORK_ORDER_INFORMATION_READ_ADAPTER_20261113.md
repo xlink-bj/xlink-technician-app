@@ -1,7 +1,7 @@
 # 工单资料薄只读适配层（2026-11-13）
 
 基线：`main@48038f309388642390e2a0cd5c7dc43d55a1a4bd`。
-后续角色贯通见 [只读角色上下文验证](WORK_ORDER_INFORMATION_SELECTED_ROLE_20261113.md)。下文角色名单一律拒绝的描述和 424 项结果是首批快照；后续仅在可信当前角色读上下文下支持有限 4/5 子集，Production 入口仍关闭。
+后续角色贯通见 [只读角色上下文验证](https://github.com/xlink-bj/xlink-technician-app/blob/df7b755c0ca56ac941a48627753049b20c554639/docs/verification/WORK_ORDER_INFORMATION_SELECTED_ROLE_20261113.md)。下文角色名单一律拒绝的描述和 424 项结果是首批快照；后续仅在可信当前角色读上下文下支持有限 4/5 子集，Production 入口仍关闭。
 
 首批交付状态：**SOURCE + synthetic normal-App H5 verified；当前 Production 生效配置未核实，Production 新入口维持关闭。**
 本记录不把历史固定源码或 Mock 当作当前生产有效配置证据。
