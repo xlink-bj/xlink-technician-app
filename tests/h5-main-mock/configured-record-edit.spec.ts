@@ -101,8 +101,18 @@ test(`normal configured existing-record editor ${mode}`,async({page,baseURL},inf
     await page.getByTestId('r1-normal-input-'+numberKey).locator('input').fill('0')
     await page.getByTestId('r1-normal-input-'+textKey).locator('textarea,input').fill('已核对现场说明')
     const save=page.getByTestId('r1-normal-save');await save.scrollIntoViewIfNeeded()
-    const box=await save.boundingBox(),back=await page.getByTestId('normal-form-workspace-back').boundingBox()
-    expect(box!.y+box!.height).toBeLessThanOrEqual(back!.y)
+    const backControl=page.getByTestId('normal-form-workspace-back')
+    const box=await save.boundingBox(),back=await backControl.boundingBox()
+    // S01 places both controls in the fixed ActionBar. Verify ownership,
+    // reachability and no overlap instead of the former inline-save order.
+    for(const control of [save,backControl]){
+      expect(await control.evaluate(el=>Boolean(el.closest('[data-testid="app-action-bar"]')))).toBe(true)
+      const rect=await control.boundingBox()
+      expect(rect!.y).toBeGreaterThanOrEqual(44)
+      expect(rect!.y+rect!.height).toBeLessThanOrEqual(page.viewportSize()!.height)
+    }
+    expect(box!.y>=back!.y+back!.height || back!.y>=box!.y+box!.height
+      || box!.x>=back!.x+back!.width || back!.x>=box!.x+box!.width).toBe(true)
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true)
     await page.screenshot({path:info.outputPath('existing-editor-ready-to-save.png')})
     if(mode==='stale-before-save')stale=true
