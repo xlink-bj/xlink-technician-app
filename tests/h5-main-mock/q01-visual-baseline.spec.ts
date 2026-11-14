@@ -94,47 +94,22 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   if (await collapsed.isVisible()) {
     await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
   }
-  // Prove the final stylesheet reaches the REAL quotation shell.
-  // A passing component CSS test with an unchanged large work-order card
-  // was the visual false-positive this iteration explicitly eliminates.
+  // Owner unified the order summary across all Workspaces. The Q01 body and
+  // control geometry below retain their existing commercial contract.
   const shellContext = page.getByTestId('action-workspace-context')
-  const contextPaint = await shellContext.evaluate((el) => {
-    const style = getComputedStyle(el)
-    return {
-      background: style.backgroundColor,
-      radius: parseFloat(style.borderTopLeftRadius),
-      borderBottomStyle: style.borderBottomStyle,
-      contextClasses: el.className,
-      ancestorClasses: (() => {
-        const classes: string[] = []
-        let node: Element | null = el
-        for (let i = 0; node && i < 8; i++, node = node.parentElement) classes.push(node.className || node.tagName)
-        return classes
-      })(),
-      matchesShellRule: Boolean(el.closest('.action-workspace-page--quotation:not(.action-workspace-page--q01-entry)')),
-      matchedQ01Css: Array.from(document.styleSheets).flatMap(sheet => {
-        try {
-          return Array.from(sheet.cssRules).filter(rule =>
-            rule.cssText.includes('action-workspace-page--quotation:not') &&
-            rule.cssText.includes('action-workspace-context.app-surface'))
-            .map(rule => rule.cssText.slice(0, 280))
-        } catch {
-          return []
-        }
-      }).slice(0, 4),
-      loadedQ01Style: Array.from(document.styleSheets).some(sheet => {
-        try {
-          return Array.from(sheet.cssRules).some(rule => rule.cssText.includes('action-workspace-context.app-surface'))
-        } catch {
-          return false
-        }
-      }),
-    }
+  await expect(shellContext).toHaveCount(1)
+  await expect(shellContext).toHaveClass(/app-work-order-summary/)
+  await expect(shellContext.locator('.app-work-order-summary__customer')).toBeVisible()
+  await expect(shellContext).not.toContainText(/报价中|勘查中/)
+  const contextPaint = await shellContext.evaluate(el => {
+    const style = getComputedStyle(el), rect = el.getBoundingClientRect()
+    return { background: style.backgroundColor, radius: parseFloat(style.borderTopLeftRadius),
+      left: rect.left, right: rect.right, contextClasses: el.className }
   })
-  expect(contextPaint.background, 'Q01 context CSS diagnostic: '+JSON.stringify(contextPaint))
-    .toBe('rgba(0, 0, 0, 0)')
-  expect(contextPaint.radius, 'Q01 context now flows as one compact row').toBe(0)
-  expect(contextPaint.borderBottomStyle).toBe('solid')
+  expect(contextPaint.background).toBe('rgb(255, 255, 255)')
+  expect(contextPaint.radius).toBeGreaterThan(0)
+  expect(contextPaint.left).toBeGreaterThanOrEqual(0)
+  expect(contextPaint.right).toBeLessThanOrEqual(375)
   await expect(page.getByTestId('quotation-commercial-draft-badge')).toBeVisible()
   await expect(page.locator('.quotation-content__panel-title')).toContainText('维修部位报价')
   const content = group.getByTestId('quotation-composition-selection')
