@@ -1,20 +1,17 @@
 import { isBusinessMockMode } from './config'
 import { appointmentFormDefinitionWireId } from '../appointment-contract'
 import { mockSurveyFormDefinitionId } from './survey-contract'
+import { mockJourneyNodes, mockJourneyWorkOrderId } from '@shared/mock-journey-identity'
+
+export { mockJourneyNodes, mockJourneyWorkOrderId } from '@shared/mock-journey-identity'
 
 /** DEV-only synthetic review journey. Its state and FormData are isolated from
  * R1 Production/Beta; the Mock router requires a matching Process command. */
-export const mockJourneyWorkOrderId = 'mock-work-order-019-continuous-journey'
 export const mockJourneyWorkflowRunId = 'mock-workflow-run-019'
 export const mockJourneyOrderWorkflowDefinitionId = 'mock-workflow-definition-019-order'
 export const mockJourneyOrderWorkflowRunId = 'mock-workflow-run-019-order'
 export const mockJourneyQuotationId = 'mock-quotation-019-protocol'
 export const mockJourneyOfficialOrderId = 'mock-official-order-019-protocol'
-export const mockJourneyNodes = {
-  appointment: 'mock-workflow-node-019-appointment',
-  survey: 'mock-workflow-node-019-survey',
-  quotation: 'mock-workflow-node-019-place-order',
-} as const
 export type MockJourneyStage = keyof typeof mockJourneyNodes
 const storageKey = 'xlink.dev.mock.journey.019.stage.v1'
 const formDataKey = 'xlink.dev.mock.journey.019.form-data.v1.'

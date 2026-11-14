@@ -158,6 +158,39 @@ async function openWorkspace(
 describe('Action Workspace runtime and Appointment content boundary', () => {
   beforeEach(() => setActivePinia(createPinia()))
 
+  it('keeps the synthetic appointment dispatch scope tied to actor, stage and current session', async () => {
+    vi.stubEnv('VITE_XLINK_H5_MOCK_E2E', 'true')
+    try {
+      for (const [userId, roleId, expected] of [
+        ['synthetic-user', 'synthetic-role', true],
+        ['other-user', 'synthetic-role', false],
+        ['synthetic-user', 'other-role', false],
+      ] as const) {
+        setActivePinia(createPinia())
+        let actor: SessionSnapshot = { ...session,
+          user: { id: asOpaqueId<'UserId'>(userId) },
+          currentRole: { id: asOpaqueId<'RoleId'>(roleId) },
+        }
+        const detail = appointmentDetail('mock-work-order-019-continuous-journey', 'mock-workflow-node-019-appointment')
+        const node = detail.workflowNodes![0]!
+        const { store, command } = configureWorkspace({ ...detail, workflowNodes: [{ ...node,
+          sourceNodeType: 'forms',
+          visibility: { evidenceState: 'verified', viewableRoleIds: [actor.currentRole!.id] },
+        }] }, appointmentForm(), undefined, () => actor)
+        expect((await store.load({ workOrderId: detail.id, workflowNodeId: node.id,
+          actionIntent: 'set_appointment', localPreviewOnly: true })).state).toBe('succeeded')
+        expect(store.descriptor?.execution).not.toBe('enabled')
+        expect(store.isCurrentMockJourneyScope('appointment')).toBe(expected)
+        expect(store.isCurrentMockJourneyScope('survey')).toBe(false)
+        actor = { ...actor, sessionRef: asOpaqueId<'SessionRef'>('changed-session') }
+        expect(store.isCurrentMockJourneyScope('appointment')).toBe(false)
+        expect(command.submitAppointment).not.toHaveBeenCalled()
+      }
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
   it('opens an enabled Current Action through the Workflow projection', async () => {
     const { store, command } = configureWorkspace()
     const result = await openWorkspace(store)

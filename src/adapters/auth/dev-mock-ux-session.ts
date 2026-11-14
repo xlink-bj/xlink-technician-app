@@ -1,5 +1,6 @@
 import type { AuthSessionPort, SessionSnapshot } from '@shared/ports'
 import { asOpaqueId, createOperationError } from '@shared/types'
+import { mockJourneyRoleId, mockJourneyUserId } from '@shared/mock-journey-identity'
 
 /**
  * The ordinary main App's credential-free DEV QA identity. No storage, login
@@ -11,11 +12,11 @@ export function createDevMockUxSessionPort(): AuthSessionPort {
   const fixture: SessionSnapshot = {
     sessionRef: asOpaqueId<'SessionRef'>('local-mock-only-session'),
     user: {
-      id: asOpaqueId<'UserId'>('synthetic-user'),
+      id: asOpaqueId<'UserId'>(mockJourneyUserId),
       displayName: '王师傅',
     },
     currentRole: {
-      id: asOpaqueId<'RoleId'>('synthetic-role'),
+      id: asOpaqueId<'RoleId'>(mockJourneyRoleId),
       name: '现场服务工程师',
     },
     roleVersion: 'local-dev-role-version-1',

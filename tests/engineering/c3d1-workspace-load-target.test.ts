@@ -66,18 +66,40 @@ describe('C3-D1 Action Workspace load eligibility', () => {
     expect(target({ currentTask: disabled, request, devMockE2EBuildEnabled: true }))
       .toMatchObject({ kind: 'blocked', message: 'This Action is not executable' })
   })
-  it('allows exact DEV-only local preview and retains disabled_read_only execution', () => {
+  it.each([
+    ['mock-workflow-node-019-appointment', 'set_appointment'],
+    ['mock-workflow-node-019-survey', 'interact_with_form'],
+  ] as const)('allows exact DEV-only %s preview and preserves its eligibility guards', (nodeId, actionIntent) => {
     const workOrderId = asOpaqueId<'WorkOrderId'>('mock-work-order-019-continuous-journey')
-    const workflowNodeId = asOpaqueId<'WorkflowNodeRuntimeId'>('mock-workflow-node-019-survey')
-    const selected = task({ nodeId: workflowNodeId, execution: 'disabled_read_only', sourceNodeType: 'repeat' })
-    const result = target({
+    const workflowNodeId = asOpaqueId<'WorkflowNodeRuntimeId'>(nodeId)
+    const selected = task({ nodeId: workflowNodeId, actionIntent,
+      execution: 'disabled_read_only', sourceNodeType: 'repeat' })
+    const preview = {
       detail: detail({ id: workOrderId, workflowNodes: [{ id: workflowNodeId,
         category: 'repeat', lifecycle: 'active', formDefinitionId }] }),
       currentTask: selected, devMockE2EBuildEnabled: true,
-      request: { workOrderId, workflowNodeId, actionIntent: 'interact_with_form', localPreviewOnly: true },
-    })
+      request: { workOrderId, workflowNodeId, actionIntent, localPreviewOnly: true },
+    }
+    const result = target(preview)
     expect(result.kind).toBe('ready')
     if (result.kind === 'ready') expect(result.currentTask.execution).toBe('disabled_read_only')
+    for (const overrides of [
+      { devMockE2EBuildEnabled: false },
+      { request: { ...preview.request, localPreviewOnly: false } },
+      { request: { ...preview.request, actionIntent: 'place_order' } },
+      { currentTask: { ...selected, sourceNodeType: undefined } },
+    ]) {
+      expect(target({ ...preview, ...overrides })).toMatchObject({ kind: 'blocked' })
+    }
+    const foreignOrder = asOpaqueId<'WorkOrderId'>('foreign-order')
+    expect(target({ ...preview, detail: { ...preview.detail, id: foreignOrder },
+      request: { ...preview.request, workOrderId: foreignOrder } })).toMatchObject({ kind: 'blocked' })
+    const otherNode = asOpaqueId<'WorkflowNodeRuntimeId'>(actionIntent === 'set_appointment'
+      ? 'mock-workflow-node-019-survey' : 'mock-workflow-node-019-appointment')
+    expect(target({ ...preview,
+      detail: { ...preview.detail, workflowNodes: [{ ...preview.detail.workflowNodes![0]!, id: otherNode }] },
+      currentTask: { ...selected, nodeId: otherNode },
+      request: { ...preview.request, workflowNodeId: otherNode } })).toMatchObject({ kind: 'blocked' })
   })
   it('blocks unsupported action and missing dynamic FormDefinition', () => {
     expect(target({ currentTask: task({ actionIntent: 'open_subworkflow' }),

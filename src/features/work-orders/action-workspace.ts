@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import { readQuotationRepairParts, type LocalQuotationRepairPartsReader } from './quotation/repair-parts-provider'
 import { defineStore } from 'pinia'
 import { isProductionReadOnlyRuntime } from '@shared/config'
+import { mockJourneyNodes, mockJourneyRoleId, mockJourneyUserId, mockJourneyWorkOrderId } from '@shared/mock-journey-identity'
 
 import { detailWorkflowProjectionFor } from './detail-workflow'
 import { selectActionWorkspaceLoadTarget } from './action-workspace-load-target'
@@ -535,11 +536,10 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const current = descriptor.value
     const session = dependencies?.getSession()
     return Boolean(commandSessionScopeCurrent() && current && session?.currentRole
-      && String(session.user.id) === 'synthetic-user'
-      && String(session.currentRole.id) === 'synthetic-role'
-      && String(current.workOrderId) === 'mock-work-order-019-continuous-journey'
-      && String(current.workflowNodeId) === (stage === 'appointment'
-        ? 'mock-workflow-node-019-appointment' : 'mock-workflow-node-019-survey')
+      && String(session.user.id) === mockJourneyUserId
+      && String(session.currentRole.id) === mockJourneyRoleId
+      && String(current.workOrderId) === mockJourneyWorkOrderId
+      && String(current.workflowNodeId) === mockJourneyNodes[stage]
       && current.actionIntent === (stage === 'appointment' ? 'set_appointment' : 'interact_with_form')
       && current.execution !== 'enabled')
   }

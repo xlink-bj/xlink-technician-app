@@ -2,6 +2,7 @@ import { actionContentKindForIntent, type ActionContentKind } from '@runtimes/ac
 import type { CurrentTaskProjection } from '@runtimes/workflow'
 import type { SessionSnapshot, WorkOrderDetail, WorkflowNodeRead } from '@shared/ports'
 import type { ErrorCategory, RoleId, WorkOrderId, WorkflowNodeRuntimeId } from '@shared/types'
+import { mockJourneyNodes, mockJourneyWorkOrderId } from '@shared/mock-journey-identity'
 
 export interface ActionWorkspaceLoadTargetRequest {
   readonly workOrderId: WorkOrderId
@@ -55,11 +56,11 @@ export function selectActionWorkspaceLoadTarget(input: {
   // DEV tour: LOCAL draft preview only, never an executable FormData/Workflow action.
   const syntheticReadOnlyPreview = request.localPreviewOnly === true
     && input.devMockE2EBuildEnabled
-    && String(request.workOrderId) === 'mock-work-order-019-continuous-journey'
+    && String(request.workOrderId) === mockJourneyWorkOrderId
     && String(request.workflowNodeId) === (request.actionIntent === 'set_appointment'
-      ? 'mock-workflow-node-019-appointment'
+      ? mockJourneyNodes.appointment
       : request.actionIntent === 'interact_with_form'
-        ? 'mock-workflow-node-019-survey' : '')
+        ? mockJourneyNodes.survey : '')
     && (currentTask?.sourceNodeType === 'forms' || currentTask?.sourceNodeType === 'repeat')
     && currentTask?.execution === 'disabled_read_only'
   const isNormalFormAction = input.normalFormContentEnabled === true
