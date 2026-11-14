@@ -58,7 +58,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Reproducible static LOC and test effectiveness census
-        run: node scripts/eq01-quality-census.mjs --output .review/eq01/quality-census.json
+        run: node scripts/eq01-quality-census.mjs --output test-results/eq01/quality-census.json
       - name: Focused no-fallback registry and existing authorization regression
         env:
           VITE_XLINK_ENVIRONMENT: test
@@ -84,7 +84,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: eq01-quality-census-${{ github.run_id }}
-          path: .review/eq01/
+          path: test-results/eq01/
           if-no-files-found: warn
           retention-days: 30
 

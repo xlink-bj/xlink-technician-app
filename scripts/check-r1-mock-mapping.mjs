@@ -51,8 +51,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const manifest = JSON.parse(readFileSync('contracts/r1-mock-mapping.json', 'utf8'))
   const result = validateR1MockMapping(manifest)
   if (process.argv.includes('--run')) {
-    mkdirSync('.review/r1-mock-mapping', { recursive: true })
-    const report = '.review/r1-mock-mapping/vitest.json'
+    mkdirSync('test-results/r1-mock-mapping', { recursive: true })
+    const report = 'test-results/r1-mock-mapping/vitest.json'
     const run = spawnSync('pnpm', ['exec','vitest','run',...result.unitTests,'--reporter=json',`--outputFile=${report}`], { stdio: 'inherit' })
     if (run.status !== 0) process.exit(run.status ?? 1)
     const actual = JSON.parse(readFileSync(report, 'utf8'))
@@ -62,7 +62,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       testsPassed: actual.numPassedTests,
       domains: manifest.domains.map(row => ({ id: row.id, tests: row.unitTests, result: row.unitTests.every(testPassed) ? 'PASS' : 'INCOMPLETE', unresolved: row.unresolved, liveParity: row.liveParity })),
       browserExecution: 'NOT_RUN_BY_THIS_COMMAND', scenarios: manifest.scenarios }
-    const output = '.review/r1-mock-mapping/result.json'
+    const output = 'test-results/r1-mock-mapping/result.json'
     mkdirSync(dirname(output), { recursive: true }); writeFileSync(output, JSON.stringify(final, null, 2) + '\n')
     if (final.domains.some(row => row.result !== 'PASS')) process.exitCode = 1
     console.log(JSON.stringify(final))

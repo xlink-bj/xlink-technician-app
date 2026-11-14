@@ -43,6 +43,7 @@ jobs:
           name: q03-real-app-375-${{ github.run_id }}
           path: |
             .review/q03-commercial-baseline/
+            test-results/q03-commercial-baseline/
             test-results/main-h5-mock/
           retention-days: 14
           if-no-files-found: warn

@@ -42,6 +42,7 @@ jobs:
           name: q01-real-app-375-${{ github.run_id }}
           path: |
             .review/q01-visual-baseline/
+            test-results/q01-visual-baseline/
             test-results/main-h5-mock/
           retention-days: 14
           if-no-files-found: warn

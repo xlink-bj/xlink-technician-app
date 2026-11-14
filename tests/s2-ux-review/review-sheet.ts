@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises'
-import { join, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import type { Browser, Page } from '@playwright/test'
 
 /**
@@ -22,6 +22,7 @@ export interface ReviewSession {
 }
 
 const OUTPUT = resolve(process.cwd(), '.review/m1-s2/generated')
+const REPORT_OUTPUT = resolve(process.cwd(), 'test-results/m1-s2/generated')
 const allowedId = /^[0-9]{2}-[a-z][a-z0-9-]{2,70}$/
 const escapeHtml = (str: string): string => str
   .replaceAll('&', '&amp;')
@@ -114,12 +115,14 @@ function layout(
 export async function finishReviewSession(browser: Browser, session: ReviewSession): Promise<string> {
   if (session.frames.length < 7) throw new Error('S2 visual review missing required business-state frames')
   const dir = join(OUTPUT, `${session.viewport.width}x${session.viewport.height}`)
+  const reportDir = join(REPORT_OUTPUT, `${session.viewport.width}x${session.viewport.height}`)
   const shots = join(dir, 'frames')
   await mkdir(shots, { recursive: true })
+  await mkdir(reportDir, { recursive: true })
   for (const frame of session.frames) {
     await writeFile(join(shots, frame.id + '.png'), frame.image)
   }
-  await writeFile(join(dir, 'manifest.json'), JSON.stringify({
+  await writeFile(join(reportDir, 'manifest.json'), JSON.stringify({
     schemaVersion: 1,
     provenance: 'DEV_ONLY_SOURCE_MODELED_MOCK',
     actualApp: true,
@@ -131,8 +134,8 @@ export async function finishReviewSession(browser: Browser, session: ReviewSessi
     })),
   }, null, 2))
 
-  await writeFile(join(dir, 'index.html'), layout(
-    session, frame => './frames/' + frame.id + '.png',
+  await writeFile(join(reportDir, 'index.html'), layout(
+    session, frame => relative(reportDir, join(shots, frame.id + '.png')).replaceAll('\\', '/'),
   ))
 
   // Generate a true single-file PNG contact sheet using the installed
@@ -150,5 +153,5 @@ export async function finishReviewSession(browser: Browser, session: ReviewSessi
   } finally {
     await preview.close()
   }
-  return dir
+  return reportDir
 }

@@ -55,7 +55,7 @@ jobs:
       - name: Full canonical behavior/type/architecture/quality census
         run: pnpm verify:full
       - name: Generate honest static census (not executed coverage)
-        run: node scripts/eq01-quality-census.mjs --check --output .review/eq03/eq10-quality-census.json
+        run: node scripts/eq01-quality-census.mjs --check --output test-results/eq03/eq10-quality-census.json
       - name: Non-test H5, WeChat MP and native App bundles
         run: pnpm build:h5 && pnpm build:mp-weixin && pnpm build:app
       - name: Retain deterministic local quality evidence
@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: eq10-quality-${{ github.run_id }}
-          path: .review/eq03/eq10-quality-census.json
+          path: test-results/eq03/eq10-quality-census.json
           if-no-files-found: warn
           retention-days: 30
   original-mock-journey-and-goldens:

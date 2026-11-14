@@ -78,6 +78,7 @@ jobs:
           name: m1-s2-focused-${{ github.run_id }}
           path: |
             .review/m1-s2/focus/
+            test-results/m1-s2/focus/
             test-results/s2-ux-focus/
           if-no-files-found: warn
           retention-days: 14

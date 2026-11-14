@@ -111,7 +111,7 @@ try {
   const outIndex = process.argv.indexOf('--output')
   if (outIndex >= 0) {
     const output = process.argv[outIndex+1]
-    check(Boolean(output) && output.startsWith('.review/ds07c8/'), 'UNSAFE_OUTPUT_PATH')
+    check(Boolean(output) && output.startsWith('test-results/ds07c8/'), 'UNSAFE_OUTPUT_PATH')
     mkdirSync(dirname(resolve(output)), { recursive: true })
     writeFileSync(output, JSON.stringify(result, null, 2) + '\n')
   }

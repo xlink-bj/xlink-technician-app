@@ -52,7 +52,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Pinned original R1 six-stage truth and honest live gates
-        run: node scripts/check-r1-six-stage-parity.mjs --output .review/r1-parity/source-evidence.json
+        run: node scripts/check-r1-six-stage-parity.mjs --output test-results/r1-parity/source-evidence.json
       - name: Adversarial R1 route and business side-effect tests
         run: |
           pnpm exec vitest run \
@@ -74,7 +74,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: r1-source-review-${{ github.run_id }}
-          path: .review/r1-parity/
+          path: test-results/r1-parity/
           if-no-files-found: warn
           retention-days: 30
 

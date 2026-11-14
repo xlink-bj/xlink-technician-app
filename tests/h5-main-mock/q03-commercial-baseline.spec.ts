@@ -135,7 +135,9 @@ test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 3
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   expect(remote).toEqual([])
   expect(errors).toEqual([])
-  await writeFile(resolve(dir, 'metrics.json'), JSON.stringify({
+  const reportDir = resolve('test-results/q03-commercial-baseline')
+  await mkdir(reportDir, { recursive: true })
+  await writeFile(resolve(reportDir, 'metrics.json'), JSON.stringify({
     viewport: '375x667', source: 'real uni-app, DEV Mock via adapter',
     materialPrices: [38.6, 26.8], tabs: { packageTabs, materialTabs }, paint, remote, errors,
     head: process.env.GITHUB_SHA ?? 'local',

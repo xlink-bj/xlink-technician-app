@@ -76,6 +76,7 @@ jobs:
           name: s2-main-app-review-sheets-${{ github.run_id }}
           path: |
             .review/m1-s2/generated/
+            test-results/m1-s2/generated/
             test-results/s2-ux-review/
           if-no-files-found: warn
           retention-days: 30

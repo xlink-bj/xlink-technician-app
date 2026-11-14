@@ -280,7 +280,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     const name = screen.toLowerCase() + '-' + viewport.width + 'x' + viewport.height
     const shot = await page.screenshot({ fullPage: false, animations: 'disabled', caret: 'hide' })
     await writeFile(resolve(dir, name + '.png'), shot)
-    await writeFile(resolve(dir, name + '.json'), JSON.stringify({
+    const reportDir = resolve(process.cwd(), 'test-results/m1-s2/focus')
+    await mkdir(reportDir, { recursive: true })
+    await writeFile(resolve(reportDir, name + '.json'), JSON.stringify({
       schemaVersion: 1,
       scene: screen as Screen,
       viewport,

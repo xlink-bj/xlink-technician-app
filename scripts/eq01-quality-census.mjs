@@ -69,7 +69,7 @@ const report = {
 const arg=process.argv.indexOf('--output')
 if(arg !== -1){
   const path=process.argv[arg+1]
-  if(!(path?.startsWith('.review/eq01/') || path?.startsWith('.review/eq03/')) || path.includes('..')) throw Error('Output must be under .review/eq01/ or .review/eq03/')
+  if(!(path?.startsWith('test-results/eq01/') || path?.startsWith('test-results/eq03/')) || path.includes('..')) throw Error('Output must be under test-results/eq01/ or test-results/eq03/')
   const output=resolve(root,path)
   mkdirSync(dirname(output),{recursive:true})
   writeFileSync(output,JSON.stringify(report,null,2)+'\n')

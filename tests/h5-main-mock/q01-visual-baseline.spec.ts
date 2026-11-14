@@ -203,7 +203,9 @@ test('Q01 selected-items visual baseline on real App H5, 375x667', async ({ page
   const measureImage = await page.screenshot({ animations: 'disabled', caret: 'hide' })
   await writeFile(resolve(dir, 'q01-measures-and-action-375x667.png'), measureImage)
   await info.attach('Q01 measures + actions viewport', { body: measureImage, contentType: 'image/png' })
-  await writeFile(resolve(dir, 'evidence.json'), JSON.stringify({
+  const reportDir = resolve('test-results/q01-visual-baseline')
+  await mkdir(reportDir, { recursive: true })
+  await writeFile(resolve(reportDir, 'evidence.json'), JSON.stringify({
     viewport: '375x667', source: 'real uni-app H5 / DEV Mock', lineCount: 4,
     materialQuantityX: qtyX, style: geometry, contextPaint, externalRequests, runtimeErrors,
     gitCommit: process.env.GITHUB_SHA ?? 'local',

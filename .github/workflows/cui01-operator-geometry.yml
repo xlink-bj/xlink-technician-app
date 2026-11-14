@@ -41,6 +41,7 @@ jobs:
           name: cui01-operator-geometry-${{ github.run_id }}
           path: |
             .review/cui01-geometry/
+            test-results/cui01-geometry/
             test-results/main-h5-mock/
           retention-days: 14
           if-no-files-found: warn

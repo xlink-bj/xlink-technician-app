@@ -95,7 +95,9 @@ test('cross-page controls and category labels obey one visual grid at 375px', as
   await expect(page.getByTestId('quotation-catalog-page')).toHaveCount(0)
   expect(external).toEqual([])
   expect(runtimeErrors).toEqual([])
-  await writeFile(resolve(dir, 'measurements.json'), JSON.stringify({
+  const reportDir = resolve('test-results/cui01-geometry')
+  await mkdir(reportDir, { recursive: true })
+  await writeFile(resolve(reportDir, 'measurements.json'), JSON.stringify({
     viewport: '375x667', source: 'real uni-app H5, DEV Mock adapter',
     measurements, external, runtimeErrors, sha: process.env.GITHUB_SHA ?? 'local',
   }, null, 2))

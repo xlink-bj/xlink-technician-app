@@ -164,7 +164,7 @@ const result={
 const o=process.argv.indexOf('--output')
 if(o>=0){
   const out=process.argv[o+1]
-  assert(typeof out==='string'&&out.startsWith('.review/r1-parity/')&&!out.includes('..'),'UNSAFE_OUTPUT')
+  assert(typeof out==='string'&&out.startsWith('test-results/r1-parity/')&&!out.includes('..'),'UNSAFE_OUTPUT')
   mkdirSync(dirname(resolve(root,out)),{recursive:true})
   writeFileSync(resolve(root,out),JSON.stringify(result,null,2)+'\n')
 }
