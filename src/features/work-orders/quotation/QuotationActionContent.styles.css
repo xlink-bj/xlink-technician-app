@@ -140,6 +140,8 @@
 /* uni-textarea defaults to ~150px; keep short repair descriptions compact.
    Long text remains editable/scrollable inside the field. */
 .quotation-content--review .quotation-content__context-input--multiline { height: 84px; min-height: 84px; }
+/* H5 inherits the outer min-height; keep the wrapper inside the padded field. */
+.quotation-content__context-input--multiline :deep(.uni-textarea-wrapper) { min-height: 0; }
 
 /* G4-F catalog page: local presentation only; ActionWorkspaceShell remains shared. */
 .quotation-content__catalog-topbar { flex: 0 0 55px; grid-template-columns: 68px minmax(0, 1fr) 68px; min-height: 55px; }

@@ -129,6 +129,46 @@ async function isolatedNetwork(page: Page, baseURL: string) {
   return { external, errors }
 }
 
+for (const viewport of [{ width: 430, height: 932 }, { width: 375, height: 667 }]) {
+  test(`group description stays inside its field above quantity at ${viewport.width}`, async ({ page, baseURL }, info) => {
+    await page.setViewportSize(viewport)
+    const network = await isolatedNetwork(page, baseURL!)
+    try {
+      await enter(page); await addMaterial(page)
+      const host = page.getByTestId('quotation-group-description-quotation-group-1')
+      const field = host.locator('textarea')
+      const values = ['屋面防水层局部修补', '屋面女儿墙根部与落水口周边防水层破损，需清理基层、修补裂缝并复核收口。'.repeat(3)]
+      for (const value of values) {
+        await field.fill(value)
+        await host.scrollIntoViewIfNeeded()
+        const geometry = await host.evaluate(element => {
+          const outer = element.getBoundingClientRect()
+          const input = element.querySelector('textarea')!.getBoundingClientRect()
+          const quantityLabel = document.querySelector('[data-testid="quotation-group-quantity-quotation-group-1"]')!
+            .parentElement!.querySelector('.quotation-content__context-label')!.getBoundingClientRect()
+          return { topInset: input.top - outer.top, bottomInset: outer.bottom - input.bottom,
+            quantityGap: quantityLabel.top - input.bottom }
+        })
+        expect(geometry.topInset).toBeGreaterThanOrEqual(0)
+        expect(geometry.bottomInset).toBeGreaterThanOrEqual(0)
+        expect(geometry.quantityGap).toBeGreaterThanOrEqual(6)
+        await expect(field).toHaveValue(value)
+        await expect.poll(async () => (await quotationDraft(page)).groups[0].partDescription).toBe(value)
+      }
+      await page.locator('.uni-page-head-hd').click()
+      await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
+      await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+      if (!await page.getByTestId('quotation-group-context-quotation-group-1').isVisible()) {
+        await page.getByTestId('quotation-group-context-toggle-quotation-group-1').click()
+      }
+      await expect(field).toHaveValue(values[1])
+      expect(network.external).toEqual([]); expect(network.errors).toEqual([])
+    } finally {
+      await info.attach('network.json', { body: JSON.stringify(network), contentType: 'application/json' })
+    }
+  })
+}
+
 test('normal SPU decimal, zero/empty/negative input and refresh preserve existing quantity rules', async ({ page, baseURL }, info) => {
   const network = await isolatedNetwork(page, baseURL!)
   try {
