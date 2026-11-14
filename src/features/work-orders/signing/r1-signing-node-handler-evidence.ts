@@ -28,8 +28,8 @@ export function reviewR1ActivePlaceOrderHandler(
     return { verified: false, reason: '无法唯一确定当前有效的下单工作流节点' }
   }
   const node = active[0]!
-  if (detail.workflowRunId && node.runId && detail.workflowRunId !== node.runId) {
-    return { verified: false, reason: '节点属于其他工作流实例' }
+  if (!detail.workflowRunId || !node.runId || detail.workflowRunId !== node.runId) {
+    return { verified: false, reason: '节点与当前工作流实例的归属未核验' }
   }
   if (node.visibility?.evidenceState !== 'verified' || !node.handlers?.length) {
     return { verified: false, reason: '当前节点缺少可核验的 handlerIds 数据' }
