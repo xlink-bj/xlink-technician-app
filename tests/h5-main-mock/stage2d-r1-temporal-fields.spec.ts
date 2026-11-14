@@ -48,6 +48,12 @@ test.describe('Stage 2D R1 temporal/rating record roundtrip', () => {
         await field(key).locator('.app-button').filter({ hasText: '清空' }).click()
       }
       await page.getByTestId('a-special-save').click()
+      // This is a completed-save roundtrip, not an interrupted transaction.
+      // The existing row is already visible during an edit; wait for the
+      // editor to reset after durable cleanup before reloading the page.
+      await expect(page.getByTestId('a-special-save')).toHaveText('保存记录')
+      await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
+      await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
       await page.reload()
       await page.getByTestId(`a-special-edit-${id}`).click()
       await expect(field('inspectionDate')).toContainText('请选择日期')
