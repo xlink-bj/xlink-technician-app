@@ -1,6 +1,6 @@
 # Review-only tooling
 
-本目录包含独立的开发验证环境，**不属于商用 App 的路由或发布入口**。原先散落在仓库根部的 `__review/`、`review-app/`、`review-app-g4f/` 已统一迁入这里。
+本目录保留历史 Review 工具和现有开发辅助脚本，**不属于商用 App 的路由或发布入口，也不是日常开发的替代项目**。正常开发/测试从固定仓库根目录使用 [README](../../README.md#development-environments) 与现有分层测试命令。原先散落在仓库根部的 `__review/`、`review-app/`、`review-app-g4f/` 已统一迁入这里。
 
 | 子目录 | 用途 |
 | --- | --- |
@@ -22,7 +22,7 @@ pnpm run check:g4e-review-harness
 pnpm run check:review-root-hygiene
 ```
 
-微信小程序编译器对输入目录的相对层级有限制，因此 `build:mp-weixin-review` 会在仓库根目录生成一个 **ignored** 的 `.review-input` 链接，指向 `tools/review/uni-gallery`。这是编译适配路径，不是被重新引入的正式根目录源码。`.review/` 同样只承载临时取证和报告。不可把上述路径加入商用 `src/pages.json`、Production 构建或权限上下文。
+微信小程序编译器对输入目录的相对层级有限制，因此 `build:mp-weixin-review` 会在仓库根目录生成一个 **ignored** 的 `.review-input` 链接，指向 `tools/review/uni-gallery`。这是编译适配路径，不是被重新引入的正式根目录源码。`.review/` 仅保留需要查看的系统截图；报告、日志及测试输出使用 `test-results/`，可复用脚本/配置保留在正式工具目录，不将脚本、数据库或临时构建工程放入 `.review/`。不可把上述路径加入商用 `src/pages.json`、Production 构建或权限上下文。
 
 `scripts/` 中保留的业务协议审计、质量守卫、CI、生成器和类型声明属于其他消费者；只有在证明可删除且不损害历史证据后再分批治理。
 

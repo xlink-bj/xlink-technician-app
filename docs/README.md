@@ -8,6 +8,10 @@
 >
 > **主干更新提示（2026-10-30）：**本索引中的 G0-A/B/C 和 C1 审计数字均固定在旧 `main@17ba721`，不是最新主干状态。C1-FIX 已通过 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 合入 `57cde73`；四个内部 QA 页面已从 H5/MP 发布包排除。C2-A [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 随后合入 `main@ded94abc`，减少四条 DEV Mock 反向依赖，但同样不属于本历史快照。原生 APP 最终打包/真机验证仍在 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240)。
 
+## 当前日常开发入口
+
+环境与启动命令看 [README](../README.md#development-environments)：本地前后端、纯前端 Mock、生产只读；Beta 显式选择。工作方式以 [AGENTS.md](../AGENTS.md) 的 main-only 与分层回归为准：修改功能及相关测试、执行关键回归、提交 main、核 CI，不为每次开发重建专项验证流程。历史分支/PR/隔离窗口记录不是当前操作指令。报告在 `test-results/`，`.review/` 只放需要查看的系统截图。
+
 ## 先读这六份
 
 | 场景 | 当前入口 | 属性 |
@@ -68,5 +72,5 @@
 1. 核对最新 main 的 exact SHA、受影响的文件及当前测试。
 2. 若改变设计原则：先修订目标架构/专题 ADR，再修改实现。
 3. 若只改变实现：更新实现基线的日期和 SHA，不反向把历史版本写成当前事实。
-4. PR 给出变更边界、风险、测试和 Owner gate；未经批准不得 merge/deploy。
+4. 普通增量按 AGENTS.md 在 main 直接提交，记录受影响范围、测试及精确 SHA CI。发布、生产业务操作等不在普通提交授权内；不重复申请日常提交审批。
 
