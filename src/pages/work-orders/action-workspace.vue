@@ -14,7 +14,7 @@
   </view>
 
   <R1FormActionContentHost v-else-if="normalContentForPage" ref="normalContent"
-    :visible="normalPageVisible" :customer-name="workspace.detail?.customerName" :display-number="workspace.detail?.displayNumber"
+    :visible="normalPageVisible" :customer-name="workspace.detail?.customerName" :service-address="workspace.detail?.serviceAddress" :service-district="workspace.detail?.serviceDistrict" :display-number="workspace.detail?.displayNumber"
     :exit-message="normalExitMessage" :work-order-id="String(workspace.descriptor!.workOrderId)" :node="workspace.normalFormNode"
     :actor-scope="workOrderReadScopeKey(session.session)" :dev-mock-dynamic-form-content="workspace.devMockDynamicFormContent" :create-dev-mock-dynamic-form-controller="createDevMockDynamicFormControllerForUi" @changed="refreshNormalContext" @back="exit" />
 
@@ -23,7 +23,7 @@
     ref="quotationHubRef"
     :work-order-id="String(workspace.descriptor?.workOrderId ?? '')"
     :display-number="workspace.detail?.displayNumber"
-    :customer-name="workspace.detail?.customerName"
+    :customer-name="workspace.detail?.customerName" :service-address="workspace.detail?.serviceAddress" :service-district="workspace.detail?.serviceDistrict"
     :local-draft-group-count="quotationComposition.groups.length"
     :local-draft-state="quotationComposition.localState"
     :read-only="productionReadOnly"
@@ -93,7 +93,7 @@
 
   <ActionWorkspaceShell
     v-else-if="workspace.descriptor && (workspace.appointmentForm || workspace.dynamicForm)"
-    :customer-name="workspace.detail?.customerName"
+    :customer-name="workspace.detail?.customerName" :service-address="workspace.detail?.serviceAddress" :service-district="workspace.detail?.serviceDistrict"
     :display-number="workspace.detail?.displayNumber"
     :commercial-survey="workspace.descriptor.formPurpose === 'survey'"
     :h5-navigation-fit="Boolean(workspace.appointmentForm)"

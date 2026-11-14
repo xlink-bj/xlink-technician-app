@@ -185,7 +185,7 @@ jobs:
           retention-days: 7
 
   draft-lifecycle-h5:
-    # Group the 33 existing/new lifecycle cases on their own runner, preserving
+    # Group the lifecycle and normal-form presentation cases on one runner, preserving
     # all commands and the original scoped job's 15-minute budget.
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
@@ -223,6 +223,8 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/normal-action-workspace.config.ts
+      - name: Verify S01 normal form layout and uncertain-save recovery (4 cases)
+        run: pnpm exec playwright test --config config/playwright/s01-normal-form.config.ts
       - name: Verify DEV Mock dynamic form Action Workspace lifecycle (5 cases)
         run: pnpm exec playwright test --config config/playwright/dev-mock-dynamic-form-workspace.config.ts
       - name: Preserve draft lifecycle H5 evidence
@@ -236,6 +238,7 @@ jobs:
             test-results/normal-form-draft-recovery/existing2/
             test-results/normal-form-fresh-original/
             test-results/normal-action-workspace/
+            test-results/s01/
             test-results/dev-mock-dynamic-form-workspace/
           if-no-files-found: warn
           retention-days: 7

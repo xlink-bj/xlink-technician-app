@@ -1,5 +1,5 @@
 <template>
-  <view class="r1-file-field">
+  <view class="r1-file-field" :class="{'r1-file-field--commercial':commercial}">
     <view v-for="(file,index) in files" :key="file.url" class="r1-file-item">
       <image v-if="safeImage(file)" :src="file.url" mode="aspectFill"
         :data-testid="`r1-normal-file-preview-${field.valueKey}`" class="r1-file-preview" />
@@ -30,7 +30,7 @@ import { isR1NormalImageWireArray } from '@shared/form/r1-normal-image-contract'
 import type { R1LocalField } from './r1-local-form-fields'
 import type { R1NormalFormFileSessionView } from './r1-normal-form-media-port'
 const props=defineProps<{readonly field:Pick<R1LocalField,'fieldId'|'valueKey'>;readonly modelValue?:unknown;
-  readonly draft?:Readonly<Record<string,unknown>>;readonly media?:R1NormalFormFileSessionView;readonly disabled?:boolean;readonly retained?:boolean;readonly allowRetainedRemoval?:boolean}>()
+  readonly draft?:Readonly<Record<string,unknown>>;readonly media?:R1NormalFormFileSessionView;readonly commercial?:boolean;readonly disabled?:boolean;readonly retained?:boolean;readonly allowRetainedRemoval?:boolean}>()
 const emit=defineEmits<{(event:'update:modelValue',value:readonly R1FileWireValue[]):void}>()
 const localError=ref('')
 const files=computed<readonly R1FileWireValue[]>(()=>{
@@ -64,4 +64,10 @@ async function change(kind:'pick'|'retry'|'remove'|'discardFailed',index=0){
 </script>
 <style scoped>
 .r1-file-item{display:flex;align-items:center;gap:8px;margin:8px 0}.r1-file-preview{width:88px;height:88px;border-radius:8px}.r1-file-name{overflow-wrap:anywhere;font-size:13px}.r1-file-error{display:block;color:#a33;font-size:12px}
+
+.r1-file-field--commercial{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--app-space-sm)}
+.r1-file-field--commercial .r1-file-item{box-sizing:border-box;flex:0 1 calc(33.333% - var(--app-space-sm));min-width:84px;flex-direction:column;align-items:stretch;margin:0;gap:var(--app-space-xs)}
+.r1-file-field--commercial .r1-file-preview{width:100%;height:96px;border-radius:var(--app-radius-control)}
+.r1-file-field--commercial .r1-file-name{display:flex;align-items:center;min-height:64px;padding:var(--app-space-sm);background:var(--app-color-page);border-radius:var(--app-radius-control);font-size:var(--app-font-body);overflow-wrap:anywhere}
+.r1-file-field--commercial .r1-file-error{width:100%;font-size:var(--app-font-body);line-height:1.5}
 </style>

@@ -1,3 +1,4 @@
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 import { captureReviewFrame, finishReviewSession, type ReviewSession } from './review-sheet'
 
@@ -189,14 +190,16 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-records').locator('.quotation-hub__order')).toHaveCount(2)
       await expect(page.getByTestId('quotation-order-hub')).not.toContainText(/DEV-Q00|Mock|演示数据|设计样本/)
-      // Commercial reference: the work-order identity and customer detail
-      // occupy separate, visually grouped rows rather than one cramped stack.
-      await expect(page.locator('.quotation-hub__work-order-meta')).toContainText('客户')
-      const heroTop = await page.locator('.quotation-hub__work-order-top').boundingBox()
-      const heroMeta = await page.locator('.quotation-hub__work-order-meta').boundingBox()
-      expect(heroTop).not.toBeNull()
-      expect(heroMeta).not.toBeNull()
-      expect(heroMeta!.y).toBeGreaterThan(heroTop!.y + 42)
+      // All Workspaces use the same source-backed order summary. No inferred
+      // workflow badge or fallback internal ID is introduced by presentation.
+      const summary = page.getByTestId('action-workspace-context')
+      await expect(summary).toHaveCount(1)
+      await expect(summary.locator('.app-work-order-summary__customer')).toBeVisible()
+      await expect(summary).not.toContainText(/报价中|勘查中/)
+      const summaryBox = await summary.boundingBox()
+      expect(summaryBox).not.toBeNull()
+      expect(summaryBox!.x).toBeGreaterThanOrEqual(0)
+      expect(summaryBox!.x + summaryBox!.width).toBeLessThanOrEqual(page.viewportSize()!.width)
       // Screenshot generation alone is not a typography or spacing review:
       // Q00's former 19rpx labels were only ~10px on a 390px screen.
       const orderTitleSize = await page.locator('.quotation-hub__order-number').first().evaluate(
@@ -289,6 +292,10 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await page.getByTestId('quotation-cost-adjustments').scrollIntoViewIfNeeded()
       await expect(page.getByTestId('quotation-cost-adjustments')).toBeVisible()
       await capture('05-quote-fees', 'Q', 'Q01 费用与优惠', '独立费用分组、不可用操作和底部金额提交状态')
+      // The current quotation metadata has a required selection-stage answer.
+      // Complete it through the real field, preserving the business gate.
+      await page.getByTestId('order-field-mock-order-mode').getByText('否', { exact: true }).click()
+      await expect(page.getByTestId('order-extfield-editor')).toHaveAttribute('data-draft-status', 'saved_local')
       await page.getByTestId('quotation-first-step-select-products').click()
       await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
       await expect(page.getByTestId('quotation-catalog-kind-package')).toBeVisible()
@@ -364,9 +371,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       // never promote a local quotation draft to a formal Order.
       await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
       await page.locator('.work-orders-entry').click()
-      await page.locator('.search-input input').fill('04009')
-      await page.locator('.search-button').click()
-      await page.locator('.work-order-card').filter({ hasText: '陈女士' }).click()
+      await (await searchMockWorkOrder(page, { orderNum: '04009', customer: '陈女士' })).click()
       await expect(page.locator('.summary-number')).toContainText('04009')
       await page.evaluate(() => {
         const uni = (window as Window & {

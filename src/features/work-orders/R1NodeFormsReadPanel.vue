@@ -1,10 +1,10 @@
 <template>
-  <view data-testid="r1-normal-form-read">
-    <text class="form-read__hint">读取当前工单节点已保存的记录。查看不会保存或推进流程。</text>
+  <view data-testid="r1-normal-form-read" :class="{'form-read--commercial':commercial}">
+    <text v-if="!commercial" class="form-read__hint">读取当前工单节点已保存的记录。查看不会保存或推进流程。</text>
     <AppButton variant="secondary" size="compact" :disabled="loading || busy || fileBusy || fileCancelling || draftWorking" @tap="load">
       {{ loading ? '正在读取…' : '读取已保存表单' }}
     </AppButton>
-    <text v-if="message" class="form-read__hint" data-testid="r1-normal-form-read-message">{{ message }}</text>
+    <text v-if="displayMessage" class="form-read__hint" data-testid="r1-normal-form-read-message">{{ displayMessage }}</text>
     <view v-if="draftMessage" class="form-read__draft" data-testid="r1-normal-draft-status" aria-live="polite">
       <text class="form-read__hint">{{ draftMessage }}</text>
       <AppButton v-if="draftRead?.state === 'recoverable'" variant="secondary" :disabled="draftWorking" data-testid="r1-normal-draft-restore" @tap="restoreDraft">恢复填写</AppButton>
@@ -17,18 +17,23 @@
     </view>
     <template v-if="visibleSnapshot">
       <text v-if="!actions && visibleSnapshot.definition.fields?.some(field => field.type==='file')" class="form-read__hint" data-testid="r1-normal-file-unavailable">此表单的附件配置或授权尚不支持新增图片。</text>
-      <text v-if="!visibleSnapshot.records.length" class="form-read__hint" data-testid="r1-normal-form-empty">暂无已保存记录。</text>
+      <text v-if="!visibleSnapshot.records.length && (!commercial || !actions || actions.locked())" class="form-read__hint" data-testid="r1-normal-form-empty">暂无已保存记录。</text>
       <view v-for="(record,index) in visibleSnapshot.records" :key="String(record.id)" class="form-read__record" data-testid="r1-normal-form-record">
         <text class="form-read__title">{{ visibleSnapshot.node.displayName || '现场记录' }} · {{ index + 1 }}</text>
-        <view v-for="field in projectR1RecordReadFields(visibleSnapshot.definition, record)" :key="field.fieldId" class="form-read__field">
+        <view v-for="group in readGroups(record)" :key="group.key" :class="{'form-read__group':commercial}"
+          :data-testid="commercial?'s01-source-group':undefined">
+          <AppTaskSectionHeading v-if="commercial && (group.title || group.kind==='number' && group.fields.length>1)"
+            :title="group.title || '数值信息'" icon="task" tone="measure" status="已保存" />
+        <view v-for="field in group.fields" :key="field.fieldId" class="form-read__field">
           <slot v-if="$slots['read-field'] && readFieldOverride?.(visibleSnapshot, record, field)"
             name="read-field" :snapshot="visibleSnapshot" :record="record" :field="field" />
           <template v-else>
             <text class="form-read__label">{{ field.label }}</text>
             <text v-if="!readFiles(record,field)" class="form-read__value" :data-testid="`r1-normal-value-${field.valueKey}`">{{ field.text }}</text>
             <R1NormalFileField v-if="readFiles(record,field)" :field="field"
-              :model-value="record.values?.[field.valueKey]" :retained="retainedReadFiles(record,field)" />
+              :model-value="record.values?.[field.valueKey]" :retained="retainedReadFiles(record,field)" :commercial="commercial" />
           </template>
+        </view>
         </view>
         <text v-if="actions?.editProblem?.(String(record.id))" class="form-read__hint"
           :data-testid="`r1-normal-edit-status-${record.id}`">{{ actions.editProblem(String(record.id)) }}</text>
@@ -39,12 +44,18 @@
         <AppButton v-if="(visibleSnapshot.records.length || fileEditorClosed) && actions.canCreate?.() && !editing" variant="secondary"
           :disabled="busy || loading" data-testid="r1-normal-append" @tap="beginCreate">新增记录</AppButton>
         <view v-if="editing || (!visibleSnapshot.records.length && !fileEditorClosed)" class="form-read__record" data-testid="r1-normal-create">
-          <text class="form-read__title">{{ visibleSnapshot.node.displayName || '新增现场记录' }}</text>
+          <text v-if="!commercial" class="form-read__title">{{ visibleSnapshot.node.displayName || '新增现场记录' }}</text>
           <slot v-if="$slots['edit-experience'] && editPresentation" name="edit-experience" :context="editPresentation" />
           <template v-else>
-          <template v-for="field in editableFields" :key="field.fieldId">
-            <AppField v-if="field.visible" :label="field.label" :required="field.required" :data-testid="`r1-normal-input-${field.valueKey}`">
-              <R1NormalFileField v-if="field.supported && field.type==='file' && (actions.fileMedia || actions.retainedFiles)" :field="field"
+          <view v-for="group in editGroups" :key="group.key" :class="{'form-read__group':commercial}"
+            :data-testid="commercial?'s01-source-group':undefined">
+            <AppTaskSectionHeading v-if="commercial && (group.title || group.kind==='number' && group.fields.length>1)"
+              :title="group.title || '数值信息'" icon="appointment" tone="measure" status="按实际填写" />
+            <view :class="{'form-read__group-fields':commercial}">
+          <template v-for="field in group.fields" :key="field.fieldId">
+            <AppField v-if="field.visible" :label="field.label" :required="field.required" :data-testid="`r1-normal-input-${field.valueKey}`" :optional="commercial && !field.required" :read-only="commercial && field.readOnly"
+              :class="{'form-read__numeric':commercial && (field.type==='number' || field.type==='digit')}">
+              <R1NormalFileField v-if="field.supported && field.type==='file' && (actions.fileMedia || actions.retainedFiles)" :field="field" :commercial="commercial"
                 :model-value="values[field.valueKey]" :draft="values" :media="actions.fileMedia" :retained="actions.retainedFiles" :allow-retained-removal="actions.retainedFiles" :disabled="busy || loading || fileCancelling || draftBlocked || draftWorking"
                 @update:model-value="setFileValue(field.fieldId,field.valueKey,$event)" />
               <R1FormFieldControl v-else-if="field.supported" :field="field" :model-value="scalarValueFor(field.valueKey)"
@@ -52,6 +63,9 @@
               <text v-else class="form-read__hint">{{ field.reason || '当前字段不可编辑' }}</text>
             </AppField>
           </template>
+            </view>
+          </view>
+          <template v-if="!commercial">
           <AppButton :disabled="loading || busy || fileCancelling || draftBlocked || draftWorking || !validDraft" :loading="busy" data-testid="r1-normal-save" @tap="save(false)">保存记录</AppButton>
           <AppButton v-if="actions.canSaveAndComplete?.()" variant="secondary" :disabled="loading || busy || fileCancelling || draftBlocked || draftWorking || !validDraft"
             data-testid="r1-normal-save-complete-request" @tap="confirmSaveCompletion = true">保存并完成</AppButton>
@@ -61,10 +75,11 @@
             <AppButton variant="text" :disabled="busy" @tap="confirmSaveCompletion = false">返回检查</AppButton>
           </template>
           </template>
-          <AppButton v-if="editing || actions.fileMedia" variant="text" :disabled="busy || fileCancelling" :loading="fileCancelling" data-testid="r1-normal-edit-cancel" @tap="cancelEdit">{{ actions.fileMedia && !editingId ? '取消本次新增' : '取消编辑' }}</AppButton>
-          <text class="form-read__hint">保存仅保存本条记录，不会完成当前节点或进入下一阶段。</text>
+          </template>
+          <AppButton v-if="!commercial && (editing || actions.fileMedia)" variant="text" :disabled="busy || fileCancelling" :loading="fileCancelling" data-testid="r1-normal-edit-cancel" @tap="cancelEdit">{{ actions.fileMedia && !editingId ? '取消本次新增' : '取消编辑' }}</AppButton>
+          <text v-if="!commercial" class="form-read__hint">保存仅保存本条记录，不会完成当前节点或进入下一阶段。</text>
         </view>
-        <view v-if="visibleSnapshot.records.length && !editing && (actions.canComplete ? actions.canComplete() : true)" class="form-read__record">
+        <view v-if="!commercial && visibleSnapshot.records.length && !editing && (actions.canComplete ? actions.canComplete() : true)" class="form-read__record">
           <AppButton v-if="!confirmCompletion" variant="secondary" :disabled="busy" data-testid="r1-normal-complete-request"
             @tap="confirmCompletion = true">完成当前节点</AppButton>
           <template v-else>
@@ -106,6 +121,8 @@ import { r1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-rea
 import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
+import AppTaskSectionHeading from '@shared/ui/AppTaskSectionHeading.vue'
+import {r1FormFieldGroups,type R1FormWorkspaceFooter,type R1FormFooterAction} from './r1-form-workspace-presentation'
 import R1FormFieldControl from './R1FormFieldControl.vue'
 import R1NormalFileField from './R1NormalFileField.vue'
 import { isR1NormalFileFieldEligible, sameR1NormalFileValues } from './r1-normal-file-values'
@@ -119,7 +136,7 @@ import { r1RepeatActionsKey } from './r1-repeat-actions-port'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-read'
 
 const props = defineProps<{ readonly reader: R1NodeFormsReader; readonly workOrderId: string;
-  readonly runtimeNodeId: string; readonly actorScope?: string | null;
+  readonly runtimeNodeId: string; readonly commercial?:boolean; readonly actorScope?: string | null;
   readonly editExperienceOverride?: (snapshot: R1NodeFormsSnapshot, recordId: string) => boolean;
   readonly readFieldOverride?: (snapshot: R1NodeFormsSnapshot, record: FormDataRead, field: R1RecordReadField) => boolean }>()
 let readerView = claimNormalReader(props.reader)
@@ -145,6 +162,8 @@ const actions = computed(() => visibleSnapshot.value ? actionProvider?.forSnapsh
 const fileBusy=computed(()=>{void actions.value?.fileMedia?.revision.value;return actions.value?.fileMedia?.busy()??false})
 const editableFields = computed(() => visibleSnapshot.value ? actions.value?.projectFields?.(values.value,editingId.value)
   ?? projectR1RepeatFields(visibleSnapshot.value, values.value) : [])
+function readGroups(record:FormDataRead){const source=visibleSnapshot.value;const fields=source?projectR1RecordReadFields(source.definition,record):[];return source&&props.commercial?r1FormFieldGroups(source.definition,fields):[{key:'all',kind:'field' as const,fields}]}
+const editGroups=computed(()=>visibleSnapshot.value&&props.commercial?r1FormFieldGroups(visibleSnapshot.value.definition,editableFields.value.filter(field=>field.visible)):[{key:'all',kind:'field' as const,fields:editableFields.value}])
 const inputsValid = useFormInputValidityScope()
 const validDraft = computed(() => { if(!inputsValid.value || fileCancelling.value)return false;try {void actions.value?.fileMedia?.revision.value
   if(actions.value?.fileMedia&&!actions.value.fileMedia.ready(values.value))return false
@@ -186,6 +205,7 @@ const editPresentation = computed(() => {
     saveOnly:async()=>{if(owns())await save(false)}}
 })
 watch(actions,(next,old)=>{if(old?.fileMedia&&next?.fileMedia!==old.fileMedia)old.fileMedia.dispose()})
+const displayMessage=computed(()=>props.commercial && actions.value && !actions.value.locked() && /^已从后台读取 \d+ 条记录，当前仅查看。$/.test(message.value) ? message.value.replace('，当前仅查看。','。') : message.value)
 // Share only the exact visible read state, never a save ACK or the stale parent EXTS summary.
 watch(visibleSnapshot, value => emit('snapshot-change', value && snapshotActorScope.value
   ? { actorScope: snapshotActorScope.value, snapshot: value } : null), { immediate: true, flush: 'sync' })
@@ -307,7 +327,29 @@ async function flushLocalDraft(): Promise<boolean> {
   return ticket===version && session===draftSession && draftRead.value?.state !== 'failed'
     && !busy.value && !loading.value && !fileBusy.value && !fileCancelling.value && !draftWorking.value
 }
-defineExpose({ flushLocalDraft })
+// Shell-owned placement only; every callback still enters the original guarded operation.
+const workspaceFooter=computed<R1FormWorkspaceFooter>(()=>{
+ const source=visibleSnapshot.value,action=actions.value,ticket=version,actor=props.actorScope
+ if(!props.commercial||!source||!action||action.locked())return{actions:[],notice:'',editing:false}
+ const own=()=>ticket===version&&props.actorScope===actor&&visibleSnapshot.value===source&&actions.value===action&&viewReader.isCurrent(source)&&!action.locked()
+ const list:R1FormFooterAction[]=[]
+ const add=(id:string,label:string,variant:R1FormFooterAction['variant'],disabled:boolean,run:()=>void,working=false)=>list.push({id,label,variant,disabled,loading:working,run:()=>{if(own())run()}})
+ const blocked=loading.value||busy.value||fileCancelling.value||draftBlocked.value||draftWorking.value||!validDraft.value
+ const editor=editing.value||!source.records.length&&!fileEditorClosed.value
+ let notice='保存记录不会自动完成当前节点。'
+ if(editor&&!editPresentation.value){
+  if(confirmSaveCompletion.value){notice='确认保存本条记录并完成当前节点？';add('r1-normal-save-complete-confirm','确认保存并完成','primary',blocked,()=>{void save(true)},busy.value);add('r1-normal-save-complete-back','返回检查','text',busy.value,()=>{confirmSaveCompletion.value=false})}
+  else{add('r1-normal-save','保存记录','secondary',blocked,()=>{void save(false)},busy.value)
+   if(action.canSaveAndComplete?.())add('r1-normal-save-complete-request','保存并完成','primary',blocked,()=>{confirmSaveCompletion.value=true})
+   else add('r1-normal-complete-unavailable','完成当前节点','primary',true,()=>{})}
+  if(editing.value||action.fileMedia)add('r1-normal-edit-cancel',action.fileMedia&&!editingId.value?'取消本次新增':'取消编辑','text',busy.value||fileCancelling.value,()=>{void cancelEdit()},fileCancelling.value)
+ }else if(source.records.length&&!editing.value&&(action.canComplete?action.canComplete():true)){
+  if(confirmCompletion.value){notice='确认已保存记录齐全，完成当前节点？';add('r1-normal-complete-confirm','确认完成','primary',busy.value,()=>{void complete()},busy.value);add('r1-normal-complete-back','返回检查','text',busy.value,()=>{confirmCompletion.value=false})}
+  else add('r1-normal-complete-request','完成当前节点','primary',busy.value,()=>{confirmCompletion.value=true})
+ }
+ return{actions:list,notice:list.length?notice:'',editing:editor}
+})
+defineExpose({ flushLocalDraft,workspaceFooter })
 function restoreDraft(){
   const source=visibleSnapshot.value, action=actions.value, read=draftRead.value
   if(!source||!action||action.locked()||read?.state!=='recoverable'||draftWorking.value)return
@@ -458,4 +500,16 @@ async function complete() {
 .form-read__field{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #f1f4f8}
 .form-read__label{font-size:13px;color:#68788f;flex:0 0 90px}
 .form-read__value{font-size:13px;color:#263b55;text-align:right;overflow-wrap:anywhere}
+
+.form-read--commercial{--app-font-field-label:28rpx;--app-font-meta:24rpx}
+.form-read--commercial .form-read__hint{font-size:var(--app-font-body);line-height:1.5;margin:var(--app-space-sm) 0}
+.form-read--commercial .form-read__record{border:0;padding-top:0;margin-top:var(--app-space-md)}
+.form-read--commercial .form-read__title{display:block;font-size:var(--app-font-body);margin-bottom:var(--app-space-sm);color:var(--app-color-text-secondary)}
+.form-read__group{box-sizing:border-box;padding:var(--app-card-padding);margin-bottom:var(--app-space-md);border:1rpx solid var(--app-color-border);border-radius:var(--app-radius-card);background:var(--app-color-surface)}
+.form-read__group-fields{display:flex;flex-wrap:wrap;gap:var(--app-space-md)}
+.form-read__group-fields .app-field{width:100%;min-width:0;margin:0}
+.form-read__group-fields .form-read__numeric{flex:1 1 calc(50% - var(--app-space-md));min-width:0}
+.form-read--commercial .form-read__field{display:block;padding:var(--app-space-xs) 0;border:0}
+.form-read--commercial .form-read__label{display:block;margin-bottom:var(--app-space-sm);font-size:var(--app-font-body);line-height:1.5;color:var(--app-color-text-secondary)}
+.form-read--commercial .form-read__value{display:block;text-align:left;font-size:var(--app-font-value);line-height:1.6;color:var(--app-color-text-primary);overflow-wrap:anywhere}
 </style>

@@ -91,8 +91,9 @@
         </view>
       </AppRecordCard>
 
+      <view v-if="workflowProjection.currentTask"
+        :data-testid="normalWorkspaceEntry ? 'normal-form-workspace-entry' : aStageDynamicFormNodeKind ? 'special-form-workspace-entry' : undefined">
       <WorkOrderTaskFocus
-        v-if="workflowProjection.currentTask"
         :title="workflowProjection.currentTask.title"
         :action-label="productionReadOnly
           ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作')
@@ -104,6 +105,8 @@
         @action="handleCurrentTaskAction"
       />
 
+      </view>
+
 
       <!-- Current source-backed forms/repeat node only; Production repeat reads
            a bounded list after an explicit tap and never exposes write actions. -->
@@ -111,18 +114,12 @@
         v-if="productionReadOnly && currentR1FormNode?.sourceNodeType === 'repeat'"
         :node="currentR1FormNode" :read="workOrder.mainRepeatRead"
         @read="loadMainRepeatForms" />
-      <view v-else-if="aStageDynamicFormNodeKind && currentR1FormNode" class="app-surface" data-testid="special-form-workspace-entry">
-        <AppButton @tap="handleCurrentTaskAction">打开表单工作台</AppButton>
-      </view>
       <view v-else-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'pending'" class="app-surface">
         <AppStatus tone="warning" quiet message="上次操作结果待核对，请进入原表单工作台查看。" />
         <AppButton data-testid="special-receipt-workspace-entry" @tap="openDevMockDynamicFormReceipt">查看待核对记录</AppButton>
       </view>
-      <view v-else-if="normalWorkspaceEntry" class="app-surface" data-testid="normal-form-workspace-entry">
-        <AppButton @tap="handleCurrentTaskAction">打开表单工作台</AppButton>
-      </view>
-      <R1NodeFormsOverview v-else-if="currentR1FormNode" :node="currentR1FormNode"
-        :work-order-id="String(detail.id)" :actor-scope="workOrderReadScopeKey(session.session)" @changed="retry" />
+      <AppStatus v-else-if="currentR1FormNode && !normalWorkspaceEntry && !aStageDynamicFormNodeKind"
+        variant="strip" quiet message="表单内容在工作台中查看与填写。" data-testid="form-workspace-entry-note" />
       <AppStatus v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'" tone="success" quiet
         message="现场记录已完成，可重新进入查看。"
         data-testid="a-special-complete" />
@@ -353,7 +350,6 @@ import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
-import R1NodeFormsOverview from '@features/work-orders/R1NodeFormsOverview.vue'
 import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
 import HistoricalFormsTimeline from '@features/work-orders/HistoricalFormsTimeline.vue'
 import { historicalFormsReaderKey } from '@features/work-orders/r1-historical-forms-read'
@@ -405,7 +401,7 @@ const currentR1FormNode = computed(() => {
 const normalReader = injectHistoryReader(r1NodeFormsReaderKey,null)
 const normalWorkspaceEntry = computed(() => !productionReadOnly && normalReader?.enabled() === true
   && Boolean(currentR1FormNode.value?.formDefinitionId) && ['interact_with_form','set_appointment'].includes(workflowProjection.value.currentTask?.actionIntent??'')
-  && workflowProjection.value.currentTask?.execution === 'disabled_read_only' && !aStageDynamicFormNodeKind.value)
+  && ['enabled','disabled_read_only'].includes(workflowProjection.value.currentTask?.execution ?? '') && !aStageDynamicFormNodeKind.value)
 const aStageDynamicFormNodeKind = computed<AStageDynamicFormNodeKind | null>(() => {
   const source = currentR1FormNode.value?.sourceNodeType
   if (source !== 'forms' && source !== 'repeat' || productionReadOnly) return null

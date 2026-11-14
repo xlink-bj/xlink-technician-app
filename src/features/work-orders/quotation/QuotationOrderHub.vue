@@ -1,21 +1,8 @@
 <template>
   <view class="quotation-hub app-transaction-page" data-testid="quotation-order-hub">
     
-    <AppRecordCard class="quotation-hub__work-order">
-      <view class="quotation-hub__work-order-top">
-        <view class="quotation-hub__house" aria-hidden="true"><AppIcon name="order" :size="21" color="#216bd0" /></view>
-        <view class="quotation-hub__work-order-copy">
-          <text class="quotation-hub__eyebrow">当前工单</text>
-          <text class="quotation-hub__work-order-number">{{ workOrderNumberDisplay(displayNumber || workOrderId, syntheticFixture, false) }}</text>
-        </view>
-      </view>
-      <view v-if="customerName" class="quotation-hub__work-order-meta">
-        <view class="quotation-hub__work-order-meta-cell">
-          <text class="quotation-hub__meta-label">客户</text>
-          <text class="quotation-hub__work-order-customer">{{ customerName }}</text>
-        </view>
-      </view>
-    </AppRecordCard>
+    <AppWorkOrderSummary :customer-name="customerName" :display-number="displayNumber"
+      :service-address="serviceAddress" :service-district="serviceDistrict" />
     <AppLoadingState v-if="draftLoading" variant="inline" label="正在读取报价草稿" data-testid="quotation-hub-draft-loading" />
     <AppStatus
       v-if="!choosingMode && !isVisualSample && displayReadState !== 'succeeded'"
@@ -172,12 +159,12 @@ import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
+import AppWorkOrderSummary from '@shared/ui/AppWorkOrderSummary.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import { uxStateLanguage } from '@shared/ui/ux-state-language'
-import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { useQuotationOrderBrowseStore } from './order-browse-store'
 import type { QuotationOrderBrowseItem } from '@shared/ports'
 import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
@@ -186,6 +173,8 @@ import { isSigningReadOrderCandidate, unavailableSigningReadReason } from '@shar
 const props = defineProps<{
   readonly workOrderId: string
   readonly displayNumber?: string
+  readonly serviceAddress?: string
+  readonly serviceDistrict?: string
   readonly customerName?: string
   readonly localDraftGroupCount: number
   readonly localDraftState?: string

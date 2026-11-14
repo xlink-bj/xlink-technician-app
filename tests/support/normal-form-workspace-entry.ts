@@ -3,6 +3,8 @@ import { expect, type Page } from '@playwright/test'
 export async function enterNormalFormWorkspace(page: Page): Promise<void> {
   await expect(page).toHaveURL(/pages\/work-orders\/detail/)
   await expect(page.getByTestId('r1-normal-form-read')).toHaveCount(0)
+  await expect(page.getByTestId('r1-normal-save')).toHaveCount(0)
+  await expect(page.locator('textarea')).toHaveCount(0)
   const action=page.getByTestId('task-focus-action')
   await expect(action).toBeEnabled()
   await action.click()

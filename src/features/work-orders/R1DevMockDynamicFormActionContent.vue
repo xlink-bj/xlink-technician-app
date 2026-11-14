@@ -1,5 +1,5 @@
 <template>
- <ActionWorkspaceShell :customer-name="customerName" :display-number="displayNumber" lifecycle="available" draft-status="clean" :can-submit="false" submit-label="返回工单详情">
+ <ActionWorkspaceShell :customer-name="customerName" :service-address="serviceAddress" :service-district="serviceDistrict" :display-number="displayNumber" lifecycle="available" draft-status="clean" :can-submit="false" submit-label="返回工单详情">
   <view v-if="visible" data-testid="special-form-workspace-content">
    <AppActionContentHeading :title="content.node.displayName || '现场记录'" caption="按当前节点核对现场记录" icon="task" />
    <R1DevMockDynamicFormTransactionPanel v-if="content.mode!=='completed'" :key="panelKey" ref="panel"
@@ -21,7 +21,7 @@ import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
-const props=defineProps<{workOrderId:string;content:DevMockDynamicFormWorkspaceContent;actorScope:string|null;visible:boolean;createController:AStageDynamicFormMockControllerFactory;customerName?:string;displayNumber?:string;exitMessage?:string}>()
+const props=defineProps<{workOrderId:string;content:DevMockDynamicFormWorkspaceContent;actorScope:string|null;visible:boolean;createController:AStageDynamicFormMockControllerFactory;serviceAddress?:string;serviceDistrict?:string;customerName?:string;displayNumber?:string;exitMessage?:string}>()
 const emit=defineEmits<{(event:'changed'|'back'):void}>()
 const panel=ref<{flushLocalDraft():Promise<boolean>}|null>(null)
 // An owned active→closed pending session keeps its controller; actor/scope replacement cannot.

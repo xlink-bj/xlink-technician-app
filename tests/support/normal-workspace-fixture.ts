@@ -31,5 +31,5 @@ export async function normalWorkspaceFixture(page:Page,baseURL:string){
   if(path==='workflowNode/updateExts/n'){state.writes.push(path);node.exts=JSON.parse(req.postData()!);return ok({success:true,status:1})}
   state.unexpected.push(path);return route.abort()
  })
- return{state,fields,node}
+ return{state,fields,node,workOrder:sa}
 }

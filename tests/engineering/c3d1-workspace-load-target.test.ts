@@ -40,6 +40,22 @@ describe('C3-D1 Action Workspace load eligibility', () => {
       expect(result.node.formDefinitionId).toBe(formDefinitionId)
     }
   })
+  it.each(['forms','repeat'] as const)('normal reader hosts enabled %s forms without replacing enabled appointment', sourceNodeType => {
+    const node = { id: workflowNodeId, category: sourceNodeType, sourceNodeType,
+      lifecycle: 'active' as const, formDefinitionId }
+    const source = { detail: detail({ workflowNodes: [node] }), normalFormContentEnabled: true }
+    expect(target({ ...source, currentTask: task({ sourceNodeType }) }))
+      .toMatchObject({ kind: 'ready', isNormalFormAction: true })
+    const appointment = { ...source, currentTask: task({ sourceNodeType, actionIntent: 'set_appointment' }),
+      request: { workOrderId, workflowNodeId, actionIntent: 'set_appointment' } }
+    expect(target(appointment)).toMatchObject({ kind: 'ready', isAppointmentAction: true, isNormalFormAction: false })
+    expect(target({ ...appointment, currentTask: { ...appointment.currentTask, execution: 'disabled_read_only' } }))
+      .toMatchObject({ kind: 'ready', isNormalFormAction: true })
+    expect(target({ ...source, normalFormContentEnabled: false, currentTask: task({ sourceNodeType }) }))
+      .toMatchObject({ kind: 'ready', isNormalFormAction: false })
+    expect(target({ ...source, detail: detail({ workflowNodes: [{ ...node, lifecycle: 'closed' }] }) }))
+      .toMatchObject({ kind: 'ready', isNormalFormAction: false })
+  })
   it('blocks foreign Work Order before attaching detail', () => {
     expect(target({ detail: detail({ id: asOpaqueId<'WorkOrderId'>('foreign') }) }))
       .toMatchObject({ kind: 'blocked', keepDetail: false,

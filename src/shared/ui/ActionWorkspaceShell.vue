@@ -2,46 +2,8 @@
   <view class="action-workspace-page" :class="{ 'action-workspace-page--survey': commercialSurvey, 'action-workspace-page--quotation': commercialQuotation, 'action-workspace-page--q01-entry': compactQuoteEntry, 'action-workspace-page--h5-navigation-fit': h5NavigationFit, 'xl-craft': compactQuoteEntry }" data-testid="action-workspace-shell">
     <scroll-view class="action-workspace-scroll" scroll-y enable-flex :scroll-into-view="scrollIntoView">
       <view class="action-workspace-body">
-        <view class="action-workspace-context app-surface app-surface--compact" :class="{ 'xl-craft__surface': compactQuoteEntry }" data-testid="action-workspace-context">
-          <view v-if="commercialSurvey" class="action-workspace-context-survey">
-            <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="25" color="#f19436" /></view>
-            <view class="action-workspace-context-survey-main">
-              <text class="action-workspace-context-label">当前工单</text>
-              <text v-if="displayNumber" class="action-workspace-context-survey-number">{{ displayNumber }}</text>
-              <text class="action-workspace-context-survey-customer">{{ customerName || '工单' }}</text>
-            </view>
-            <view class="action-workspace-context-survey-status"><view class="action-workspace-context-status-dot" aria-hidden="true" />勘查中</view>
-          </view>
-          <view v-if="commercialQuotation && compactQuoteEntry" class="action-workspace-context-quotation-wrap">
-            <view class="action-workspace-context-quotation">
-              <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f19436" /></view>
-              <view class="action-workspace-context-survey-main">
-                <text class="action-workspace-context-label">当前工单</text>
-                <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
-                <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
-              </view>
-              <view class="action-workspace-context-quotation-state">报价中</view>
-            </view>
-            <view v-if="serviceDistrict || serviceAddress" class="q01-context-address" data-testid="q01-source-address">
-              <AppIcon name="location" :size="16" color="var(--app-content-muted-ink)" />
-              <text class="q01-context-address-text">{{ serviceDistrict }}{{ serviceDistrict && serviceAddress ? ' · ' : '' }}{{ serviceAddress }}</text>
-            </view>
-          </view>
-          <view v-else-if="commercialQuotation" class="action-workspace-context-quotation">
-            <view class="action-workspace-context-house" aria-hidden="true"><AppIcon name="home" :size="24" color="#f19436" /></view>
-            <view class="action-workspace-context-survey-main">
-              <text class="action-workspace-context-label">当前工单</text>
-              <text class="action-workspace-context-survey-number">{{ displayNumber || '工单' }}</text>
-              <text class="action-workspace-context-survey-customer">{{ customerName || '报价任务' }}</text>
-            </view>
-            <view class="action-workspace-context-quotation-state">报价中</view>
-          </view>
-          <text v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-label">当前工单</text>
-          <view v-if="!commercialSurvey && !commercialQuotation" class="action-workspace-context-row">
-            <text class="action-workspace-context-customer">{{ customerName || '工单' }}</text>
-            <text v-if="displayNumber" class="action-workspace-context-number">#{{ displayNumber }}</text>
-          </view>
-        </view>
+        <AppWorkOrderSummary :customer-name="customerName" :display-number="displayNumber"
+          :service-district="serviceDistrict" :service-address="serviceAddress" />
 
         <AppStatus
           v-if="lifecycle !== 'succeeded' && displayedDraftStatus === 'saving'"
@@ -128,7 +90,7 @@ import { ref, watch } from 'vue'
 import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
 import AppActionBar from './AppActionBar.vue'
-import AppIcon from './AppIcon.vue'
+import AppWorkOrderSummary from './AppWorkOrderSummary.vue'
 import AppStatus from './AppStatus.vue'
 
 const props = defineProps<{

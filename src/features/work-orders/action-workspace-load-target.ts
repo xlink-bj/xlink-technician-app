@@ -65,7 +65,8 @@ export function selectActionWorkspaceLoadTarget(input: {
     && currentTask?.execution === 'disabled_read_only'
   const isNormalFormAction = input.normalFormContentEnabled === true
     && (currentTask?.actionIntent === 'interact_with_form' || currentTask?.actionIntent === 'set_appointment')
-    && currentTask.execution === 'disabled_read_only'
+    && (currentTask.execution === 'disabled_read_only'
+      || currentTask.execution === 'enabled' && currentTask.actionIntent === 'interact_with_form')
     && (node?.sourceNodeType === 'forms' || node?.sourceNodeType === 'repeat')
     && node.sourceNodeType === currentTask.sourceNodeType && node.lifecycle === 'active'
     && Boolean(node.formDefinitionId)

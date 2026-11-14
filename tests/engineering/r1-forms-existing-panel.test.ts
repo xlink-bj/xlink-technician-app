@@ -1,3 +1,4 @@
+import * as workspacePresentation from '@features/work-orders/r1-form-workspace-presentation'
 import * as inputValidity from '@shared/ui/form-input-validity'
 import * as retainedFileValues from '@shared/form/r1-retained-file-values'
 import * as configuredFileRead from '@shared/form/r1-configured-file-read-evidence'
@@ -39,8 +40,8 @@ function component(file:string, panel?:Vue.Component) {
  const filename=path.resolve('src/features/work-orders/'+file+'.vue'),{descriptor}=parse(fs.readFileSync(filename,'utf8'),{filename})
  const source=compileScript(descriptor,{id:'normal-forms-count-'+file,inlineTemplate:true}).content.replaceAll('import.meta.env','({DEV:false})')
  const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText
- const modules:Record<string,unknown>={vue:Vue,'@shared/ui/form-input-validity':inputValidity,'./r1-normal-form-drafts':normalDraftPort,'@shared/form/r1-retained-file-values':retainedFileValues,'@shared/form/r1-configured-file-read-evidence':configuredFileRead,'./r1-normal-file-values':normalFileValues,'./R1NormalFileField.vue':{__esModule:true,default:Vue.defineComponent({render:()=>Vue.h('file-field')})},'./r1-repeat-form':repeatForm,'./r1-record-read-fields':recordReadFields,'./r1-repeat-actions-port':actionPort,'./r1-node-forms-read':readerPort,
- './r1-local-form-drafts':{useR1LocalFormDraftStore:()=>draftStore},'./R1NodeFormsReadPanel.vue':{__esModule:true,default:panel},'@shared/ui/AppButton.vue':{__esModule:true,default:Button},'@shared/ui/AppField.vue':{__esModule:true,default:Field},'./R1FormFieldControl.vue':{__esModule:true,default:Control},'@shared/ui/AppInput.vue':{__esModule:true,default:Field},'./R1LocalFormFieldEditor.vue':{__esModule:true,default:Field}}
+ const modules:Record<string,unknown>={'./r1-form-workspace-presentation':workspacePresentation,vue:Vue,'@shared/ui/form-input-validity':inputValidity,'./r1-normal-form-drafts':normalDraftPort,'@shared/form/r1-retained-file-values':retainedFileValues,'@shared/form/r1-configured-file-read-evidence':configuredFileRead,'./r1-normal-file-values':normalFileValues,'./R1NormalFileField.vue':{__esModule:true,default:Vue.defineComponent({render:()=>Vue.h('file-field')})},'./r1-repeat-form':repeatForm,'./r1-record-read-fields':recordReadFields,'./r1-repeat-actions-port':actionPort,'./r1-node-forms-read':readerPort,
+ './r1-local-form-drafts':{useR1LocalFormDraftStore:()=>draftStore},'./R1NodeFormsReadPanel.vue':{__esModule:true,default:panel},'@shared/ui/AppButton.vue':{__esModule:true,default:Button},'@shared/ui/AppTaskSectionHeading.vue':{__esModule:true,default:Field},'@shared/ui/AppField.vue':{__esModule:true,default:Field},'./R1FormFieldControl.vue':{__esModule:true,default:Control},'@shared/ui/AppInput.vue':{__esModule:true,default:Field},'./R1LocalFormFieldEditor.vue':{__esModule:true,default:Field}}
  const module={exports:{} as {default:Vue.Component}};new Function('require','module','exports',js)((key:string)=>{if(!(key in modules))throw Error('Unstubbed '+key);return modules[key]},module,module.exports);return module.exports.default
 }
 function makeSnapshot(nodeId='node-a',count=0,workOrder='work-a'):R1NodeFormsSnapshot{
@@ -52,9 +53,9 @@ function all(root:Host,predicate:(n:Host)=>boolean):Host[]{return[...(predicate(
 function text(root:Host):string{return root.text+root.children.map(text).join('')}
 async function settle(){for(let i=0;i<6;i++){await Promise.resolve();await Vue.nextTick()}}
 function deferred<T>(){let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>resolve=r);return{promise,resolve}}
-async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider, readonly=false){
+async function mounted(draftProvider?:normalDraftPort.R1NormalDraftProvider, readonly=false, commercial=false){
  let current:R1NodeFormsSnapshot|null=null,next=makeSnapshot('node-a',1)
- const props=Vue.reactive({workOrderId:'work-a',runtimeNodeId:'node-a',actorScope:'actor-a' as string|null})
+ const props=Vue.reactive({workOrderId:'work-a',runtimeNodeId:'node-a',actorScope:'actor-a' as string|null,commercial})
  // The private complete original is a separate synthetic backend fixture,
  // never reconstructed from the public snapshot projection.
  let originalRecord={_id:'server-0',note:'已保存',serverRevision:1},epoch=0
@@ -281,4 +282,35 @@ it('retains the Back fence while a local draft write is pending during reread',a
   h.reader.load.mockImplementationOnce(async()=>{const s=await read.promise;h.setCurrent(s);return s});await h.load()
   expect(await h.panel.value.flushLocalDraft()).toBe(false);expect(h.saveOnly).not.toHaveBeenCalled()
  }finally{h.app.unmount();write.resolve();read.resolve(makeSnapshot());await settle()}
+})
+
+it.each(['actor','node','workOrder'] as const)('commercial shell callback cannot survive %s scope change',async scope=>{
+ const h=await mounted(undefined,false,true)
+ try{
+  await h.load();await h.tap('r1-normal-edit-server-0');await h.fill('现场记录')
+  const footer=h.panel.value.workspaceFooter
+  const save=footer.actions.find((a:{id:string})=>a.id==='r1-normal-save')
+  expect(save?.disabled).toBe(false);expect(h.get('r1-normal-save')).toBeUndefined()
+  if(scope==='actor')h.props.actorScope='actor-b'
+  else if(scope==='node')h.props.runtimeNodeId='node-b'
+  else h.props.workOrderId='work-b'
+  await settle();save.run();await settle()
+  expect(h.saveOnly).not.toHaveBeenCalled();expect(h.complete).not.toHaveBeenCalled()
+  expect(h.panel.value.workspaceFooter.actions).toEqual([])
+ }finally{h.app.unmount()}
+})
+it('commercial footer confirms separately and drops commands after unknown save result',async()=>{
+ const h=await mounted(undefined,false,true)
+ try{
+  await h.load();await h.tap('r1-normal-edit-server-0');await h.fill('现场记录')
+  const request=h.panel.value.workspaceFooter.actions.find((a:{id:string})=>a.id==='r1-normal-save-complete-request')
+  request.run();await settle();expect(h.saveAndComplete).not.toHaveBeenCalled()
+  const back=h.panel.value.workspaceFooter.actions.find((a:{id:string})=>a.id==='r1-normal-save-complete-back')
+  back.run();await settle()
+  const save=h.panel.value.workspaceFooter.actions.find((a:{id:string})=>a.id==='r1-normal-save')
+  save.run();await settle();expect(h.saveOnly).toHaveBeenCalledOnce()
+  expect(h.panel.value.workspaceFooter.actions).toEqual([])
+  save.run();await settle();expect(h.saveOnly).toHaveBeenCalledOnce()
+  expect(text(h.root)).toContain('保存未完成或结果尚未核实')
+ }finally{h.app.unmount()}
 })
