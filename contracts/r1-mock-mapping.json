@@ -67,7 +67,8 @@
       "domain": "普通 FormData",
       "sourceEvidence": "docs/verification/R1_FOUR_PHASE_FUNCTIONAL_LEDGER.md",
       "unitTests": [
-        "tests/engineering/r1-stage1-functional-flow.test.ts"
+        "tests/engineering/r1-stage1-functional-flow.test.ts",
+        "tests/engineering/mock-exact-form-query-parity.test.ts"
       ],
       "unresolved": "本轮只有节点记录引用，无获准 FormData 值读取/保存权限测试",
       "liveParity": "NOT_VERIFIED"
@@ -80,6 +81,7 @@
         "tests/engineering/a-mock-special-forms-repeat-protocol.test.ts",
         "tests/engineering/r1-f2-multiform-transaction.test.ts",
         "tests/engineering/mock-repeat-query-parity.test.ts",
+        "tests/engineering/mock-exact-form-query-parity.test.ts",
         "tests/engineering/a-stage-main-app-special-controller.test.ts",
         "tests/engineering/r1-scoped-form-read.test.ts"
       ],
@@ -102,6 +104,7 @@
       "domain": "当前 Survey",
       "sourceEvidence": "docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md",
       "unitTests": [
+        "tests/engineering/mock-exact-form-query-parity.test.ts",
         "tests/g4e/inspection-contract.test.ts",
         "tests/g4e/survey-media-contract.test.ts",
         "tests/engineering/survey-59-mock-fields.test.ts",

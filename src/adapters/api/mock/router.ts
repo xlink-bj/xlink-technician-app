@@ -974,7 +974,9 @@ function matchedResponse(
         : undefined
     const candidate = dataId ? formDataForExactRead(dataId, appointmentFormDefinitionWireId) : undefined
     const formData = mutableRecord(candidate)?.extId === appointmentFormDefinitionWireId ? candidate : undefined
-    return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
+    return typeof exactDataId === 'string'
+      ? queryMockR1FormRows(formData ? [formData] : [], requestData)
+      : { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
   if (route.startsWith('biz/extForm/query/') && route.slice('biz/extForm/query/'.length) === mockSyntheticDynamicFormDefinitionId) {
     const exactDataId = requestData['is:_id|string#and']
@@ -1016,7 +1018,9 @@ function matchedResponse(
     const dataId = typeof exactDataId === 'string' ? exactDataId : undefined
     const candidate = dataId ? formDataForExactRead(dataId, mockSurveyFormDefinitionId) : undefined
     const formData = mutableRecord(candidate)?.extId === mockSurveyFormDefinitionId ? candidate : undefined
-    return { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
+    return typeof exactDataId === 'string'
+      ? queryMockR1FormRows(formData ? [formData] : [], requestData)
+      : { data: formData ? [formData] : [], page: 1, rows: 20, total: formData ? 1 : 0 }
   }
 
   return null
