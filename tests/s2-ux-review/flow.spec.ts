@@ -70,6 +70,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
       await expect(page.getByTestId('app-action-content-heading')).toContainText('预约信息')
       await capture('02-appointment', 'A', '预约上门', '用户认可的交互样板', 'accepted_baseline')
+      await expect(page.getByTestId('mock-journey-advance')).toBeVisible()
       await page.locator('.action-content-field--note textarea').fill('S2审查：屋面维修')
       await page.getByTestId('mock-journey-advance').click()
 

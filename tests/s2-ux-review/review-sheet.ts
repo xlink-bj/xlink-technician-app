@@ -43,7 +43,11 @@ export async function captureReviewFrame(
   if (width !== session.viewport.width || height !== session.viewport.height) {
     throw new Error('S2 viewport drift: refuse non-comparable capture')
   }
-  const image = await page.screenshot({ animations: 'disabled', caret: 'hide', fullPage: false })
+  // Exclude only the DEV journey driver from commercial frames. Screenshot
+  // styles are temporary; the next test step can still advance the Mock flow.
+  const image = await page.screenshot({ animations: 'disabled', caret: 'hide', fullPage: false,
+    style: '[data-testid="mock-journey-progress"] { display: none !important; }',
+  })
   session.frames.push({ ...input, path: new URL(page.url()).hash.split('?')[0], image })
   // Keep partial capture evidence even if a later UI state or sheet fails.
   // The final contact sheet is generated only after every required frame.

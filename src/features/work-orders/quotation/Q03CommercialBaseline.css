@@ -207,12 +207,12 @@
   color: #768aa3; font-size: 10px;
 }
 .quotation-content__catalog-page .quotation-content__catalog-item-footer {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
   border-top: 1px solid #edf1f6; padding: 9px 0 0; margin: 0;
   justify-content: space-between;
 }
 .quotation-content__catalog-page .quotation-content__catalog-item-price {
-  flex: 1 1 auto; min-width: 0; display: flex;
+  flex: 1 0 100%; min-width: 0; display: flex;
   flex-direction: column; gap: 3px;
 }
 .quotation-content__catalog-page .quotation-content__catalog-item-price-label {

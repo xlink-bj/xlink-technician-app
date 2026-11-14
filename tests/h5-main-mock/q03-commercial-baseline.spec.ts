@@ -2,6 +2,64 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 
+for (const width of [375, 390, 430]) {
+  test(`Q03 material price and specification actions remain readable at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 375 ? 667 : width === 390 ? 844 : 932 })
+    const remote: string[] = [], errors: string[] = []
+    page.on('pageerror', error => errors.push(error.message))
+    await page.route('**/*', route => {
+      const url = new URL(route.request().url())
+      if (url.origin === 'http://localhost:5174') return route.continue()
+      remote.push(url.origin + url.pathname); return route.abort('blockedbyclient')
+    })
+    await page.goto('/#/pages/index/index?devReview=1')
+    await page.locator('.mock-action-scenario').filter({ hasText: '报价草稿' }).click()
+    await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
+    await page.getByTestId('quotation-add-group').click()
+    await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
+    await page.getByRole('dialog', { name: '选择维修部位' }).locator('.app-cascade-selector__parents')
+      .getByText('屋面', { exact: true }).click()
+    await page.getByTestId('quotation-repair-part-picker-done').click()
+    await page.getByTestId('quotation-first-step-description').locator('textarea').fill('屋面局部修补')
+    await page.getByTestId('quotation-first-step-quantity').locator('input').fill('12')
+    await page.getByTestId('quotation-first-step-select-products').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
+    const card = page.getByTestId('quotation-catalog-item-material-mock-catalog-material-sealant')
+    await expect(card).toContainText('按材料规格核价')
+    await card.scrollIntoViewIfNeeded()
+    const dir = resolve('.review/q03-commercial-baseline')
+    await mkdir(dir, { recursive: true })
+    await page.screenshot({ path: resolve(dir, `q03-spec-actions-${width}.png`), animations: 'disabled' })
+    for (const item of [card, page.getByTestId('quotation-catalog-item-material-mock-catalog-material-butyl-tape')]) {
+      const geometry = await item.evaluate(element => {
+        const footer = element.querySelector('.quotation-content__catalog-item-footer')!.getBoundingClientRect()
+        const price = element.querySelector('.quotation-content__catalog-item-price')!.getBoundingClientRect()
+        return { width: price.width, footerWidth: footer.width, priceBottom: price.bottom,
+          actions: [...element.querySelectorAll('.quotation-content__catalog-item-action')].map(action => {
+            const box = action.getBoundingClientRect()
+            return { left: box.left, right: box.right, top: box.top, height: box.height }
+          }), left: footer.left, right: footer.right }
+      })
+      expect(geometry.width).toBeGreaterThanOrEqual(geometry.footerWidth - 1)
+      for (const action of geometry.actions) {
+        expect(action.top).toBeGreaterThanOrEqual(geometry.priceBottom)
+        expect(action.height).toBeGreaterThanOrEqual(44)
+        expect(action.left).toBeGreaterThanOrEqual(geometry.left - 1)
+        expect(action.right).toBeLessThanOrEqual(geometry.right + 1)
+      }
+    }
+    await page.getByTestId('quotation-material-options-mock-catalog-material-sealant').click()
+    await expect(page.getByTestId('quotation-sku-field-thickness')).toBeVisible()
+    await page.getByTestId('quotation-sku-preview-back').click()
+    const ordinary = page.getByTestId('quotation-catalog-item-material-mock-catalog-material-butyl-tape')
+    await expect(ordinary).toContainText('¥38.60/卷')
+    await expect(ordinary.locator('.quotation-content__catalog-item-action')).toHaveCount(1)
+    await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-butyl-tape').click()
+    await expect(page.getByTestId('quotation-repair-group-quotation-group-1')).toContainText('丁基防水密封胶带')
+    expect(remote).toEqual([]); expect(errors).toEqual([])
+  })
+}
+
 /** Owner review: one width, actual uni-app component, source-shaped DEV Mock. */
 test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 375px', async ({ page }, info) => {
   await page.setViewportSize({ width: 375, height: 667 })

@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { resolve } from 'node:path'
-import type { Browser } from '@playwright/test'
-import { finishReviewSession, type ReviewSession } from '../s2-ux-review/review-sheet'
+import type { Browser, Page } from '@playwright/test'
+import { captureReviewFrame, finishReviewSession, type ReviewSession } from '../s2-ux-review/review-sheet'
 
 const files = vi.hoisted(() => new Map<string, string | Buffer>())
 vi.mock('node:fs/promises', () => ({
@@ -9,6 +9,19 @@ vi.mock('node:fs/promises', () => ({
   writeFile: vi.fn(async (path: string, data: string | Buffer) => { files.set(path, data) }),
 }))
 beforeEach(() => files.clear())
+
+it('excludes only the DEV journey driver while capturing a commercial frame', async () => {
+  const screenshot = vi.fn(async () => Buffer.from('synthetic-frame'))
+  const page = { viewportSize: () => ({ width: 390, height: 844 }), screenshot,
+    url: () => 'http://localhost:5174/#/pages/work-orders/action-workspace' } as unknown as Page
+  const session: ReviewSession = { viewport: { width: 390, height: 844 }, frames: [] }
+  await captureReviewFrame(page, session, { id: '02-appointment', stage: 'A',
+    label: '预约上门', description: 'Synthetic frame', status: 'accepted_baseline' })
+  expect(screenshot).toHaveBeenCalledWith({ animations: 'disabled', caret: 'hide', fullPage: false,
+    style: '[data-testid="mock-journey-progress"] { display: none !important; }',
+  })
+  expect(session.frames[0].image).toEqual(Buffer.from('synthetic-frame'))
+})
 
 it('keeps S2 images at their original paths while reports link to them from test-results', async () => {
   const session: ReviewSession = {
