@@ -55,7 +55,9 @@ describe('explicit dev launch profiles, no HTTP or runtime authority', () => {
   })
   it('detects actual Vite dotenv inheritance instead of silently borrowing local tenant and login values', () => {
     const root = mkdtempSync(join(tmpdir(), 'xlink-profile-')); roots.push(root)
-    for (const key of remoteProfileKeys) vi.stubEnv(key, undefined)
+    // Vitest loads the developer profile before this synthetic dotenv fixture.
+    // Clear its inputs, including local integration grants, not just remote keys.
+    for (const key of new Set([...remoteProfileKeys, ...Object.keys(process.env).filter(key => key.startsWith('VITE_XLINK_'))])) vi.stubEnv(key, undefined)
     writeFileSync(join(root, '.env.local'), 'VITE_XLINK_AUTH_TENANT=local-only\nVITE_XLINK_QUICK_LOGIN_PHONE=LOCAL_PRIVATE_SENTINEL\n')
     writeFileSync(join(root, '.env.beta.local'), 'VITE_XLINK_ENVIRONMENT=test\nVITE_XLINK_API_BASE_URL=https://xlinkbeta.fsgo365.cn/fsgo/wm\nVITE_XLINK_MOCK=false\n')
     const inherited = loadEnv('beta', root, 'VITE_')
