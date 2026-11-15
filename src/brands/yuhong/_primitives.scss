@@ -26,7 +26,8 @@
 .app-button--secondary, .app-button--ghost { border-color: var(--yh-border-control); background: var(--yh-color-surface-card); color: var(--yh-link); }
 .app-button--tertiary, .app-button--text { color: var(--yh-link); }
 .app-button--disabled, .app-button--disabled:active {
-  background: var(--yh-color-action-disabled-bg); color: var(--yh-color-action-disabled-text);
+  /* uni-button's native disabled rule must not replace product state colors. */
+  background: var(--yh-color-action-disabled-bg) !important; color: var(--yh-color-action-disabled-text) !important;
   border-color: transparent; opacity: 1;
 }
 .app-button__content { display: flex; align-items: center; justify-content: center; gap: var(--yh-space-8); min-width: 0; }
