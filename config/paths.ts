@@ -8,6 +8,8 @@ export const rootPath = (...segments: string[]) => resolve(repositoryRoot, ...se
 /** One alias contract for the official app, review Vite and Vitest runners. */
 export const sourceAliases = {
   '@': rootPath('src'),
+  // Non-product review runners keep the accepted XLink presentation.
+  '@brand-ui': rootPath('src/brands/xlink'),
   '@app': rootPath('src/app'),
   '@shared': rootPath('src/shared'),
   '@adapters': rootPath('src/adapters'),

@@ -67,7 +67,7 @@
     "audit:modules": "node scripts/check-module-dependencies.mjs --report",
     "check:module-dependencies": "node scripts/check-module-dependencies.mjs --check --self-test",
     "check:stacked-provenance": "node scripts/check-eq10-stack.mjs",
-    "verify": "pnpm run check:c1-release-qa-pages && pnpm run check:boundaries && pnpm run check:engineering-ownership && pnpm run check:module-dependencies && pnpm run check:review-root-hygiene && pnpm run check:config-layout && pnpm run check:critical && pnpm run check:ui-governance && pnpm run check:b2x2-parity && pnpm run check:m1-i8-baseline && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run check:r1-sku-read-audit && pnpm run check:r1-mock-mapping && pnpm run typecheck && pnpm run test",
+    "verify": "pnpm run check:c1-release-qa-pages && pnpm run check:boundaries && pnpm run check:engineering-ownership && pnpm run check:module-dependencies && pnpm run check:review-root-hygiene && pnpm run check:config-layout && pnpm run check:critical && pnpm run check:ui-governance && pnpm run check:b2x2-parity && pnpm run check:m1-i8-baseline && pnpm run check:g4f-phase1a && pnpm run check:g4f-phase1b && pnpm run check:g4f-synthetic-extfield-review && pnpm run check:r1-sku-read-audit && pnpm run check:r1-mock-mapping && pnpm run check:brand-theme && pnpm run typecheck && pnpm run test",
     "check:c1-release-qa-pages": "node scripts/check-c1-release-qa-pages.mjs source",
     "check:ui-governance": "node scripts/check-ui-governance.mjs",
     "check:b2x2-parity": "node scripts/check-b2x2-commercial-ui-parity.mjs",
@@ -80,7 +80,8 @@
     "verify:critical": "node scripts/verify-critical-behavior.mjs --run",
     "check:critical": "node scripts/verify-critical-behavior.mjs",
     "check:r1-mock-mapping": "node scripts/check-r1-mock-mapping.mjs",
-    "verify:r1-mock-mapping": "node scripts/check-r1-mock-mapping.mjs --run"
+    "verify:r1-mock-mapping": "node scripts/check-r1-mock-mapping.mjs --run",
+    "check:brand-theme": "node src/brands/yuhong/build.mjs --check && node --test src/brands/yuhong/test.mjs"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-5010520260709002",

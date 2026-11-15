@@ -1,0 +1,81 @@
+/* Yuhong owns component appearance. Shared Vue components own behavior.
+   These rules are loaded instead of the XLink foundation, never after it. */
+.app-surface, .app-record-card {
+  box-sizing: border-box; min-width: 0; overflow: hidden;
+  background: var(--yh-color-surface-card);
+  border: var(--yh-border-width) solid var(--yh-border-subtle);
+  border-radius: var(--yh-radius-card);
+}
+.app-button {
+  box-sizing: border-box; display: flex; align-items: center; justify-content: center;
+  position: relative; min-width: 0; max-width: 100%; margin: 0;
+  min-height: var(--yh-size-primary); padding: var(--yh-space-8) var(--yh-space-12);
+  border: var(--yh-border-width) solid transparent; border-radius: var(--yh-radius-control);
+  background: transparent; color: var(--yh-color-text-primary);
+  font-family: inherit; font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight);
+  line-height: var(--yh-type-body-line); white-space: normal;
+}
+.app-button::after { border: 0; }
+.app-button--block { width: 100%; }
+.app-button--size-compact { min-height: var(--yh-size-touch); font-size: var(--yh-type-meta-size); }
+.app-button--primary { background: var(--yh-action-primary); color: var(--yh-color-action-on-primary); }
+.app-button--primary:active, .app-button--primary.app-button--pressed { background: var(--yh-color-action-pressed); }
+.app-button--secondary, .app-button--ghost { border-color: var(--yh-border-control); background: var(--yh-color-surface-card); color: var(--yh-link); }
+.app-button--tertiary, .app-button--text { color: var(--yh-link); }
+.app-button--disabled, .app-button--disabled:active {
+  background: var(--yh-color-action-disabled-bg); color: var(--yh-color-action-disabled-text);
+  border-color: transparent; opacity: 1;
+}
+.app-button__content { display: flex; align-items: center; justify-content: center; gap: var(--yh-space-8); min-width: 0; }
+.app-button__label { min-width: 0; overflow-wrap: anywhere; }
+.app-button__loading-slot--active { width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: yh-spin 900ms linear infinite; }
+.app-button:focus-visible, .app-selector:focus-visible { outline: var(--yh-focus-width) solid var(--yh-focus-ring); outline-offset: var(--yh-focus-offset); }
+.app-field { margin-top: var(--yh-space-16); }
+.app-field__label { display: block; color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); margin-bottom: var(--yh-space-8); }
+.app-field__required, .app-field__error { color: var(--yh-color-status-error-fg); }
+.app-field__optional, .app-field__readonly, .app-field__supporting { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); }
+.app-field__supporting, .app-field__error { display: block; margin-top: var(--yh-space-4); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.app-input, .app-textarea, .app-selector {
+  box-sizing: border-box; width: 100%; min-height: var(--yh-size-primary);
+  padding: var(--yh-space-8) var(--yh-space-12); background: var(--yh-color-surface-card);
+  border: var(--yh-border-width) solid var(--yh-border-control); border-radius: var(--yh-radius-control);
+  color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line);
+}
+.app-textarea { min-height: var(--app-textarea-min-height); }
+.app-input--focused, .app-textarea--focused { outline: 2px solid var(--yh-focus-ring); outline-offset: -2px; }
+.app-input--error, .app-textarea--error, .app-selector--error { outline: var(--yh-border-error-width) solid var(--yh-color-status-error-fg); outline-offset: -2px; }
+.app-input--readonly, .app-input--disabled, .app-textarea--readonly, .app-textarea--disabled, .app-selector--disabled { background: var(--yh-color-field-disabled-bg); color: var(--yh-color-text-secondary); }
+.app-selector { display: flex; align-items: center; justify-content: space-between; gap: var(--yh-space-8); }
+.app-selector__label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.app-selector__placeholder, .app-input__placeholder, .app-textarea__placeholder { color: var(--yh-color-text-muted); }
+.app-action-bar { box-sizing: border-box; width: 100%; flex-shrink: 0; background: var(--yh-color-surface-card); border-top: 1px solid var(--yh-border-subtle); padding: var(--yh-space-8) 0 calc(var(--yh-space-8) + env(safe-area-inset-bottom)); }
+.app-action-bar__inner { box-sizing: border-box; width: 100%; margin: 0 auto; }
+.app-action-bar--dual .app-action-bar__inner, .app-action-bar--split .app-action-bar__inner, .app-action-bar--trailing .app-action-bar__inner { display: flex; align-items: center; gap: var(--yh-layout-footer-gap); }
+.app-action-bar--dual .app-button { flex: 1; min-width: 0; }
+.app-action-bar--split .app-action-bar__inner { justify-content: space-between; }
+.app-action-bar--trailing .app-action-bar__inner { justify-content: flex-end; }
+.app-meta-tag { display: inline-flex; align-items: center; padding: var(--yh-space-4) var(--yh-space-8); border-radius: var(--yh-radius-control); background: var(--yh-color-status-neutral-bg); color: var(--yh-color-status-neutral-fg); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.app-meta-tag--info { background: var(--yh-color-status-info-bg); color: var(--yh-color-status-info-fg); }
+.app-meta-tag--success { background: var(--yh-color-status-success-bg); color: var(--yh-color-status-success-fg); }
+.app-meta-tag--warning { background: var(--yh-color-status-warning-bg); color: var(--yh-color-status-warning-fg); }
+.app-status { display: block; padding: var(--yh-space-8) var(--yh-space-12); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); color: var(--yh-color-text-secondary); background: var(--yh-color-surface-subtle); border-radius: var(--yh-radius-control); }
+.app-status--error { color: var(--yh-color-status-error-fg); background: var(--yh-color-status-error-bg); }
+.app-status--warning { color: var(--yh-color-status-warning-fg); background: var(--yh-color-status-warning-bg); }
+.app-status--success { color: var(--yh-color-status-success-fg); background: var(--yh-color-status-success-bg); }
+.app-status--quiet { background: transparent; padding: var(--yh-space-4) 0; }
+.app-information-row { display: flex; align-items: baseline; justify-content: space-between; gap: var(--yh-space-16); padding: var(--yh-space-12) 0; border-bottom: 1px solid var(--yh-border-subtle); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.app-information-row__label { color: var(--yh-color-text-secondary); }
+.app-information-row__value { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.app-loading { padding: var(--yh-space-32); text-align: center; color: var(--yh-color-text-secondary); font-size: var(--yh-type-body-size); }
+.app-loading__spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--yh-border-subtle); border-top-color: var(--yh-action-primary); border-radius: 50%; animation: yh-spin 900ms linear infinite; }
+.app-section-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--yh-space-12); }
+.app-section-heading__copy { display: flex; flex-direction: column; }
+.app-section-heading__title { color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.app-section-heading__subtitle, .app-section-heading__trailing { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.app-transaction-page { min-height: 100%; box-sizing: border-box; color: var(--yh-color-text-primary); background: var(--yh-color-surface-page); }
+.app-amount-value { display: inline-block; max-width: 100%; font-size: var(--yh-type-body-size); font-weight: var(--yh-type-amount-weight); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.app-amount-value--prominent { font-size: var(--yh-type-amount-size); }
+.app-amount-value--primary { color: var(--yh-action-primary); }
+.app-amount-value--muted { color: var(--yh-color-text-secondary); }
+@keyframes yh-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .app-button__loading-slot--active, .app-loading__spinner { animation-duration: 1.8s; } }

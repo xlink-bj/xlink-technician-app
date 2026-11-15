@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module'
+import { selectBrand } from './brand-profile'
 import { uniH5PickerLifecycle } from './uni-h5-picker-lifecycle'
 
 import { defineConfig, loadEnv } from 'vite'
@@ -10,6 +11,7 @@ const uni = require('@dcloudio/vite-plugin-uni').default
 
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, repositoryRoot, 'VITE_')
+  const brand = selectBrand(process.env.VITE_XLINK_BRAND ?? env.VITE_XLINK_BRAND)
   // MP watch uses Vite's build command too; the explicit launch marker owns this check.
   const profile = process.env.XLINK_DEV_PROFILE
   assertDevProfile(profile, mode, env, profile ? declaredModeKeys(repositoryRoot, mode) : new Set())
@@ -27,7 +29,7 @@ export default defineConfig(({ mode, command }) => {
         : profile === 'local' && process.env.UNI_PLATFORM === 'h5'
           ? { server: localH5Server } : {}),
     plugins: [uniH5PickerLifecycle(), uni()],
-    resolve: { alias: sourceAliases },
+    resolve: { alias: { ...sourceAliases, '@brand-ui': brand.styleDirectory } },
     ...(redactProductionQuickLogin ? {
       // Local dev may use the ignored Production profile for an authorized
       // read-only inspection. Never embed its quick-login values in a bundle.
