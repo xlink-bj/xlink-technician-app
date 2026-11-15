@@ -1,6 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
+import { searchMockWorkOrder } from '../support/search-mock-work-order'
 
 type Screen = 'Q00' | 'Q01' | 'Q03' | 'C01' | 'DETAIL'
 const requested = (process.env.S2_FOCUS_SCREEN || 'Q00').toUpperCase()
@@ -43,7 +44,10 @@ async function guardLocalOnly(page: Page) {
 }
 
 for (const screen of screens) {
-for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }]) {
+const viewports = screen === 'DETAIL'
+  ? [{ width: 430, height: 932 }, { width: 390, height: 844 }, { width: 375, height: 667 }, { width: 320, height: 680 }]
+  : [{ width: 390, height: 844 }, { width: 375, height: 667 }]
+for (const viewport of viewports) {
   test('L2 actual main-App ' + screen + ' focused visual / ' + viewport.width, async ({ page }, info) => {
     await page.setViewportSize(viewport)
     const assertSafe = await guardLocalOnly(page)
@@ -80,9 +84,7 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
     await expect(page.getByTestId('dev-review-tools')).toHaveCount(0)
     await expect(page.getByTestId('business-mode-provenance')).toHaveCount(0)
     await page.locator('.work-orders-entry').click()
-    await page.locator('.search-input input').fill('26018')
-    await page.locator('.search-button').click()
-    await page.locator('.work-order-card').filter({ hasText: '吴先生' }).click()
+    await (await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })).click()
     await expect(page.locator('.summary-number')).toContainText('#26018')
     if (screen !== 'DETAIL') {
       await page.locator('.primary-task-action').click()
@@ -138,10 +140,13 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       const buttonBox = await button.boundingBox()
       expect(cardBox).not.toBeNull()
       expect(buttonBox).not.toBeNull()
-      expect(cardBox!.height, 'exact master target height 169px').toBeGreaterThanOrEqual(168.5)
-      expect(cardBox!.height).toBeLessThanOrEqual(169.5)
-      expect(buttonBox!.height, 'master CTA 51px').toBeGreaterThanOrEqual(50.5)
-      expect(buttonBox!.height).toBeLessThanOrEqual(51.5)
+      expect(cardBox!.height, 'compact information/action stack').toBeGreaterThanOrEqual(120)
+      expect(cardBox!.height).toBeLessThanOrEqual(155)
+      expect(buttonBox!.height, 'preserve the existing large touch target').toBeGreaterThanOrEqual(50)
+      const copy = await card.locator('.task-focus-panel__copy').boundingBox()
+      expect(buttonBox!.y, 'actions stay below information, never in a fixed side column').toBeGreaterThanOrEqual(copy!.y + copy!.height)
+      expect(buttonBox!.x).toBeGreaterThan(cardBox!.x)
+      expect(buttonBox!.x + buttonBox!.width).toBeLessThan(cardBox!.x + cardBox!.width)
       const paint = await card.evaluate(el => {
         const style = getComputedStyle(el)
         const title = el.querySelector('.task-focus-panel__title')
@@ -153,9 +158,9 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
         }
       })
       expect(paint).toEqual({
-        background: 'rgb(22, 44, 74)',
-        radius: '19px',
-        titleSize: '25px',
+        background: 'rgb(255, 255, 255)',
+        radius: '12px',
+        titleSize: '20px',
         buttonColor: 'rgb(23, 105, 220)',
       })
       const channels = paint.buttonColor.match(/[0-9]+/g)?.slice(0, 3).map(Number)
@@ -295,6 +300,53 @@ for (const viewport of [{ width: 390, height: 844 }, { width: 375, height: 667 }
       gitCommit: process.env.GITHUB_SHA ?? 'local',
     }, null, 2))
     await info.attach(name, { body: shot, contentType: 'image/png' })
+    if (screen === 'DETAIL') {
+      const panel = page.getByTestId('task-focus-panel')
+      // DOM-only layout stress, not additional production fields or business actions.
+      await panel.evaluate(el => {
+        const title = el.querySelector('.task-focus-panel__title')!
+        title.textContent = '合成布局压力样本：较长的现场任务名称需要完整展示并自然换行'
+        const primary = el.querySelector('.task-focus-panel__action')!
+        primary.querySelector('.task-focus-panel__action-label')!.textContent = '继续核对当前任务资料并进入下一步处理（合成布局文案）'
+        const secondary = primary.cloneNode(true) as HTMLElement
+        secondary.removeAttribute('data-testid'); secondary.removeAttribute('aria-label')
+        secondary.querySelector('.task-focus-panel__action-label')!.textContent = '查看已有记录'
+        secondary.style.background = 'var(--app-color-control-surface)'
+        secondary.style.color = 'var(--app-text-strong)'
+        el.querySelector('.task-focus-panel__actions')!.append(secondary)
+      })
+      const layout = await panel.evaluate(el => {
+        const card = el.getBoundingClientRect()
+        return { overflow: el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight + 1,
+          contained: [...el.querySelectorAll('.task-focus-panel__title, .task-focus-panel__action')].every(item => {
+            const rect = item.getBoundingClientRect()
+            return rect.left >= card.left && rect.right <= card.right && rect.bottom <= card.bottom
+          }) }
+      })
+      expect(layout).toEqual({ overflow: false, contained: true })
+      await panel.screenshot({ path: resolve(dir, name + '-layout-stress.png'), animations: 'disabled' })
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await expect(page.getByTestId('task-focus-title')).toHaveText('报价')
+      await page.getByTestId('task-focus-action').click()
+      await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
+      // Other actual shared-component contexts keep their original action gates.
+      for (const scene of [
+        { id: 'mock-work-order-019-continuous-journey', number: '26019', title: '预约上门时间', disabled: 'false' },
+        { id: 'mock-work-order-017-survey-success', number: '19017', title: '现场勘察', disabled: 'true' },
+      ]) {
+        await page.goto('/#/pages/work-orders/detail?id=' + scene.id)
+        await page.reload({ waitUntil: 'domcontentloaded' })
+        await expect(page.locator('.summary-number')).toContainText(scene.number)
+        await expect(page.getByTestId('task-focus-title')).toHaveText(scene.title)
+        const action = page.getByTestId('task-focus-action')
+        await expect(action).toHaveAttribute('aria-disabled', scene.disabled)
+        if (scene.disabled === 'true') {
+          const url = page.url(); await action.click({ force: true }); await expect(page).toHaveURL(url)
+        }
+      }
+      assertSafe()
+    }
+
     if (screen === 'Q01') {
       // A real bottom-sheet presentation of the EXISTING source-backed
       // cascaded repair-part picker; not a fake detached list or new data.
