@@ -6,7 +6,7 @@ import{test,expect}from'@playwright/test'
 import { selectBrand } from '../../config/vite/brand-profile'
 test.skip(process.env.XLINK_H5_SURVEY_FIRST_MEDIA_SAVE!=='true','Explicit fully intercepted synthetic typed media run only')
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAFUlEQVR4nGOUq7j0nwEJMDGgAcICAJ0wAm/4ZvM3AAAAAElFTkSuQmCC','base64')
-const cases=[{scenario:'success',width:430},{scenario:'ack-conflict',width:430},{scenario:'upload-failure',width:430},{scenario:'success',width:375}] as const
+const cases=[{scenario:'success',width:430},{scenario:'ack-conflict',width:430},{scenario:'upload-failure',width:430},{scenario:'success',width:375},{scenario:'upload-failure',width:375}] as const
 for(const {scenario,width} of cases)test(`normal App typed first media ${scenario} at ${width}`,async({page,baseURL},info)=>{
  await page.setViewportSize({width,height:width===430?932:667})
  const brand=selectBrand(process.env.VITE_XLINK_BRAND).id
@@ -61,6 +61,15 @@ for(const {scenario,width} of cases)test(`normal App typed first media ${scenari
   await choose()
   if(scenario==='upload-failure'&&key==='infraredImageList'){
    await expect(page.getByTestId('r1-normal-file-retry-'+key)).toBeVisible()
+   if(brand==='yuhong'){
+    const add=await page.getByTestId('r1-normal-file-add-'+key).boundingBox()
+    const retry=await page.getByTestId('r1-normal-file-retry-'+key).boundingBox()
+    const discard=await page.getByTestId('r1-normal-file-discard-'+key).boundingBox()
+    expect(retry!.y).toBeGreaterThanOrEqual(add!.y+add!.height)
+    expect(discard!.y).toBe(retry!.y)
+    expect(retry!.width).toBeGreaterThanOrEqual(120)
+    expect(discard!.width).toBeGreaterThanOrEqual(120)
+   }
    await shot('upload-failure')
    await page.getByTestId('r1-normal-file-retry-'+key).click()
    await expect(page.getByTestId('r1-normal-file-status-'+key)).toContainText('不可重试')

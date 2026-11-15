@@ -1,5 +1,5 @@
 <template>
-  <view class="r1-file-field" :class="{'r1-file-field--commercial':commercial}">
+  <view class="r1-file-field" :class="{'r1-file-field--commercial':commercial,'r1-file-field--attention':!!hint}">
     <view v-for="(file,index) in files" :key="file.url" class="r1-file-item">
       <image v-if="safeImage(file)" :src="file.url" mode="aspectFill"
         :data-testid="`r1-normal-file-preview-${field.valueKey}`" class="r1-file-preview" />

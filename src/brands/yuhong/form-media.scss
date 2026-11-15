@@ -12,6 +12,7 @@
 .r1-file-preview { display: block; width: 100%; height: 120px; border-radius: var(--yh-radius-control); }
 .r1-file-name { box-sizing: border-box; display: block; min-width: 0; padding: var(--yh-space-8); background: var(--yh-color-surface-subtle); border-radius: var(--yh-radius-control); overflow-wrap: anywhere; word-break: break-all; font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
 .r1-file-add { flex: 1 1 calc(50% - var(--yh-space-8)); align-self: flex-start; }
+.r1-file-field--attention .r1-file-add { flex-basis: 100%; }
 .r1-file-retry, .r1-file-discard { flex: 1; min-width: 0; }
 .r1-file-status, .r1-file-error {
   display: block; flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere;
