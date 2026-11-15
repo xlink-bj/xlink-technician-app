@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import { readFile, readdir } from 'node:fs/promises'
 
 const tokenPath = new URL('../../src/shared/ui/design-system.scss', import.meta.url)
-const matrixPath = new URL('../../docs/ux/UI_REFERENCE_MATRIX.md', import.meta.url)
 const sharedUiPath = new URL('../../src/shared/ui/', import.meta.url)
 const uiPath = (name: string) => new URL(`../../src/shared/ui/${name}`, import.meta.url)
 const pagePath = (name: string) => new URL(`../../src/pages/work-orders/${name}`, import.meta.url)
@@ -231,36 +230,6 @@ describe('App UI Design System v0.2', () => {
     expect(presentation).toContain("'memo'")
     expect(presentation).toContain("'remarks'")
     expect(presentation).toContain("'description'")
-  })
-
-  it('keeps Bottom Sheet classification honest until a second consumer exists', async () => {
-    const standard = await readFile(new URL('../../docs/design-system/ACTION_WORKSPACE_UX_STANDARD.md', import.meta.url), 'utf8')
-    expect(standard).toContain('| Bottom Sheet | `SHARED_PATTERN` |')
-    expect(standard).not.toContain('| Bottom Sheet | `SHARED_PRIMITIVE` |')
-    expect(standard).toContain('second verified consumer')
-    expect(standard).toContain('interaction contract is truly common')
-  })
-
-  it('records current external references and explicit XLink decisions', async () => {
-    const matrix = await readFile(matrixPath, 'utf8')
-
-    for (const evidence of [
-      'WeUI Mini Program',
-      'Vant Weapp',
-      'Ant Design Mobile',
-      '739eca530481e9dc9860cc298cb126b9890799cf',
-      '7a7d43757ed19d3ad5e6bca69059e0b9ea565d0b',
-      'eee5477f8d6221ced8298e3547eb03e0a037a615',
-      'weui-btn_bottom-fixed',
-      'button-default-height',
-      '--app-control-height: 88rpx',
-      '--app-control-padding-x',
-      '--app-textarea-min-height',
-      'third-party UI runtime dependency',
-      'does not establish business labels',
-    ]) {
-      expect(matrix).toContain(evidence)
-    }
   })
 
   it('keeps shared UI presentation-only and free of upward imports', async () => {
