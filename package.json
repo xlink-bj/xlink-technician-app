@@ -39,7 +39,7 @@
     "check:config-layout": "node config/check-layout.mjs",
     "test:h5-review": "playwright test",
     "capture:g4e-review": "playwright test tests/h5-review/g4e-survey.spec.ts",
-    "build:mp-weixin": "node scripts/check-c1-release-qa-pages.mjs release-context && uni build -p mp-weixin && node scripts/check-c1-release-qa-pages.mjs mp-weixin && node scripts/verify-mp-app-bootstrap.mjs && node scripts/check-mp-wxss-stage-a.mjs",
+    "build:mp-weixin": "node scripts/check-c1-release-qa-pages.mjs release-context && uni build -p mp-weixin && node scripts/check-c1-release-qa-pages.mjs mp-weixin && node scripts/verify-mp-app-bootstrap.mjs && node scripts/check-mp-wxss-stage-a.mjs && node scripts/verify-mp-workspace-bindings.mjs",
     "build:app": "node scripts/check-c1-release-qa-pages.mjs source && node scripts/check-c1-release-qa-pages.mjs release-context && uni build -p app",
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "verify:g4f-prod-read": "node scripts/verify-g4f-prod-read.mjs",
