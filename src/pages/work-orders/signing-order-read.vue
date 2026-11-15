@@ -45,7 +45,7 @@
         >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态' : '核验当前订单合同' }}</AppButton>
         <button class="signing-read-context-toggle" type="button" :aria-expanded="stageInfoExpanded"
           @tap="stageInfoExpanded = !stageInfoExpanded">
-          <text class="xl-craft__caption">状态说明</text><AppIcon name="chevron-right" :size="15" color="#7b8aa0" />
+          <text class="xl-craft__caption">状态说明</text><AppIcon name="chevron-right" :size="15" color="var(--signing-read-detail-icon, #7b8aa0)" />
         </button>
         <text v-show="stageInfoExpanded" class="signing-read-stage-detail signing-read-body"
           data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
@@ -71,7 +71,7 @@
           <button class="signing-read-detail-toggle" type="button" :aria-expanded="orderAuditExpanded"
             data-testid="signing-order-audit-toggle" @tap="orderAuditExpanded = !orderAuditExpanded">
             <text class="xl-craft__caption">{{ orderAuditExpanded ? '收起订单状态' : '订单状态' }}</text>
-            <AppIcon name="chevron-right" :size="15" color="#7b8aa0" />
+            <AppIcon name="chevron-right" :size="15" color="var(--signing-read-detail-icon, #7b8aa0)" />
           </button>
           <text v-show="orderAuditExpanded" class="signing-read-order-note"
             data-testid="signing-order-read-r1-stage">{{ orderStageDisplay(review.snapshot.review?.order.processState) }}</text>
@@ -111,7 +111,7 @@
               <text>合同操作</text><text class="signing-read-operations-state xl-craft__caption">暂未开放</text>
             </view>
             <view class="signing-read-operations-chevron" :class="{ 'is-open': operationLimitsExpanded }" aria-hidden="true">
-              <AppIcon name="chevron-right" :size="16" color="#74859a" />
+              <AppIcon name="chevron-right" :size="16" color="var(--signing-read-operations-icon, #74859a)" />
             </view>
           </button>
           <view v-show="operationLimitsExpanded" class="signing-read-operations-detail">
@@ -288,156 +288,6 @@ onUnload(() => {
 })
 </script>
 
-<style>
-/* DS-05B — C01 visual master translation. All UI materials come from shared
-   .xl-craft; this page owns ONLY spatial composition and a factual progress cue. */
-.signing-read-page {
-  min-height: 100vh;
-  padding: 14px 16px calc(22px + env(safe-area-inset-bottom));
-}
-.signing-read-section {
-  display: flex; flex-direction: column; gap: 9px;
-  padding: 15px 16px; margin-bottom: 11px;
-}
-.signing-read-section .app-section-heading__title {
-  color: var(--xl-ink); font-weight: 700;
-}
-.signing-read-section .app-section-heading__subtitle {
-  color: var(--xl-caption); font-size: 11px;
-}
-.signing-read-hero {
-  gap: 0; padding: 15px 16px; margin-bottom: 11px;
-}
-.signing-read-hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.signing-read-hero-title { color: var(--xl-ink); font-size: 14px; font-weight: 600; line-height: 22px; }
-
-.signing-read-order-identity {
-  display:flex; align-items:baseline; justify-content:space-between;
-  gap:12px; margin-top:12px;
-}
-.signing-read-order-number {
-  display: block; text-align: right;
-  font-size: 13px; line-height: 20px; font-weight: 600;
-  min-width:0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
-}
-.signing-read-hero-money {
-  display: flex; justify-content: space-between; gap: 12px;
-  align-items: flex-end; margin-top: 11px;
-}
-.signing-read-hero-amount { display: flex; flex-direction: column; gap: 2px; }
-.signing-read-amount-value {
-  color: var(--xl-ink); font-size: 28px; font-weight: 700;
-  line-height: 31px; letter-spacing: -.025em;
-}
-.signing-read-hero-money > .signing-read-meta {
-  text-align: right; font-size: 11px; white-space: normal;
-  padding-bottom: 3px; max-width: 45%;
-}
-.signing-read-order-note {
-  display: block; color: var(--xl-secondary);
-  font-size: 12px; line-height: 19px;
-  margin-top: 4px; padding: 8px 0 0;
-}
-.signing-read-order-details { border-top:1px solid var(--xl-divider); margin-top:11px; padding-top:3px; }
-.signing-read-detail-toggle {
-  margin:0; padding:0; width:100%; min-height:44px;
-  display:flex; align-items:center; justify-content:space-between;
-  background:transparent; color:var(--xl-secondary);
-  border:0; font-weight:600;
-}
-.signing-read-detail-toggle::after { border:0; }
-.signing-read-stage {
-  display: flex; flex-direction: column; gap: 5px; margin: 0 0 11px;
-  padding: 16px; border: 1px solid var(--app-journey-context-border);
-  background: var(--app-journey-context);
-}
-.signing-read-stage-index {
-  color: var(--xl-blue); font-size: 11px; line-height: 18px;
-  font-weight: 700; font-variant-numeric: tabular-nums;
-}
-.signing-read-stage .xl-craft__progress-track { margin-bottom: 7px; }
-.signing-read-reconciled-inline { display:flex; flex-direction:column; gap:4px; }
-.signing-read-phase {
-  display:block; color:var(--app-journey-context-ink);
-  line-height:19px; font-weight:600;
-}
-.signing-read-progress-title {
-  display: block; color: var(--app-journey-emphasis); font-size: var(--app-journey-title-size);
-  line-height: 31px; font-weight: 750;
-}
-.signing-read-stage-detail { margin-top:2px; }
-.signing-read-next {
-  display:flex; align-items:baseline; gap:12px;
-  border-top:1px solid var(--app-journey-context-border);
-  margin-top:10px; padding-top:11px;
-}
-.signing-read-next-label {
-  color:var(--app-journey-context-ink); font-size:12px; font-weight:700;
-  flex:none;
-}
-.signing-read-stage .signing-read-body { line-height:1.55; color:var(--xl-secondary); }
-.signing-read-stage-cta { margin-top:12px; min-height:var(--app-journey-tap-height); }
-.signing-read-context-toggle {
-  width:100%; min-height:36px; margin:5px 0 0; padding:6px 0 0;
-  display:flex; align-items:center; justify-content:space-between;
-  border:0; border-top:1px solid var(--app-journey-context-border);
-  background:transparent; color:var(--app-journey-context-ink);
-  font-weight:600; text-align:left;
-}
-.signing-read-context-toggle::after { border:0; }
-.signing-read-stage-detail { padding:7px 0 4px; }
-.signing-read-body, .signing-read-help {
-  display: block; color: var(--xl-secondary);
-  font-size: 13px; line-height: 20px;
-}
-.signing-read-warning, .signing-read-footer {
-  display: block; color: var(--xl-caption);
-  font-size: 12px; line-height: 19px;
-}
-.signing-read-section--progress { border-left: 0; }
-.signing-read-contract-cta { width: 100%; margin-top: 3px; }
-.signing-read-section .xl-craft__notice { margin: 5px 0 0; }
-.signing-read-contract-item {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 12px 13px; border: 1px solid var(--xl-divider);
-  border-radius: var(--xl-radius-control);
-  background: var(--xl-field-bg);
-}
-.signing-read-contract-number { color: var(--xl-ink); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-.signing-read-contract-state { color: var(--app-journey-context-ink); font-size: 12px; line-height: 1.5; font-weight:600; }
-.signing-read-operations { border-top:1px solid var(--xl-divider); margin-top:5px; }
-.signing-read-operations-toggle {
-  width:100%; min-height:44px; margin:0; padding:6px 0;
-  display:flex; align-items:center; justify-content:space-between; gap:10px;
-  border:0; background:transparent; color:var(--xl-ink);
-  font-weight:650; line-height:1.5; text-align:left;
-}
-.signing-read-operations-toggle::after { border:0; }
-.signing-read-operations-copy { display:flex; align-items:baseline; gap:8px; min-width:0; }
-.signing-read-operations-state { color:var(--xl-caption); font-weight:400; }
-.signing-read-operations-chevron { display:flex; align-items:center; justify-content:center; transition:transform .15s ease; }
-.signing-read-operations-chevron.is-open { transform:rotate(90deg); }
-.signing-read-operations-detail { display:flex; flex-direction:column; gap:11px; padding-top:5px; }
-.signing-read-operations-actions { display:flex; flex-direction:column; gap:9px; }
-.signing-read-footer { text-align: center; margin: 12px 0 18px; }
-.signing-read-return {
-  box-sizing:border-box; min-height:44px; margin:12px 0 0;
-}
-.signing-read-section--diagnostics { border-style: dashed; box-shadow: none; }
-.signing-read-diagnostics-copy { display: flex; flex-direction: column; gap: 4px; }
-.signing-read-diagnostics-toggle {
-  min-height: 44px; margin: 0; padding: 9px 12px;
-  border: 1px solid var(--xl-stroke); border-radius: var(--xl-radius-control);
-  background: var(--xl-white); color: var(--xl-secondary);
-  font-size: 13px; line-height: 1.4;
-}
-.signing-read-diagnostics-toggle::after { border: 0; }
-.signing-read-diagnostics-details {
-  display: flex; flex-direction: column; gap: 12px;
-  padding-top: 13px; border-top: 1px solid var(--xl-divider);
-}
-@media(max-width:360px) {
-  .signing-read-page { padding-left: 12px; padding-right: 12px; }
-  .signing-read-hero { padding: 17px 15px; }
-}
+<style lang="scss">
+@import "@brand-ui/signing-read.scss";
 </style>

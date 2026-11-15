@@ -169,10 +169,10 @@ jobs:
         env:
           XLINK_H5_SURVEY_59: 'true'
         run: pnpm exec playwright test --config config/playwright/survey-59-read.config.ts
-      - name: Verify quotation and Home Login in both build-selected brands
+      - name: Verify quotation Home Login and signing read in both build-selected brands
         run: |
-          VITE_XLINK_BRAND=xlink pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts
-          VITE_XLINK_BRAND=yuhong pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts
+          VITE_XLINK_BRAND=xlink pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts
+          VITE_XLINK_BRAND=yuhong pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4

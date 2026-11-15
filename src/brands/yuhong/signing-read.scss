@@ -1,0 +1,66 @@
+/* Page composition only. Shared controls and read authority retain their owners. */
+.signing-read-page {
+  --signing-read-detail-icon: var(--yh-color-text-secondary);
+  --signing-read-operations-icon: var(--yh-color-text-secondary);
+  box-sizing: border-box; min-height: 100vh; width: 100%;
+  padding: var(--yh-space-16) var(--yh-space-16) calc(var(--yh-space-16) + env(safe-area-inset-bottom));
+  background: var(--yh-color-surface-page); color: var(--yh-color-text-primary);
+  font-family: var(--yh-type-family); font-size: var(--yh-type-body-size);
+  font-weight: var(--yh-type-body-weight); line-height: var(--yh-type-body-line);
+}
+.signing-read-page .signing-read-stage, .signing-read-page .signing-read-section {
+  box-sizing: border-box; display: flex; flex-direction: column; min-width: 0;
+  gap: var(--yh-space-12); padding: var(--yh-space-16); margin-bottom: var(--yh-space-16);
+  border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-card);
+  background: var(--yh-color-surface-card); overflow-wrap: anywhere;
+}
+.signing-read-page .xl-craft__caption, .signing-read-page .xl-craft__meta,
+.signing-read-page .signing-read-meta, .signing-read-page .signing-read-help,
+.signing-read-page .signing-read-footer, .signing-read-page .signing-read-stage-index {
+  font-size: var(--yh-type-meta-size); font-weight: var(--yh-type-meta-weight);
+  line-height: var(--yh-type-meta-line); color: var(--yh-color-text-secondary);
+}
+.signing-read-page .xl-craft__progress-labels { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--yh-space-8); }
+.signing-read-page .xl-craft__progress-track { display: flex; gap: var(--yh-space-4); height: var(--yh-space-4); }
+.signing-read-page .xl-craft__progress-track > view { flex: 1; background: var(--yh-color-surface-skeleton); border-radius: var(--yh-radius-control); }
+.signing-read-page .xl-craft__progress-track > .is-active { background: var(--yh-action-primary); }
+.signing-read-page .signing-read-reconciled-inline { display: flex; flex-direction: column; gap: var(--yh-space-4); }
+.signing-read-page .signing-read-progress-title {
+  display: block; font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight);
+  line-height: var(--yh-type-title-line); color: var(--yh-color-text-primary);
+}
+.signing-read-page .signing-read-next { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--yh-space-8) var(--yh-space-16); padding-top: var(--yh-space-12); border-top: var(--yh-border-width) solid var(--yh-border-subtle); }
+.signing-read-page .signing-read-next-label { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.signing-read-page .signing-read-body { display: block; font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.signing-read-page .signing-read-context-toggle, .signing-read-page .signing-read-detail-toggle,
+.signing-read-page .signing-read-operations-toggle {
+  box-sizing: border-box; display: flex; align-items: center; justify-content: space-between;
+  gap: var(--yh-space-12); min-height: var(--yh-size-touch); width: 100%; margin: 0;
+  padding: var(--yh-space-8) 0; border: 0; border-radius: var(--yh-radius-control);
+  background: transparent; color: var(--yh-color-text-primary); text-align: left; white-space: normal;
+  font-size: var(--yh-type-body-size); font-weight: var(--yh-type-body-weight); line-height: var(--yh-type-body-line);
+}
+.signing-read-page .signing-read-context-toggle { border-top: var(--yh-border-width) solid var(--yh-border-subtle); }
+.signing-read-page .signing-read-context-toggle::after, .signing-read-page .signing-read-detail-toggle::after,
+.signing-read-page .signing-read-operations-toggle::after { border: 0; }
+.signing-read-page .signing-read-context-toggle:focus-visible, .signing-read-page .signing-read-detail-toggle:focus-visible,
+.signing-read-page .signing-read-operations-toggle:focus-visible { outline: var(--yh-focus-width) solid var(--yh-focus-ring); outline-offset: var(--yh-focus-offset); }
+.signing-read-page .signing-read-hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--yh-space-8); }
+.signing-read-page .signing-read-hero-title { font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.signing-read-page .signing-read-order-identity { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--yh-space-8) var(--yh-space-16); }
+.signing-read-page .signing-read-order-number { min-width: 0; max-width: 100%; font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.signing-read-page .signing-read-hero-money { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--yh-space-8) var(--yh-space-16); }
+.signing-read-page .signing-read-hero-amount { display: flex; flex-direction: column; gap: var(--yh-space-4); }
+.signing-read-page .signing-read-order-details, .signing-read-page .signing-read-operations { border-top: var(--yh-border-width) solid var(--yh-border-subtle); }
+.signing-read-page .signing-read-order-note { display: block; margin-top: var(--yh-space-4); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.signing-read-page .signing-read-warning { display: block; color: var(--yh-color-status-warning-fg); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.signing-read-page .signing-read-contract-item { display: flex; flex-direction: column; gap: var(--yh-space-8); padding: var(--yh-space-12); border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-subtle); }
+.signing-read-page .signing-read-contract-number { font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); overflow-wrap: anywhere; }
+.signing-read-page .signing-read-contract-state { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.signing-read-page .signing-read-operations-copy { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--yh-space-8); min-width: 0; }
+.signing-read-page .signing-read-operations-chevron { display: flex; flex-shrink: 0; }
+.signing-read-page .signing-read-operations-chevron.is-open { transform: rotate(90deg); }
+.signing-read-page .signing-read-operations-detail, .signing-read-page .signing-read-operations-actions { display: flex; flex-direction: column; gap: var(--yh-space-12); }
+.signing-read-page .signing-read-operations-detail { padding-top: var(--yh-space-8); }
+.signing-read-page .signing-read-return { margin-top: var(--yh-space-8); }
+.signing-read-page .signing-read-footer { display: block; text-align: center; margin: var(--yh-space-16) 0; }
