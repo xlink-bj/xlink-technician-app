@@ -33,8 +33,8 @@ test('normal App displays bounded configured information, safe fallback and isol
     if(path==='code/query'&&body['is:type|string#and']==='STATUS')return route.fulfill({json:{data:[],total:0,page:Number(body.page),rows:Number(body.rows)}})
     unexpected.push(request.method()+' '+path);return route.abort('blockedbyclient')
   })
-  const open=async(id='A')=>{await page.locator('.card-customer').filter({hasText:'合成客户'+id}).click();await expect(page.locator('.summary-customer')).toHaveText('合成客户'+id);await page.locator('.detail-tab').filter({hasText:'客户'}).click()}
-  const back=async()=>{await page.goBack();await expect(page.locator('.work-orders-page')).toBeVisible()}
+  const open=async(id='A')=>{await page.locator('.card-customer').filter({hasText:'合成客户'+id}).click();await expect(page.locator('.summary-customer')).toHaveText('合成客户'+id);await page.getByTestId('customer-summary').click()}
+  const back=async()=>{if(page.url().includes('read=customer')){await page.goBack();await expect(page.getByTestId('work-order-archives')).toBeVisible()}await page.goBack();await expect(page.locator('.work-orders-page')).toBeVisible()}
   try{
     await page.goto('/#/pages/index/index');await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click()
     await expect(page.locator('.home-page')).toBeVisible();await page.locator('.work-orders-entry').click();await expect(page.locator('.card-customer')).toHaveCount(2)
@@ -60,7 +60,7 @@ test('normal App displays bounded configured information, safe fallback and isol
     configFailure=true;await open();await expect(rows).toHaveCount(0);await expect(page.locator('.customer-info-panel')).toContainText('客户姓名');await back();configFailure=false
     config=configured([field('memo',{nameDisp:'切换字段'})]);holdA=true
     await page.locator('.card-customer').filter({hasText:'合成客户A'}).click();await arrivedA;await back();await open('B')
-    await expect(rows).toContainText(['扩展备注B']);releaseA();await expect(page.locator('.summary-customer')).toHaveText('合成客户B');await expect(rows).toContainText(['扩展备注B'])
+    await expect(rows).toContainText(['扩展备注B']);releaseA();await expect(page.getByTestId('detail-read-context')).toContainText('合成客户B');await expect(rows).toContainText(['扩展备注B'])
     await page.screenshot({path:info.outputPath('B-after-late-A-430x932.png'),fullPage:true})
     await back();preAccept=true;const readsBefore=calls.filter(c=>c.path==='biz/extField/query').length
     await page.locator('.card-customer').filter({hasText:'合成客户A'}).click();await expect(page.getByText('工单待接单',{exact:true})).toBeVisible()

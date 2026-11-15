@@ -155,7 +155,7 @@ describe('G4-C API detail mapping and route identity', () => {
 
     const result = await api.getWorkOrderDetail(workOrderId)
 
-    expect(result).toEqual(success(detail))
+    expect(result).toEqual(success({ ...detail, activityReadState: 'failed' }))
     expect(result.data).not.toHaveProperty('_id')
     expect(result.data).not.toHaveProperty('status')
     expect(result.data).not.toHaveProperty('exts')

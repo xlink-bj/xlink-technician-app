@@ -35,6 +35,7 @@
     />
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
+      <template v-if="readView === 'home'">
       <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
         <view class="summary-card__content">
         <view class="summary-top-row">
@@ -107,13 +108,7 @@
       </view>
 
 
-      <!-- Current source-backed forms/repeat node only; Production repeat reads
-           a bounded list after an explicit tap and never exposes write actions. -->
-      <R1ProductionMainRepeatPanel
-        v-if="productionReadOnly && currentR1FormNode?.sourceNodeType === 'repeat'"
-        :node="currentR1FormNode" :read="workOrder.mainRepeatRead"
-        @read="loadMainRepeatForms" />
-      <view v-else-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'pending'" class="app-surface">
+      <view v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'pending'" class="app-surface">
         <AppStatus tone="warning" quiet message="上次操作结果待核对，请进入原表单工作台查看。" />
         <AppButton data-testid="special-receipt-workspace-entry" @tap="openDevMockDynamicFormReceipt">查看待核对记录</AppButton>
       </view>
@@ -127,32 +122,19 @@
         data-testid="a-special-completion-unverified" />
       <AppButton v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'"
         data-testid="special-completed-workspace-entry" variant="secondary" @tap="openDevMockDynamicFormReceipt">查看已完成记录</AppButton>
-      <R1ProductionChildFormsPanel
-        v-if="productionReadOnly && productionChildParents.length"
-        :parents="productionChildParents"
-        :selected-parent-id="workOrder.childReadParentId"
-        :nodes="workOrder.childReadNodes"
-        :state="workOrder.childReadState"
-        :error="workOrder.childReadError"
-        :repeat-by-node="workOrder.repeatReadByNode"
-        @load-child="loadChildForms"
-        @load-repeat="loadRepeatForms"
-      />
+      </template>
+      <WorkOrderArchiveCards v-if="readView === 'home'"
+        :work-order-id="String(detail.id)" :activities="activities"
+        :follow-up-message="followUpReadMessage(detail)" :has-history="canShowHistoricalForms"
+        :customer-summary="detail.informationFields === undefined ? (detail.customerName || '查看本次服务资料') : `${informationRows.length} 项可查看资料`"
+        :archives="[orderArchiveSummary(quotationBrowse.page)]" :order-state="quotationBrowse.state"
+        :order-error="quotationBrowse.errorMessage" @retry-orders="retryQuotationRead" />
 
-      <AppRecordCard class="information-card">
-        <scroll-view class="detail-tabs" scroll-x="true" show-scrollbar="false">
-          <view
-            v-for="tab in visibleDetailTabs"
-            :key="tab.key"
-            class="detail-tab"
-            :class="{ 'detail-tab--active': activeTab === tab.key }"
-            @tap="selectTab(tab.key)"
-          >
-            <text>{{ tab.label }}</text>
-          </view>
-        </scroll-view>
+      <AppRecordCard v-else class="information-card">
+        <view class="archive-detail-heading"><text class="tab-empty-title">{{ readView === 'follow-up' ? '全部跟进记录' : readView === 'customer' ? '客户资料' : '正式订单 · 只读' }}</text></view>
+        <text class="archive-detail-context" data-testid="detail-read-context">{{ detail.customerName }}{{ detail.displayNumber ? ` · ${workOrderNumberDisplay(detail.displayNumber)}` : '' }}</text>
 
-        <view v-if="activeTab === 'follow-up'" class="tab-panel">
+        <view v-if="readView === 'follow-up'" class="tab-panel">
           <view v-if="activities.length > 0" class="activity-list">
             <view v-for="(activity, index) in activities" :key="activity.id" class="activity-item">
               <view class="activity-rail" aria-hidden="true">
@@ -177,15 +159,32 @@
               </view>
             </view>
           </view>
-          <view v-else-if="!canShowHistoricalForms" class="tab-empty">
-            <text class="tab-empty-title">暂无跟进记录</text>
-            <text class="tab-empty-copy">后续跟进信息将在业务能力开放后展示。</text>
+          <view v-if="followUpReadMessage(detail)" class="tab-empty">
+            <text class="tab-empty-title">{{ followUpReadMessage(detail) }}</text>
           </view>
+      <!-- Current source-backed forms/repeat node only; Production repeat reads
+           a bounded list after an explicit tap and never exposes write actions. -->
+      <R1ProductionMainRepeatPanel
+        v-if="productionReadOnly && currentR1FormNode?.sourceNodeType === 'repeat'"
+        :node="currentR1FormNode" :read="workOrder.mainRepeatRead"
+        @read="loadMainRepeatForms" />
+      <R1ProductionChildFormsPanel
+        v-if="productionReadOnly && productionChildParents.length"
+        :parents="productionChildParents"
+        :selected-parent-id="workOrder.childReadParentId"
+        :nodes="workOrder.childReadNodes"
+        :state="workOrder.childReadState"
+        :error="workOrder.childReadError"
+        :repeat-by-node="workOrder.repeatReadByNode"
+        @load-child="loadChildForms"
+        @load-repeat="loadRepeatForms"
+      />
+
           <HistoricalFormsTimeline v-if="canShowHistoricalForms" :work-order-id="String(detail.id)"
             :actor-scope="workOrderReadScopeKey(session.session)" />
         </view>
 
-        <view v-else-if="activeTab === 'customer'" class="tab-panel customer-info-panel">
+        <view v-else-if="readView === 'customer'" class="tab-panel customer-info-panel">
           <template v-if="detail.informationFields !== undefined">
             <view v-for="row in informationRows" :key="row.field.fieldId" class="detail-row customer-info-row" data-testid="configured-information-row">
               <text class="row-label">{{ row.field.label }}</text>
@@ -213,9 +212,9 @@
           </template>
         </view>
 
-        <view v-else-if="activeTab === 'order'" class="tab-panel order-info-panel">
+        <view v-if="readView === 'customer'" class="tab-panel order-info-panel">
           <view class="order-info-heading">
-            <text>订单信息</text>
+            <text>工单信息</text>
           </view>
           <view class="order-info-list">
             <view class="detail-row order-info-row" v-if="detail.displayNumber">
@@ -239,10 +238,9 @@
           </view>
         </view>
 
-        <view v-else-if="activeTab === 'quotation' && productionReadOnly" class="tab-panel quotation-read-panel" data-testid="production-quotation-read-panel">
-          <view class="quotation-read-intro">
-            <text class="tab-empty-title">正式订单 · 只读</text>
-            <text class="tab-empty-copy">查看当前工单最近的正式订单。此处为有限只读核验，未显示不代表后台不存在。</text>
+        <view v-if="readView === 'quotation'" class="tab-panel quotation-read-panel" data-testid="production-quotation-read-panel">
+          <view v-if="!orderArchiveSummary(quotationBrowse.page).complete" class="quotation-read-intro">
+            <text class="tab-empty-copy">当前仅展示已读取的订单，完整数量待确认。</text>
           </view>
           <view v-if="quotationBrowse.state === 'loading'" class="quotation-read-state" data-testid="quotation-read-loading">
             <AppLoadingState variant="inline" label="正在读取正式订单" />
@@ -255,8 +253,7 @@
             <button class="state-action quotation-retry" @tap="loadQuotationRead">读取该工单正式订单</button>
           </view>
           <view v-else-if="matchingQuotationOrders.length === 0" class="tab-empty" data-testid="quotation-read-empty">
-            <text class="tab-empty-title">本次有限读取未核验到正式订单</text>
-            <text class="tab-empty-copy">当前结果不能证明订单不存在，可联系业务人员进一步核实。</text>
+            <text class="tab-empty-title">{{ selectedOrderId ? '这笔订单暂不可查看' : orderArchiveSummary(quotationBrowse.page).complete ? '尚未产生正式订单' : '暂未读取到订单记录' }}</text>
           </view>
           <view v-else class="quotation-read-list">
             <view v-for="order in matchingQuotationOrders" :key="order.id" class="quotation-read-card" data-testid="quotation-read-record">
@@ -298,12 +295,6 @@
           </view>
         </view>
 
-        <view v-else class="tab-panel">
-          <view class="tab-empty">
-            <text class="tab-empty-title">暂无资料</text>
-            <text class="tab-empty-copy">工单相关资料将在对应业务数据接入后展示。</text>
-          </view>
-        </view>
       </AppRecordCard>
 
     </view>
@@ -328,7 +319,8 @@ import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
-import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
+import { detailReadView, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
+import WorkOrderArchiveCards from '@features/work-orders/WorkOrderArchiveCards.vue'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { selectActionWorkspaceLoadTarget } from '@features/work-orders/action-workspace-load-target'
 import { useLocalUnitDisplay } from '@features/work-orders/quotation/local-unit-display'
@@ -501,12 +493,10 @@ const allowLocalMockPreview = computed(() => {
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
-const activeTab = ref<DetailTabKey>('follow-up')
-const visibleDetailTabs = computed(() => productionReadOnly
-  ? [...detailTabs, { key: 'quotation' as const, label: '正式订单' }]
-  : detailTabs)
-const matchingQuotationOrders = computed(() => quotationBrowse.items.filter(
-  (order) => order.serviceAppointmentId === String(detail.value?.id ?? ''),
+const readView = ref<DetailReadView>('home')
+const selectedOrderId = ref('')
+const matchingQuotationOrders = computed(() => orderArchiveSummary(quotationBrowse.page).items.filter(
+  (order) => order.serviceAppointmentId === String(detail.value?.id ?? '') && (!selectedOrderId.value || order.id === selectedOrderId.value),
 ))
 const showLoadingSkeleton = ref(false)
 let loadingSkeletonTimer: ReturnType<typeof setTimeout> | undefined
@@ -534,7 +524,11 @@ onBeforeUnmount(clearLoadingSkeletonTimer)
 
 watch(
   () => detail.value?.id ?? null,
-  () => quotationBrowse.clear(),
+  (id) => {
+    // A read-only child view re-reads this same WorkOrder. A transient loading
+    // null must not discard its archive context; actor changes clear separately.
+    if (id && quotationBrowse.fetchedWorkOrderId && quotationBrowse.fetchedWorkOrderId !== String(id)) quotationBrowse.clear()
+  },
 )
 
 const canDial = computed(() => !productionReadOnly && Boolean(detail.value?.contact?.normalizedPhone))
@@ -581,7 +575,13 @@ function loadForAuthenticatedSession(): void {
 
 onLoad((options) => {
   routeValue.value = options?.id
+  readView.value = detailReadView(options?.read)
+  selectedOrderId.value = typeof options?.order === 'string' ? options.order : ''
   routeReady.value = true
+})
+
+watch([() => workOrder.loadState, () => detail.value?.id], ([state, id]) => {
+  if (state === 'succeeded' && id && readView.value === 'quotation') void loadQuotationRead()
 })
 
 watch(
@@ -590,7 +590,6 @@ watch(
     // Role changes during an authenticated session must re-read the detail.
     if (ready && status === 'authenticated' && scope
       && (!previous || previous[0] !== status || previous[1] !== scope || !previous[2])) {
-      quotationBrowse.clear()
       loadForAuthenticatedSession()
     }
     if (status !== 'authenticated' && status !== 'unknown') workOrder.clear()
@@ -614,9 +613,8 @@ async function loadMainRepeatForms(nodeId: string): Promise<void> {
   await workOrder.loadMainRepeatRecords(nodeId)
 }
 
-function selectTab(tab: DetailTabKey): void {
-  activeTab.value = tab
-  if (tab === 'quotation' && productionReadOnly) void loadQuotationRead()
+async function openReadView(view: DetailReadView): Promise<void> {
+  if (detail.value) await workOrder.navigateTo(detailReadRoute(String(detail.value.id), view))
 }
 
 async function loadQuotationRead(): Promise<void> {
@@ -659,7 +657,7 @@ async function handleCurrentTaskAction(): Promise<void> {
   const id = detail.value?.id
   if (!id) return
   const target = actionWorkspaceRouteFor(id, currentTask.nodeId, currentTask.actionIntent)
-  // Quotation entry is an Action task, while the archived Order tab remains
+  // Quotation entry is an Action task, while the read-only Order archive remains
   // independent. Production keeps its established read-only entry.
   await workOrder.navigateTo(currentTask.actionIntent === 'place_order' && !productionReadOnly
     ? `${target}&entry=orders` : (normalWorkspaceEntry.value || aStageDynamicFormNodeKind.value) ? `${target}&from=detail` : target)
@@ -673,12 +671,12 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
   }
 
   if (action === 'customer') {
-    selectTab('customer')
+    await openReadView('customer')
     return
   }
 
   if (action === 'records') {
-    selectTab('follow-up')
+    await openReadView('follow-up')
     return
   }
 
@@ -924,45 +922,8 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
    Task presentation is owned by WorkOrderTaskFocus.vue (DS-06).
    Keep this business page free of a competing task palette. */
 
-.detail-tabs {
-  border-bottom: 1rpx solid #edf1f6;
-  box-sizing: border-box;
-  height: 82rpx;
-  white-space: nowrap;
-  width: 100%;
-}
-
-.detail-tab {
-  align-items: center;
-  box-sizing: border-box;
-  color: var(--app-content-muted-ink);
-  display: inline-flex;
-  font-size: 13px;
-  height: 82rpx;
-  justify-content: center;
-  margin: 0 20rpx;
-  position: relative;
-}
-
-.detail-tab:first-child {
-  margin-left: 28rpx;
-}
-
-.detail-tab--active {
-  color: var(--app-color-primary-action);
-  font-weight: 720;
-}
-
-.detail-tab--active::after {
-  background: #2878f2;
-  border-radius: 999rpx;
-  bottom: 0;
-  content: '';
-  height: 4rpx;
-  left: 0;
-  position: absolute;
-  right: 0;
-}
+.archive-detail-heading { padding: 20rpx 28rpx 0; }
+.archive-detail-context { display: block; padding: 8rpx 28rpx; color: var(--app-color-text-secondary); font-size: var(--app-font-meta); overflow-wrap: anywhere; }
 
 .tab-panel {
   padding: 16rpx 28rpx 18rpx;

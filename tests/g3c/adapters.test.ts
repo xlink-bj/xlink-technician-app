@@ -110,6 +110,7 @@ describe('G3-C API adapter foundation', () => {
 
     const detail = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>('work-order-001'))
     expect(detail.data).toEqual({
+      activityReadState: 'failed',
       id: 'work-order-001',
       workflowRunId: 'workflow-run-001',
       displayNumber: 'DEMO-SA-001',

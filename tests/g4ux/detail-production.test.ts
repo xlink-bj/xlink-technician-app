@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
-import { detailTabs } from '@features/work-orders/detail-tabs'
+import { detailReadView } from '@features/work-orders/detail-archive'
 
 const detailPage = readFileSync(new URL('../../src/pages/work-orders/detail.vue', import.meta.url), 'utf8')
-const detailTabsSource = readFileSync(new URL('../../src/features/work-orders/detail-tabs.ts', import.meta.url), 'utf8')
+const archiveCards = readFileSync(new URL('../../src/features/work-orders/WorkOrderArchiveCards.vue', import.meta.url), 'utf8')
 const quotationWorkspace = readFileSync(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8')
 const taskFocusSource = readFileSync(new URL('../../src/features/work-orders/WorkOrderTaskFocus.vue', import.meta.url), 'utf8')
 const skeletonSource = readFileSync(new URL('../../src/shared/ui/AppWorkOrderSkeleton.vue', import.meta.url), 'utf8')
 
 describe('G4-UX detail D3 semantic boundary', () => {
-  it('keeps the accepted summary, quick-action shell, and read-only tabs', () => {
+  it('keeps the accepted summary, quick-action shell, and vertically stacked read-only summaries', () => {
     expect(detailPage).toContain('class="summary-card"')
     expect(detailPage).toContain('class="summary-actions"')
     expect(detailPage).toContain('class="part-badge"')
@@ -26,15 +26,11 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).toContain("label: '跟进'")
     expect(detailPage).toContain('导航')
     expect(detailPage).toContain("action.key === 'contact' || action.key === 'navigate'")
-    expect(detailPage).toContain("{ key: 'quotation' as const, label: '正式订单' }")
-    expect(detailPage).toContain('detailTabs')
-    expect(detailTabs).toEqual([
-      { key: 'follow-up', label: '跟进记录' },
-      { key: 'customer', label: '客户信息' },
-      { key: 'order', label: '订单信息' },
-      { key: 'files', label: '资料' },
-    ])
-    expect(detailTabsSource).toContain('Read-only tabs are navigation structure')
+    expect(detailPage).toContain('<WorkOrderArchiveCards')
+    expect(detailPage).not.toContain('<scroll-view class="detail-tabs"')
+    expect(archiveCards).toContain('activities.slice(0, 2)')
+    expect(detailReadView('customer')).toBe('customer')
+    expect(detailReadView('files')).toBe('home')
   })
 
   it('renders optional normalized fields without inventing a customer value', () => {
@@ -78,7 +74,7 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).toContain('activities.length > 0')
     expect(detailPage).toContain('class="activity-item"')
     expect(detailPage).toContain("activity.badge !== '系统'")
-    expect(detailPage).toContain('暂无跟进记录')
+    expect(detailPage).toContain('followUpReadMessage(detail)')
   })
 
   it('keeps loading/error states normalized and workflow execution out of D2', () => {
@@ -117,13 +113,13 @@ describe('G4-UX detail D3 semantic boundary', () => {
   })
 
   it('keeps Production server quotations read-only and scoped to the current Work Order', () => {
-    expect(detailPage).toContain('查看当前工单最近的正式订单')
-    expect(detailPage).toContain('有限只读核验，未显示不代表后台不存在')
+    expect(detailPage).toContain('当前仅展示已读取的订单，完整数量待确认')
+    expect(detailPage).toContain("selectedOrderId ? '这笔订单暂不可查看'")
     expect(detailPage).toContain('row.line.unitPrice')
     expect(detailPage).toContain('row.line.lineTotal')
     expect(detailPage).not.toContain('服务器报价保持只读')
     expect(detailPage).not.toContain('报价 PDF 未打开或下载')
-    expect(detailPage).toContain('quotationBrowse.items.filter')
+    expect(detailPage).toContain('orderArchiveSummary(quotationBrowse.page).items.filter')
     expect(detailPage).toContain('serviceAppointmentId === String(detail.value?.id ?? \'\')')
     expect(quotationWorkspace).toContain(':can-submit="canOpenSubmit"')
     expect(quotationWorkspace).toContain('modeBlocked: productionReadOnly || productReviewOnly.value || syntheticReviewEnabled.value')

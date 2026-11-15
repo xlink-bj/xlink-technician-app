@@ -136,8 +136,10 @@ export interface WorkOrderDetail {
   /** R1 catalog filters mapped from ServiceAppointment.serviceType and exts.sourceType. */
   readonly quotationCatalogContext?: QuotationCatalogContext
   readonly contact?: WorkOrderContact
-  /** Adapter-normalized read-only follow-up timeline; omitted when no records exist. */
+  /** Adapter-normalized process records; an explicit empty array is a successful empty read. */
   readonly activities?: readonly WorkOrderActivity[]
+  /** Outcome of the separate process-record read; absence is unknown, never an empty result. */
+  readonly activityReadState?: 'succeeded' | 'failed' | 'denied' | 'unavailable'
   /** Adapter-normalized workflow nodes consumed by the read-only Workflow Runtime. */
   readonly workflowNodes?: readonly WorkflowNodeRead[]
 }

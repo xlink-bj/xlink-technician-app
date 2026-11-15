@@ -26,6 +26,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
   const state = ref<BrowseState>('idle')
   const items = ref<readonly QuotationOrderBrowseItem[]>([])
   const errorMessage = ref('')
+  const page = ref<ReadPage<QuotationOrderBrowseItem> | null>(null)
   const fetchedSessionRef = ref<string | null>(null)
   const fetchedWorkOrderId = ref<string | null>(null)
   let fetchedAuthorizationIdentityKey: string | null = null
@@ -62,6 +63,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     state.value = 'idle'
     items.value = []
     errorMessage.value = ''
+    page.value = null
     fetchedSessionRef.value = null
     fetchedWorkOrderId.value = null
     fetchedAuthorizationIdentityKey = null
@@ -95,6 +97,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     const currentRequest = ++requestVersion
     items.value = []
     state.value = 'loading'
+    page.value = null
     errorMessage.value = ''
     const readPort = port
     // Promise.resolve() also converts accidental synchronous port exceptions
@@ -111,8 +114,8 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
           return failure('server_terminal', '报价读取已被新的请求替代，请重新加载。')
         }
         if (result.state === 'succeeded' && result.data) {
-          const page = result.data
-          const rows = page.items
+          const responsePage = result.data
+          const rows = responsePage.items
           const seen = new Set<string>()
           const valid = Array.isArray(rows) && rows.length <= pageSize
             && rows.every((row) => {
@@ -128,7 +131,8 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
           }
           // Preserve the server's optional paging metadata; do NOT infer that
           // one page exhausts all Orders from the current ServiceAppointment.
-          const accepted = { ...page, items: [...rows] }
+          const accepted = { ...responsePage, items: [...rows] }
+          page.value = accepted
           items.value = accepted.items
           fetchedSessionRef.value = currentSession.sessionRef
           fetchedWorkOrderId.value = workOrderId
@@ -185,6 +189,7 @@ export const useQuotationOrderBrowseStore = defineStore('quotationOrderBrowse', 
     state,
     items,
     errorMessage,
+    page,
     fetchedSessionRef,
     fetchedWorkOrderId,
     configure,

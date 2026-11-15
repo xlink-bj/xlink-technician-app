@@ -52,7 +52,7 @@ it.each([
  // Evaluate the actual page gate, and verify both branches use this same gate.
  const expression=source.match(/const canShowHistoricalForms = computed\(\(\) => ([^\n]+)\)/)?.[1]
  expect(expression).toBeTruthy();const actual=new Function('productionReadOnly','historicalFormsEnabled','hasHistoricalForms','return '+expression)(productionReadOnly,historicalFormsEnabled,{value:hasForms})
- expect(actual).toBe(expected);expect(source).toContain('v-else-if="!canShowHistoricalForms" class="tab-empty"');expect(source).toContain('<HistoricalFormsTimeline v-if="canShowHistoricalForms"');expect(source).toContain('暂无跟进记录')
+ expect(actual).toBe(expected);expect(source).toContain('v-if="followUpReadMessage(detail)" class="tab-empty"');expect(source).toContain('<HistoricalFormsTimeline v-if="canShowHistoricalForms"');expect(source).toContain('followUpReadMessage(detail)')
 })
 
 it('mounts decoded Survey attachments in the actual history SFC without URL attributes or remote requests', async () => {

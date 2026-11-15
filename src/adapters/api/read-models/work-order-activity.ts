@@ -1,5 +1,6 @@
 import type { WorkOrderActivity } from '@shared/ports'
 import { optionalRecord, optionalString, type AdapterRecord } from '../../common/records'
+import { AdapterMappingError } from '../../common/operations'
 
 // Historical activity event labels remain adapter-owned; status is never used as business authorization.
 
@@ -29,19 +30,19 @@ function activityDisplayTime(value: string | undefined): string {
 
 function activityRows(raw: unknown): AdapterRecord[] {
   const envelope = optionalRecord(raw)
-  if (!envelope) return []
+  if (!envelope) throw new AdapterMappingError('Activity response is missing')
   const responseStatus = optionalString(envelope, ['status'])
-  if (responseStatus && responseStatus !== '1') return []
+  if (responseStatus && responseStatus !== '1') throw new AdapterMappingError('Activity read failed')
 
   let data: unknown = envelope.data
   if (typeof data === 'string' && data.trim()) {
     try {
       data = JSON.parse(data)
     } catch {
-      return []
+      throw new AdapterMappingError('Activity rows are malformed')
     }
   }
-  if (!Array.isArray(data)) return []
+  if (!Array.isArray(data)) throw new AdapterMappingError('Activity rows are missing')
   return data.map(optionalRecord).filter((row): row is AdapterRecord => Boolean(row))
 }
 

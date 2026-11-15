@@ -492,6 +492,7 @@ describe('G4-UX business mock runtime', () => {
       asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]),
     )
     expect(detail.data).toEqual({
+      activityReadState: 'succeeded',
       id: mockWorkOrderIds[0],
       workflowRunId: 'mock-workflow-run-001',
       displayNumber: '09077',
@@ -699,7 +700,8 @@ describe('G4-UX business mock runtime', () => {
     const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockWorkOrderIds[0]))
 
     expect(result.state).toBe('succeeded')
-    expect(result.data?.activities).toBeUndefined()
+    expect(result.data?.activities).toEqual([])
+    expect(result.data?.activityReadState).toBe('succeeded')
     expect(request).not.toHaveBeenCalled()
   })
 
@@ -791,6 +793,8 @@ describe('G4-UX business mock runtime', () => {
     const result = await api.getWorkOrderDetail(asOpaqueId<'WorkOrderId'>(mockDetailScenarioIds[5]))
 
     expect(result.data).toEqual({
+      activities: [],
+      activityReadState: 'succeeded',
       id: mockDetailScenarioIds[5],
       displayNumber: '19006',
       workflowRunId: 'mock-workflow-run-006',

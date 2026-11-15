@@ -39,8 +39,8 @@ async function fixture(page: Page, origin: string, initialRole: string | null = 
     unexpected.push(req.method() + ' ' + path); return route.abort('blockedbyclient')
   })
   const login = async () => { await page.locator('.launch-cta').click(); await page.locator('.method-card').filter({ hasText: '快捷登录' }).click(); await expect(page.locator('.home-page')).toBeVisible(); await page.locator('.work-orders-entry').click() }
-  const open = async (id = 'A') => { await page.locator('.card-customer').filter({ hasText: '合成客户' + id }).click(); await expect(page.locator('.summary-customer')).toHaveText('合成客户' + id); await page.locator('.detail-tab').filter({ hasText: '客户' }).click() }
-  const back = async () => { await page.goBack(); await expect(page.locator('.work-orders-page')).toBeVisible() }
+  const open = async (id = 'A') => { await page.locator('.card-customer').filter({ hasText: '合成客户' + id }).click(); await expect(page.locator('.summary-customer')).toHaveText('合成客户' + id); await page.getByTestId('customer-summary').click() }
+  const back = async () => { if(page.url().includes('read=customer')) { await page.goBack(); await expect(page.getByTestId('work-order-archives')).toBeVisible() } await page.goBack(); await expect(page.locator('.work-orders-page')).toBeVisible() }
   const rows = page.getByTestId('configured-information-row')
   return { calls, unexpected, errors, rows, open, back, login, config: (next: ReturnType<typeof field>[]) => { config = next },
     role: (next: string | null) => { role = next }, holdA: () => { hold = true; held = new Promise<void>(resolve => { arrived = resolve }) }, arrived: () => held, release: () => release() }
@@ -76,7 +76,7 @@ test('real detail rejects malformed/legacy role rules, stale A and logout/missin
     await h.open(); await expect(h.rows).toHaveCount(0); await h.back()
     h.config([field('4')]); h.holdA(); await page.locator('.card-customer').filter({ hasText: '合成客户A' }).click(); await h.arrived()
     await h.back(); await h.open('B'); await expect(h.rows).toContainText('扩展备注B'); h.release()
-    await expect(page.locator('.summary-customer')).toHaveText('合成客户B'); await expect(h.rows).toContainText('扩展备注B')
+    await expect(page.getByTestId('detail-read-context')).toContainText('合成客户B'); await expect(h.rows).toContainText('扩展备注B')
     await relogin('other'); await h.open(); await expect(h.rows).toHaveCount(0)
     await h.back(); h.config([field('5')]); await h.open(); await expect(h.rows).toContainText('扩展备注A')
     const before = h.calls.filter(c => c.path === 'biz/extField/query').length

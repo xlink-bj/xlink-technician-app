@@ -635,12 +635,12 @@ export class TechnicianApiReadAdapter implements TechnicianApiReadPort {
             if (error instanceof ApiReadTransportError && ['session_invalid', 'authorization_denied'].includes(error.category)) throw error
           }
         }
-        if (productionReadOnly) return detail
+        if (productionReadOnly) return { ...detail, activityReadState: 'unavailable' }
         const activities = await this.readWorkOrderActivities(id)
         assertDetailCurrent()
-        return activities.state === 'succeeded' && activities.data && activities.data.length > 0
-          ? { ...detail, activities: activities.data }
-          : detail
+        return activities.state === 'succeeded' && activities.data
+          ? { ...detail, activities: activities.data, activityReadState: 'succeeded' }
+          : { ...detail, activityReadState: activities.error?.category === 'authorization_denied' ? 'denied' : 'failed' }
       },
     )
     if (scopedDetail && (!detailCurrent() || realDev && !informationCurrent())) {
