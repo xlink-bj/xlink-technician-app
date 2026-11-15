@@ -4,8 +4,10 @@
   <view class="current-task-card task-focus-panel" :class="`task-focus-panel--${tone}`"
     data-testid="task-focus-panel">
     <view class="task-focus-panel__copy">
-      <text class="task-focus-panel__eyebrow">当前任务</text>
-      <text class="task-focus-panel__title" data-testid="task-focus-title">{{ title }}</text>
+      <view class="task-focus-panel__heading">
+        <text class="task-focus-panel__title" data-testid="task-focus-title">{{ title }}</text>
+        <text class="task-focus-panel__eyebrow">当前任务</text>
+      </view>
       <text v-if="disabled && note" class="task-focus-panel__note"
         data-testid="task-focus-disabled-note">{{ note }}</text>
     </view>
@@ -40,19 +42,23 @@ function activate(): void {
 <style scoped>
 /* One flexible information/action stack; eligibility and labels stay page-owned. */
 .task-focus-panel.current-task-card {
+  /* Match the existing detail customer-card content inset. */
+  --task-focus-content-inset: 28rpx;
   box-sizing: border-box; display: flex; flex-direction: column;
   width: 100%; min-width: 0; margin-top: 13px;
   border: 1px solid var(--app-outline-subtle);
   border-radius: var(--app-shape-control);
   background: var(--app-surface-raised); color: var(--app-text-strong);
 }
-.task-focus-panel__copy { min-width: 0; padding: 10px 14px; }
+.task-focus-panel__copy { min-width: 0; padding: 10px var(--task-focus-content-inset); }
+.task-focus-panel__heading { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
 .task-focus-panel__eyebrow {
-  display: block; color: var(--app-content-muted-ink);
+  display: block; flex: 0 1 auto; max-width: 100%; margin-left: auto;
+  color: var(--app-content-muted-ink); text-align: right; overflow-wrap: anywhere;
   font-size: var(--app-content-meta-size); line-height: 1.4; font-weight: 500;
 }
 .task-focus-panel__title {
-  display: block; margin-top: 3px; overflow-wrap: anywhere;
+  display: block; flex: 1 1 auto; min-width: 0; max-width: 100%; overflow-wrap: anywhere;
   font-size: var(--app-journey-title-size); line-height: 1.35; font-weight: 700;
 }
 .task-focus-panel__note {
@@ -60,7 +66,7 @@ function activate(): void {
   color: var(--app-content-muted-ink); font-size: var(--app-content-meta-size); line-height: 1.5;
 }
 .task-focus-panel__actions {
-  display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 14px;
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 8px var(--task-focus-content-inset);
   border-top: 1px solid var(--app-color-divider);
 }
 .task-focus-panel .primary-task-action.task-focus-panel__action {

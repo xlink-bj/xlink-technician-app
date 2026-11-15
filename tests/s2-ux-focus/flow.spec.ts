@@ -140,13 +140,23 @@ for (const viewport of viewports) {
       const buttonBox = await button.boundingBox()
       expect(cardBox).not.toBeNull()
       expect(buttonBox).not.toBeNull()
-      expect(cardBox!.height, 'compact information/action stack').toBeGreaterThanOrEqual(120)
-      expect(cardBox!.height).toBeLessThanOrEqual(155)
+      expect(cardBox!.height, 'compact information/action stack').toBeGreaterThanOrEqual(110)
+      expect(cardBox!.height).toBeLessThanOrEqual(140)
       expect(buttonBox!.height, 'preserve the existing large touch target').toBeGreaterThanOrEqual(50)
       const copy = await card.locator('.task-focus-panel__copy').boundingBox()
       expect(buttonBox!.y, 'actions stay below information, never in a fixed side column').toBeGreaterThanOrEqual(copy!.y + copy!.height)
       expect(buttonBox!.x).toBeGreaterThan(cardBox!.x)
       expect(buttonBox!.x + buttonBox!.width).toBeLessThan(cardBox!.x + cardBox!.width)
+      const title = await page.getByTestId('task-focus-title').boundingBox()
+      const caption = await card.locator('.task-focus-panel__eyebrow').boundingBox()
+      const customer = await page.locator('.summary-customer').boundingBox()
+      expect(Math.abs(title!.x - customer!.x), 'task title aligns with the existing customer name').toBeLessThanOrEqual(1)
+      expect(Math.abs(title!.x - buttonBox!.x), 'title and primary action share the content inset').toBeLessThanOrEqual(1)
+      expect(Math.abs(title!.y + title!.height / 2 - caption!.y - caption!.height / 2), 'task and auxiliary label share a row').toBeLessThanOrEqual(1)
+      expect(caption!.x).toBeGreaterThan(title!.x)
+      await expect(card.getByTestId('task-focus-disabled-note')).toHaveCount(0)
+      await expect(card).not.toContainText(/今天\s*10:32|今天\s*14:00[–-]16:00/)
+
       const paint = await card.evaluate(el => {
         const style = getComputedStyle(el)
         const title = el.querySelector('.task-focus-panel__title')
@@ -306,6 +316,7 @@ for (const viewport of viewports) {
       await panel.evaluate(el => {
         const title = el.querySelector('.task-focus-panel__title')!
         title.textContent = '合成布局压力样本：较长的现场任务名称需要完整展示并自然换行'
+        el.querySelector('.task-focus-panel__eyebrow')!.textContent = '当前任务 · 合成辅助文案布局压力样本'
         const primary = el.querySelector('.task-focus-panel__action')!
         primary.querySelector('.task-focus-panel__action-label')!.textContent = '继续核对当前任务资料并进入下一步处理（合成布局文案）'
         const secondary = primary.cloneNode(true) as HTMLElement
@@ -318,7 +329,7 @@ for (const viewport of viewports) {
       const layout = await panel.evaluate(el => {
         const card = el.getBoundingClientRect()
         return { overflow: el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight + 1,
-          contained: [...el.querySelectorAll('.task-focus-panel__title, .task-focus-panel__action')].every(item => {
+          contained: [...el.querySelectorAll('.task-focus-panel__title, .task-focus-panel__eyebrow, .task-focus-panel__action')].every(item => {
             const rect = item.getBoundingClientRect()
             return rect.left >= card.left && rect.right <= card.right && rect.bottom <= card.bottom
           }) }
