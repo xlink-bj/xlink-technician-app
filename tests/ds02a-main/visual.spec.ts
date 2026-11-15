@@ -86,7 +86,7 @@ for (const width of widths) {
         expect(acceptSize!.height, 'shared accept CTA >=44px').toBeGreaterThanOrEqual(43.5)
       }
       if (scene === 'detail') {
-        await expect(page.getByTestId('ds02b-detail-heading')).toBeVisible()
+        await expect(page.getByTestId('ds02b-detail-heading')).toHaveCount(0)
         await expect(page.getByTestId('ds02b-detail-record-card')).toHaveClass(/app-record-card/)
         // The source-modelled MOCK-018 may omit servicePartLabel; absence is
         // correct and must never be papered over with an invented tag.

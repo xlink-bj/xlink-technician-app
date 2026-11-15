@@ -35,7 +35,6 @@
     />
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
-      <AppSectionHeading class="detail-section-heading" title="工单概览" subtitle="服务信息与当前处理进度" data-testid="ds02b-detail-heading" />
       <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
         <view class="summary-card__content">
         <view class="summary-top-row">
@@ -118,8 +117,6 @@
         <AppStatus tone="warning" quiet message="上次操作结果待核对，请进入原表单工作台查看。" />
         <AppButton data-testid="special-receipt-workspace-entry" @tap="openDevMockDynamicFormReceipt">查看待核对记录</AppButton>
       </view>
-      <AppStatus v-else-if="currentR1FormNode && !normalWorkspaceEntry && !aStageDynamicFormNodeKind"
-        variant="strip" quiet message="表单内容在工作台中查看与填写。" data-testid="form-workspace-entry-note" />
       <AppStatus v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'" tone="success" quiet
         message="现场记录已完成，可重新进入查看。"
         data-testid="a-special-complete" />
@@ -346,7 +343,6 @@ import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
 import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
-import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
@@ -737,7 +733,6 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
 .summary-card,
 .information-card { width: 100%; min-width: 0; }
-.detail-section-heading { width: calc(100% - 6px); margin: 2px 3px 1px; }
 
 .summary-card {
   padding: 28rpx 28rpx 24rpx;

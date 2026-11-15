@@ -198,8 +198,9 @@ if (!commercialButton.includes("'tertiary' | 'ghost'") || !commercialButton.incl
   fail('DS-01.1 commercial hierarchy, composed Action Bar or passive status rendering missing')
 }
 
-// DS-02.B: each shared content primitive must have two real consumers;
- // no Workflow decision, business writes or inferred status in shared UI.
+// DS-02.B: cards/tags remain shared across List/Detail; section headings
+// belong to List and the transaction pages, not the compact Detail header.
+// No Workflow decision, business writes or inferred status in shared UI.
 const [listView, detailView, recordCard, metaTag, sectionHeading] = await Promise.all([
   read('src/pages/work-orders/work-orders.vue'),
   read('src/pages/work-orders/detail.vue'),
@@ -208,10 +209,11 @@ const [listView, detailView, recordCard, metaTag, sectionHeading] = await Promis
   read('src/shared/ui/AppSectionHeading.vue'),
 ])
 for (const consumer of [listView, detailView]) {
-  for (const name of ['AppRecordCard', 'AppMetaTag', 'AppSectionHeading']) {
+  for (const name of ['AppRecordCard', 'AppMetaTag']) {
     if (!consumer.includes(`<${name}`)) fail(`DS-02.B: missing ${name} in actual list/detail consumer`)
   }
 }
+if (!listView.includes('<AppSectionHeading')) fail('DS-02.B: List must reuse AppSectionHeading')
 for (const [name, source] of [['RecordCard', recordCard], ['MetaTag', metaTag], ['SectionHeading', sectionHeading]]) {
   if (/fetch\(|axios|useWorkOrder|submitOrder|placeOrder|WorkflowRuntime|@tap=|@click=/.test(source)) {
     fail(`DS-02.B: ${name} may only present caller-supplied data`)
