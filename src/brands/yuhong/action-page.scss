@@ -1,0 +1,20 @@
+.workspace-state { box-sizing: border-box; min-height: 100vh; padding: var(--yh-space-24); background: var(--yh-color-surface-page); }
+.workspace-state--centered { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.workspace-state-title { color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.workspace-state-copy { color: var(--yh-color-text-secondary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); margin-top: var(--yh-space-8); max-width: 400px; }
+.workspace-state-link { color: var(--yh-link); font-size: var(--yh-type-body-size); margin-top: var(--yh-space-16); }
+.workspace-state-action { margin-top: var(--yh-space-16); min-width: 160px; }
+.action-workspace-content { margin-top: var(--yh-space-16); padding: var(--yh-space-16); }
+.appointment-time-selector { color: var(--yh-color-text-primary); }
+.appointment-time-placeholder { color: var(--yh-color-text-muted); font-size: var(--yh-type-body-size); }
+.appointment-time-selected { display: flex; flex-direction: column; gap: var(--yh-space-4); }
+.appointment-time-selected-date { color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); }
+.appointment-time-selected-value { color: var(--yh-action-primary); font-size: var(--yh-type-body-size); }
+.action-success { display: flex; flex-direction: column; align-items: center; padding: var(--yh-space-32) var(--yh-space-16); text-align: center; }
+.action-success-icon { color: var(--yh-color-status-success-fg); }
+.action-success-title { margin-top: var(--yh-space-16); font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight); }
+.action-success-copy, .quotation-readonly-note { color: var(--yh-color-text-secondary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); margin-top: var(--yh-space-8); }
+.action-success-detail { margin-bottom: var(--yh-space-4); }
+.mock-journey-progress { display: flex; flex-direction: column; gap: var(--yh-space-8); margin: var(--yh-space-16); padding: var(--yh-space-16); }
+.mock-journey-progress__note, .mock-journey-progress__error { font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); color: var(--yh-color-text-secondary); }
+.mock-journey-progress__error { color: var(--yh-color-status-error-fg); }

@@ -1,0 +1,19 @@
+@import './action-page.scss';
+.confirmation-content { margin-top: var(--yh-space-16); }
+.confirmation-card { margin-bottom: var(--yh-space-16); padding: var(--yh-space-16); }
+.confirmation-card-heading { display: flex; align-items: center; gap: var(--yh-space-8); border-bottom: var(--yh-border-width) solid var(--yh-color-border-divider); padding-bottom: var(--yh-space-12); }
+.confirmation-card-icon { display: flex; align-items: center; justify-content: center; }
+.confirmation-card-title { font-size: var(--yh-type-section-size); line-height: var(--yh-type-section-line); font-weight: var(--yh-type-section-weight); }
+.confirmation-row--address { align-items: flex-start; }
+.confirmation-value--address { line-height: var(--yh-type-body-line); overflow-wrap: anywhere; }
+.confirmation-note { display: block; margin-top: var(--yh-space-12); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); white-space: pre-wrap; overflow-wrap: anywhere; }
+.confirmation-actions { display: flex; gap: var(--yh-layout-footer-gap); }
+.confirmation-action { flex: 1; min-width: 0; }
+.appointment-success { display: flex; flex-direction: column; align-items: center; padding: var(--yh-space-32) var(--yh-space-16); text-align: center; }
+.appointment-success-mark { display: flex; align-items: center; justify-content: center; width: 64px; height: 64px; border-radius: var(--yh-radius-card); background: var(--yh-color-status-success-bg); }
+.appointment-success-title { margin-top: var(--yh-space-16); font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight); }
+.appointment-success-copy, .appointment-success-warning { margin-top: var(--yh-space-8); color: var(--yh-color-text-secondary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.appointment-success-time { margin-top: var(--yh-space-24); padding: var(--yh-space-16); border: var(--yh-border-width) solid var(--yh-color-border-divider); border-radius: var(--yh-radius-card); background: var(--yh-color-surface-card); }
+.appointment-success-date, .appointment-success-time-value { display: block; font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.appointment-success-time-value { color: var(--yh-action-primary); }
+.appointment-success-secondary { width: 100%; }

@@ -261,55 +261,5 @@ function actionErrorCopy(error: OperationError | null): string {
 </script>
 
 <style>
-.workspace-state {
-  align-items: center;
-  background: var(--app-color-page);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100vh;
-  padding: var(--app-space-lg);
-  text-align: center;
-  width: 100%;
-}
-
-.workspace-state-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
-.workspace-state-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); margin-top: var(--app-space-sm); }
-.workspace-state-link { color: var(--app-color-primary); font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-lg); }
-
-.workspace-state-action {
-  margin-top: var(--app-space-lg);
-  width: 300rpx;
-}
-
-.workspace-state-action::after { border: 0; }
-.confirmation-content { margin-top: var(--app-space-md); }
-
-.confirmation-card {
-  margin-bottom: var(--app-space-md);
-  padding: var(--app-card-padding);
-}
-
-.confirmation-card-heading { align-items: center; border-bottom: 1rpx solid var(--app-color-divider); display: flex; padding-bottom: var(--app-space-md); }
-.confirmation-card-icon { align-items: center; background: var(--app-color-primary-soft); border-radius: 9rpx; color: var(--app-color-primary); display: flex; height: 38rpx; justify-content: center; margin-right: var(--app-space-sm); width: 38rpx; }
-.confirmation-card-title { color: var(--app-color-text-primary); font-size: 26rpx; font-weight: 800; }
-
-.confirmation-row--address { align-items: flex-start; padding-top: 16rpx; }
-.confirmation-value--address { line-height: 1.5; max-width: 68%; }
-.confirmation-note { color: var(--app-color-text-body); display: block; font-size: var(--app-font-value); line-height: 1.6; margin-top: var(--app-space-md); }
-
-.confirmation-actions { display: flex; gap: var(--app-action-bar-gap); }
-.confirmation-action { flex: 1; }
-
-.appointment-success { align-items: center; display: flex; flex-direction: column; padding: 34rpx 12rpx 12rpx; text-align: center; }
-.appointment-success-mark { align-items: center; background: var(--app-color-success-soft); border-radius: 50%; display: flex; height: 116rpx; justify-content: center; width: 116rpx; }
-.appointment-success-title { color: var(--app-color-text-primary); font-size: var(--app-font-major-title); font-weight: 800; margin-top: var(--app-space-lg); }
-.appointment-success-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); margin-top: var(--app-space-sm); }
-.appointment-success-time { background: var(--app-color-primary-soft); border: 1rpx solid var(--app-color-border-soft); border-radius: var(--app-radius-control); margin-top: 28rpx; padding: 20rpx 34rpx; }
-.appointment-success-date { color: var(--app-color-text-primary); display: block; font-size: 26rpx; font-weight: 800; }
-.appointment-success-time-value { color: var(--app-color-primary); display: block; font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-xs); }
-.appointment-success-warning { color: var(--app-color-warning); font-size: var(--app-font-meta); line-height: 1.5; margin-top: var(--app-space-md); }
-.confirmation-success-actions { display: flex; flex-direction: column; gap: var(--app-action-bar-gap); }
-.appointment-success-primary, .appointment-success-secondary { width: 100%; }
+@import "@brand-ui/action-confirmation.scss";
 </style>

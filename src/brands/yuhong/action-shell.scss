@@ -1,0 +1,10 @@
+/* One shell owner per build; business and navigation remain shared. */
+.action-workspace-page { box-sizing: border-box; display: flex; flex-direction: column; height: 100vh; min-height: 100%; overflow: hidden; width: 100%; background: var(--yh-color-surface-page); color: var(--yh-color-text-primary); font-family: var(--yh-type-family); }
+/* #ifdef H5 */
+.action-workspace-page--h5-navigation-fit, .action-workspace-page--survey { height: calc(100vh - 44px); }
+/* #endif */
+.action-workspace-scroll { flex: 1; height: 0; min-height: 0; width: 100%; }
+.action-workspace-body { box-sizing: border-box; width: 100%; max-width: 640px; margin: 0 auto; padding: var(--yh-space-16); }
+.action-workspace-draft-status, .action-workspace-business-feedback, .action-workspace-operation-status { display: block; margin: var(--yh-space-8) 0; }
+.action-workspace-footer { box-sizing: border-box; flex-shrink: 0; width: 100%; background: var(--yh-color-surface-card); border-top: var(--yh-border-width) solid var(--yh-color-border-divider); padding: var(--yh-space-12) 0 calc(var(--yh-space-12) + env(safe-area-inset-bottom)); }
+.action-workspace-footer-inner { box-sizing: border-box; width: 100%; max-width: 640px; margin: 0 auto; padding: 0 var(--yh-space-16); }

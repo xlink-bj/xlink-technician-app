@@ -184,30 +184,5 @@ function actionErrorCopy(error: OperationError | null): string {
 </script>
 
 <style>
-.workspace-state {
-  align-items: center;
-  background: var(--app-color-page);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100vh;
-  padding: var(--app-space-lg);
-  text-align: center;
-  width: 100%;
-}
-
-.workspace-state-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
-.workspace-state-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-field-label); line-height: 1.6; margin-top: var(--app-space-sm); }
-.workspace-state-link { color: var(--app-color-primary); font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-lg); }
-
-.workspace-state-action,
-.time-selection-submit {
-  margin-top: var(--app-space-lg);
-  width: 300rpx;
-}
-
-.workspace-state-action::after,
-.time-selection-submit::after { border: 0; }
-.time-selection-submit { margin: 0; width: 100%; }
+@import "@brand-ui/action-time.scss";
 </style>

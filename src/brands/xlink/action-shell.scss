@@ -1,0 +1,233 @@
+.action-workspace-page {
+  background: var(--app-color-page);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 100%;
+  overflow: hidden;
+  width: 100%;
+}
+
+.action-workspace-scroll {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  width: 100%;
+}
+
+.action-workspace-body {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 960rpx;
+  padding: 22rpx var(--app-page-gutter) 28rpx;
+  width: 100%;
+}
+
+.action-workspace-context { padding: 22rpx var(--app-card-padding); }
+
+.action-workspace-context-label {
+  color: var(--app-color-text-secondary);
+  display: block;
+  font-size: var(--app-font-meta);
+}
+
+.action-workspace-context-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-top: var(--app-space-xs);
+}
+
+.action-workspace-context-customer {
+  color: var(--app-color-text-primary);
+  font-size: 26rpx;
+  font-weight: 800;
+  max-width: 72%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.action-workspace-context-number {
+  color: var(--app-color-text-secondary);
+  font-size: var(--app-font-field-label);
+  font-weight: 800;
+}
+
+.action-workspace-draft-status,
+.action-workspace-business-feedback,
+.action-workspace-operation-status {
+  display: block;
+  padding-top: var(--app-space-sm);
+}
+
+.action-workspace-draft-status { margin-top: var(--app-space-sm); padding-top: 0; }
+
+.action-workspace-footer {
+  background: var(--app-action-bar-background);
+  border-top: 1rpx solid var(--app-action-bar-border);
+  box-sizing: border-box;
+  flex-shrink: 0;
+  padding: var(--app-space-sm) 0 calc(var(--app-action-bar-inset) + constant(safe-area-inset-bottom));
+  padding-bottom: calc(var(--app-action-bar-inset) + env(safe-area-inset-bottom));
+  width: 100%;
+}
+
+.action-workspace-footer-inner {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 960rpx;
+  padding-left: var(--app-action-bar-padding-x);
+  padding-right: var(--app-action-bar-padding-x);
+  width: 100%;
+}
+
+/* Survey-only S01 commercial work-order context; do not change accepted Appointment. */
+/* #ifdef H5 */
+/* uni-page-head occupies 44px above the H5 business page. Appointment,
+   confirmation and Survey must fit their bottom actions below that header.
+   Native MP/App preserve their independently managed viewport height. */
+.action-workspace-page--h5-navigation-fit { height: calc(100vh - 44px); }
+.action-workspace-page--survey { height:calc(100vh - 44px); }
+/* #endif */
+.action-workspace-page--survey .action-workspace-body { padding-top:16rpx; }
+.action-workspace-page--survey .action-workspace-context { border-radius:var(--app-radius-card); padding:20rpx; }
+.action-workspace-context-survey { display:flex; align-items:center; gap:15rpx; min-height:80rpx; }
+.action-workspace-context-house { width:64rpx; height:64rpx; flex:none; border-radius:14rpx;
+  background:#fff0e1; color:#f29a3c; display:flex; align-items:center; justify-content:center; font-size:48rpx; font-weight:700; }
+.action-workspace-context-survey-main { flex:1; min-width:0; display:flex; flex-direction:column; gap:3rpx; }
+.action-workspace-context-survey-number { color:var(--app-color-text-primary); font-size:var(--app-font-section-title); font-weight:800; }
+.action-workspace-context-survey-customer { color:var(--app-color-text-secondary); font-size:var(--app-font-meta); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.action-workspace-context-survey-status { flex:none; align-self:flex-start; display:flex; align-items:center; gap:5rpx;
+  border-radius:999rpx; background:var(--app-color-success-soft); color:var(--app-color-success);
+  font-size:var(--app-font-meta); font-weight:750; padding:6rpx 13rpx; }
+.action-workspace-context-status-dot { background:currentColor; width:11rpx; height:11rpx; border-radius:999rpx; display:inline-block; }
+.action-workspace-survey-demo-note { margin-top:12rpx; background:var(--app-color-primary-soft);
+  color:var(--app-color-text-secondary); display:flex; gap:10rpx; align-items:center;
+  border-radius:12rpx; padding:12rpx 16rpx; font-size:var(--app-font-meta); }
+.action-workspace-survey-demo-note-label { color:var(--app-color-primary); font-weight:750; }
+.action-workspace-page--survey .action-workspace-footer { background:var(--app-color-surface); box-shadow:0 -4rpx 15rpx rgba(30,50,85,.04); }
+.action-workspace-page--survey .action-workspace-context { padding:20rpx 22rpx; }
+.action-workspace-page--survey .action-workspace-context-survey { min-height:80rpx; }
+.action-workspace-context-house { font-size:0; }
+.action-workspace-survey-demo-note { min-height:38rpx; padding:9rpx 14rpx; font-size:22rpx; }
+.action-workspace-page--survey .action-workspace-body { padding-bottom:30rpx; }
+
+/* Quotation-only S01-matched work-order heading; Appointment/Survey untouched. */
+.action-workspace-page--quotation .action-workspace-body { padding-top:16rpx; }
+.action-workspace-page--quotation .action-workspace-context { border-radius:var(--app-radius-card); padding:18rpx 20rpx; }
+.action-workspace-context-quotation { display:flex; gap:15rpx; align-items:center; min-height:75rpx; }
+.action-workspace-context-quotation-state { align-self:flex-start; margin-left:auto; border-radius:999rpx;
+  padding:7rpx 11rpx; background:#eaf3ff; color:var(--app-color-primary); font-size:20rpx; white-space:nowrap; }
+
+/* Q01 first-entry layout contract; applies to no other quotation stages. */
+.action-workspace-page--q01-entry .action-workspace-body {
+  padding-top: 7px;
+  padding-bottom: 18px;
+}
+.action-workspace-page--q01-entry .action-workspace-context {
+  border-radius: 14px;
+  padding: 9px 12px;
+  box-shadow: var(--app-content-card-elevation);
+}
+.action-workspace-page--q01-entry .action-workspace-context-quotation { min-height: 43px; gap: 9px; }
+.action-workspace-page--q01-entry .action-workspace-context-house { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 9px; }
+.action-workspace-page--q01-entry .action-workspace-context-label { font-size: 10px; }
+.action-workspace-page--q01-entry .action-workspace-context-survey-number { font-size: 15px; }
+.action-workspace-page--q01-entry .action-workspace-context-survey-customer {
+  font-size: 11px;
+}
+.action-workspace-page--q01-entry .action-workspace-context-quotation-state { font-size: 11px; }
+.q01-context-address {
+  display: flex; align-items: center; gap: 9px;
+  min-height: 24px; padding-top: 5px;
+  margin-top: 6px; border-top: 1px solid var(--app-outline-subtle);
+  color: var(--app-text-strong);
+}
+.q01-context-address-text {
+  flex: 1; min-width: 0; color: var(--app-text-strong);
+  font-size: 11px; font-weight: 570; line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* #ifdef H5 */
+.action-workspace-page--q01-entry { height: calc(100vh - 44px); }
+/* #endif */
+
+
+/* Q01 approved commercial composition: selected quotation stage only.
+   The empty first-step editor and every other Action Workspace stay unchanged.
+   Order identity, permission warnings and business feedback remain visible. */
+.action-workspace-page--quotation.action-workspace-page:not(.action-workspace-page--q01-entry) {
+  background: #f5f7fa;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-body {
+  box-sizing: border-box;
+  padding: 12px 17px 132px;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context.app-surface {
+  display: block;
+  margin: 0 0 9px;
+  padding: 4px 2px 11px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-bottom: 1px solid #e5ebf3 !important;
+  border-radius: 0 !important;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context-quotation {
+  display: flex;
+  min-height: 35px;
+  gap: 11px;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context-house {
+  box-sizing: border-box; flex: 0 0 35px;
+  width: 35px; height: 35px; border-radius: 10px;
+  background: #eaf2fc;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context-label {
+  font-size: 10px;
+  color: #91a0b4;
+  line-height: 1.4;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context-survey-number {
+  font-size: 13px; line-height: 1.3; font-weight: 710; color: #273a55;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context-survey-customer {
+  font-size: 11px; color: #8292a8; line-height: 1.35;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-context-quotation-state {
+  background: #eaf2fe; border-radius: 7px;
+  color: #2b71cf; font-size: 11px; padding: 6px 9px;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-draft-status {
+  margin: 2px 0 9px; padding: 0; font-size: 11px;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .action-workspace-footer {
+  background: #fff; border-top: 1px solid #e4eaf3;
+  box-shadow: 0 -5px 15px rgba(17,37,66,.035);
+  padding-top: 11px;
+  padding-bottom: calc(13px + env(safe-area-inset-bottom));
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .quotation-workspace-footer-main {
+  gap: 13px; align-items: center;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .quotation-workspace-footer-summary__amount-label {
+  font-size: 11px; font-weight: 510; color: #8190a5;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .quotation-workspace-footer-summary__amount-value {
+  color: #1974e7; font-variant-numeric: tabular-nums;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .quotation-workspace-footer-summary__meta {
+  font-size: 11px; margin-top: 3px; color: #8493a8;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .quotation-workspace-footer-main .quotation-workspace-disabled-submit,
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .quotation-workspace-footer-main .action-workspace-submit {
+  flex-basis: 38%; width: 38%; max-width: 38%;
+  min-height: 48px; height: 48px;
+  border-radius: 12px; font-size: 14px; font-weight: 700;
+}
+.action-workspace-page--quotation:not(.action-workspace-page--q01-entry) .quotation-workspace-footer-main .quotation-workspace-disabled-submit.app-button {
+  background: #e6eaf1 !important; color: #8c9ab0 !important;
+  border: 0 !important;
+}

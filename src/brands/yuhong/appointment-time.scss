@@ -1,0 +1,21 @@
+.time-selection-content { margin-top: var(--yh-space-16); padding: var(--yh-space-16); }
+.time-selection-heading { border-bottom: var(--yh-border-width) solid var(--yh-color-border-divider); padding-bottom: var(--yh-space-16); }
+.time-selection-title { display: block; font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.time-selection-copy { display: block; color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); margin-top: var(--yh-space-8); }
+.time-section { margin-top: var(--yh-space-16); }
+.time-section-label { display: block; font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); margin-bottom: var(--yh-space-8); }
+.date-shortcuts { display: flex; gap: var(--yh-space-8); }
+.date-shortcuts-more { flex: 0 0 68px; min-width: 0; }
+.date-shortcut { box-sizing: border-box; display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; min-width: 0; min-height: 56px; margin: 0; padding: var(--yh-space-4); background: var(--yh-color-surface-card); color: var(--yh-color-text-secondary); border: var(--yh-border-width) solid var(--yh-color-border-control); border-radius: var(--yh-radius-control); }
+.date-shortcut::after, .time-slot::after { border: 0; }
+.date-shortcut-label { font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.date-shortcut-date { font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.selected-date-card { display: flex; flex-wrap: wrap; gap: var(--yh-space-8); justify-content: space-between; margin-top: var(--yh-space-16); }
+.selected-date-label { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); }
+.selected-date-value { font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); }
+.time-slots { display: flex; flex-direction: column; gap: var(--yh-space-8); }
+.time-slot { display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; width: 100%; margin: 0; min-height: var(--yh-size-primary); padding: var(--yh-space-8) var(--yh-space-12); border: var(--yh-border-width) solid var(--yh-color-border-control); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); text-align: left; }
+.date-shortcut--selected, .time-slot--selected { background: var(--yh-palette-brand-50); border-color: var(--yh-action-primary); color: var(--yh-action-primary); }
+.time-slot-check { display: flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: var(--yh-radius-control); background: var(--yh-action-primary); }
+.time-selection-error { display: block; color: var(--yh-color-status-error-fg); font-size: var(--yh-type-meta-size); margin-top: var(--yh-space-8); }
+.date-shortcut--more .date-shortcut-label { white-space: nowrap; }

@@ -1,9 +1,9 @@
+import { presentationSource } from '../support/presentation-source'
 import { describe, expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 
 import { longActionContentFixture } from './long-action-content.fixture'
 
-const shellPath = new URL('../../src/shared/ui/ActionWorkspaceShell.vue', import.meta.url)
 const pagePaths = [
   new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url),
   new URL('../../src/pages/work-orders/action-time.vue', import.meta.url),
@@ -16,7 +16,7 @@ function count(source: string, value: string): number {
 
 describe('Action Workspace Shell structural contract', () => {
   it('keeps scrollable content and the persistent footer as separate regions', async () => {
-    const shell = await readFile(shellPath, 'utf8')
+    const shell = presentationSource('shared/ui/ActionWorkspaceShell.vue')
     const scrollStart = shell.indexOf('<scroll-view class="action-workspace-scroll"')
     const scrollEnd = shell.indexOf('</scroll-view>')
     const footerStart = shell.indexOf('class="action-workspace-footer"')
@@ -35,7 +35,7 @@ describe('Action Workspace Shell structural contract', () => {
   })
 
   it('owns each draft status message exactly once', async () => {
-    const shell = await readFile(shellPath, 'utf8')
+    const shell = presentationSource('shared/ui/ActionWorkspaceShell.vue')
     const pages = await Promise.all(pagePaths.map((path) => readFile(path, 'utf8')))
 
     expect(shell).toContain('displayedDraftStatus === \'saved_local\'')
@@ -57,7 +57,7 @@ describe('Action Workspace Shell structural contract', () => {
   })
 
   it('routes business feedback through the Shell while content supplies actions', async () => {
-    const shell = await readFile(shellPath, 'utf8')
+    const shell = presentationSource('shared/ui/ActionWorkspaceShell.vue')
     const pages = await Promise.all(pagePaths.map((path) => readFile(path, 'utf8')))
     const workspace = pages[0]
     const time = pages[1]
@@ -87,7 +87,7 @@ describe('Action Workspace Shell structural contract', () => {
   })
 
   it('places the single draft strip before Action Content and suppresses it after success', async () => {
-    const shell = await readFile(shellPath, 'utf8')
+    const shell = presentationSource('shared/ui/ActionWorkspaceShell.vue')
     const draftStatusIndex = shell.indexOf('displayedDraftStatus === \'saving\'')
     const actionSlotIndex = shell.indexOf('<slot />')
     const successBranchIndex = shell.indexOf('<template v-else>')

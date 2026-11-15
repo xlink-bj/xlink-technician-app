@@ -1,0 +1,58 @@
+.workspace-state {
+  background: var(--app-color-page);
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: var(--app-space-lg);
+  width: 100%;
+}
+
+.workspace-state--centered {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.workspace-state-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; }
+
+.workspace-state-copy {
+  color: var(--app-color-text-secondary);
+  font-size: var(--app-font-field-label);
+  line-height: 1.6;
+  margin-top: var(--app-space-sm);
+  max-width: 620rpx;
+}
+
+.workspace-state-link { color: var(--app-color-primary); font-size: var(--app-font-body); font-weight: 700; margin-top: var(--app-space-lg); }
+
+.workspace-state-action {
+  margin-top: var(--app-space-lg);
+  width: 300rpx;
+}
+
+.workspace-state-action::after { border: 0; }
+
+.action-workspace-content {
+  margin-top: var(--app-space-md);
+  padding: var(--app-card-padding);
+}
+
+
+
+
+.appointment-time-selector { color: var(--app-color-text-primary); }
+.appointment-time-placeholder { color: var(--app-color-text-muted); font-size: var(--app-font-body); }
+.appointment-time-selected { display: flex; flex-direction: column; gap: 4rpx; }
+.appointment-time-selected-date { color: var(--app-color-text-primary); font-size: var(--app-font-value); font-weight: 800; }
+.appointment-time-selected-value { color: var(--app-color-primary); font-size: var(--app-font-field-label); font-weight: 700; }
+.action-success { align-items: center; display: flex; flex-direction: column; margin-top: var(--app-space-md); padding: 72rpx var(--app-card-padding); text-align: center; }
+.action-success-icon { align-items: center; background: var(--app-color-success-soft); border-radius: 999rpx; color: var(--app-color-success); display: flex; height: 72rpx; justify-content: center; width: 72rpx; }
+.action-success-title { color: var(--app-color-text-primary); font-size: var(--app-font-section-title); font-weight: 800; margin-top: var(--app-space-lg); }
+.action-success-copy { color: var(--app-color-text-secondary); font-size: var(--app-font-body); margin-top: var(--app-space-sm); }
+.action-success-detail { margin-bottom: var(--app-space-xs); }
+.quotation-readonly-note { color: var(--app-color-text-secondary); display: block; font-size: var(--app-font-meta); padding: var(--app-space-md) 0; text-align: center; }
+
+.mock-journey-progress { margin: 20rpx 24rpx; padding: 20rpx; display: flex; flex-direction: column; gap: 12rpx; }
+.mock-journey-progress__note { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.5; }
+.mock-journey-progress__error { color: var(--app-color-danger); font-size: 24rpx; line-height: 1.5; }

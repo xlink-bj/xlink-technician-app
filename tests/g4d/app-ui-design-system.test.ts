@@ -1,3 +1,4 @@
+import { presentationSource } from '../support/presentation-source'
 import { describe, expect, it } from 'vitest'
 import { readFile, readdir } from 'node:fs/promises'
 
@@ -145,9 +146,9 @@ describe('App UI Design System v0.2', () => {
     const [workspace, timePage, confirmation, shell, timeContent] = await Promise.all([
       readFile(pagePath('action-workspace.vue'), 'utf8'),
       readFile(pagePath('action-time.vue'), 'utf8'),
-      readFile(pagePath('action-confirmation.vue'), 'utf8'),
-      readFile(uiPath('ActionWorkspaceShell.vue'), 'utf8'),
-      readFile(new URL('../../src/features/work-orders/components/AppointmentTimeSelectionContent.vue', import.meta.url), 'utf8'),
+      Promise.resolve(presentationSource('pages/work-orders/action-confirmation.vue')),
+      Promise.resolve(presentationSource('shared/ui/ActionWorkspaceShell.vue')),
+      Promise.resolve(presentationSource('features/work-orders/components/AppointmentTimeSelectionContent.vue')),
     ])
     const time = [timePage, timeContent].join('\n')
     expect(timePage).toContain('<AppointmentTimeSelectionContent')
@@ -255,7 +256,7 @@ describe('App UI Design System v0.2', () => {
   })
 
   it('keeps the shared action footer outside the scroll region', async () => {
-    const shell = await readFile(uiPath('ActionWorkspaceShell.vue'), 'utf8')
+    const shell = await Promise.resolve(presentationSource('shared/ui/ActionWorkspaceShell.vue'))
     const scrollEnd = shell.indexOf('</scroll-view>')
     const footerStart = shell.indexOf('class="action-workspace-footer"')
 
