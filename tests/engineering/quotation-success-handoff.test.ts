@@ -218,6 +218,14 @@ async function mountedParent(realStore = false) {
   const hubRead = vi.fn()
   const dummy = Vue.defineComponent({ setup: () => () => Vue.h('view') })
   const Hub = Vue.defineComponent({ props: ['workOrderId'], setup(props) { hubRead(props.workOrderId); return () => Vue.h('view', { 'data-testid': 'real-page-order-hub' }) } })
+  // Preserve the real confirmation-state export while stubbing its unrelated visual tree.
+  const surveyFilename = path.resolve('src/features/work-orders/components/SurveyCompleteConfirmation.vue')
+  const { descriptor: surveyDescriptor } = parse(fs.readFileSync(surveyFilename, 'utf8'), { filename: surveyFilename })
+  const surveyJs = ts.transpileModule(surveyDescriptor.script!.content, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText
+  const surveyModule = { exports: {} }
+  new Function('require', 'module', 'exports', surveyJs)((key: string) => key === 'vue' ? Vue : {}, surveyModule, surveyModule.exports)
   const modules: Record<string, unknown> = {
     vue: Vue, '@shared/ui/form-input-validity': inputValidity,
     '@dcloudio/uni-app': { onLoad: (fn: typeof load) => { load = fn }, onShow: () => {}, onHide: () => {}, onBackPress: () => {}, onUnload: () => {} },
@@ -230,6 +238,7 @@ async function mountedParent(realStore = false) {
     '@features/work-orders/quotation/success-handoff': { useQuotationSuccessHandoff, quotationSuccessRouteMatches },
     '@features/work-orders/quotation/QuotationOrderSuccess.vue': { __esModule: true, default: component() },
     '@features/work-orders/quotation/QuotationOrderHub.vue': { __esModule: true, default: Hub },
+    '@features/work-orders/components/SurveyCompleteConfirmation.vue': { ...surveyModule.exports, __esModule: true, default: dummy },
     '@shared/session-authorization': { sessionAuthorizationFingerprint },
     '@app/business-mock': { isBusinessMockQuotationPreview: () => false, isDevSyntheticContractReadPreviewEnabled: () => false },
     '@app/a-stage-quotation-mock-ui': { isAStageMockOrderEnabled: () => false },
