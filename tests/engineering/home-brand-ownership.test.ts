@@ -7,8 +7,8 @@ import { homeBrand as yuhong } from '../../src/brands/yuhong/home-brand'
 
 describe('independent Home/Login presentation', () => {
   it('keeps product identity build-selected without changing service or login semantics', () => {
-    expect(xlink).toEqual({ name: '修链', tagline: '屋顶维修' })
-    expect(yuhong).toEqual({ name: '雨虹', tagline: '屋顶维修' })
+    expect(xlink).toEqual({ name: '修链', tagline: '家装服务' })
+    expect(yuhong).toEqual({ name: '雨虹', tagline: '家装服务' })
     const page = readFileSync(rootPath('src/pages/index/index.vue'), 'utf8')
     expect(page).toContain("from '@brand-ui/home-brand'")
     expect(page).toContain('@import "@brand-ui/home.scss"')

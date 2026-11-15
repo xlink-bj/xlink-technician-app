@@ -21,7 +21,7 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
     })
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     expect(await page.locator('body').innerText()).not.toMatch(/SYNTHETIC|DEV-Q00|Mock|测试数据|演示数据/)
-    await page.screenshot({ path: `.review/yuhong-home/${brand}-after/${state}-${width}x${width === 430 ? 932 : 667}.png`, animations: 'disabled', caret: 'hide' })
+    await page.screenshot({ path: `.review/home-service-copy/${brand}-after/${state}-${width}x${width === 430 ? 932 : 667}.png`, animations: 'disabled', caret: 'hide' })
   }
   const touch = async (selector: string) => {
     const box = await page.locator(selector).boundingBox()
@@ -30,6 +30,7 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   await page.goto('/#/pages/index/index')
   await expect(page.locator('.home-page')).toBeVisible()
   await expect(page.locator('.home-brand-name')).toHaveText(name)
+  await expect(page.locator('.home-brand-tagline')).toHaveText('家装服务')
   await expect(page.locator('.uni-page-head__title')).toHaveText(name)
   await expect(page.locator('.home-greeting')).toContainText('王师傅')
   if (brand === 'yuhong') {
@@ -56,6 +57,8 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   await page.locator('.home-footer .secondary').click()
   await expect(page.locator('.launch-stage')).toBeVisible()
   await expect(page.locator('.brand-name')).toHaveText(name)
+  await expect(page.locator('.brand-tagline')).toHaveText('家装服务')
+  await expect(page.locator('.launch-message')).toHaveText('让家装服务更专业、更高效')
   if (brand === 'yuhong') {
     await expect(page.locator('.launch-cta')).toHaveCSS('background-color', 'rgb(200, 32, 43)')
     await expect(page.locator('.launch-cta')).toHaveCSS('border-radius', '4px')

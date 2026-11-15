@@ -61,7 +61,7 @@
         </view>
       </view>
 
-      <text class="launch-message">让屋顶维修更专业、更高效</text>
+      <text class="launch-message">让家装服务更专业、更高效</text>
 
       <view class="worker-scene" aria-hidden="true">
         <view class="scene-building scene-building-left" />
