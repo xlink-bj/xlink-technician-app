@@ -1,3 +1,5 @@
+/* Legacy compact catalog actions belong to XLink; Yuhong uses its own flexible sizing. */
+.quotation-content__catalog-item .app-button { flex-shrink: 0; max-width: 88px; min-height: 44px; padding-left: var(--app-space-xs); padding-right: var(--app-space-xs); }
 /* G4-F visual master v1: quote-first hierarchy, truthful data, and compact controls. */
 .quotation-content { margin-top: 12rpx; }
 .quotation-content__heading { margin: 0 4rpx 20rpx; }

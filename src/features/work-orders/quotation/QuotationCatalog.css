@@ -20,7 +20,6 @@
 .quotation-content__catalog-thumbnail--procedure .quotation-content__catalog-thumbnail-mark, .quotation-content__catalog-thumbnail--measure .quotation-content__catalog-thumbnail-mark { color: var(--app-color-text-body); }
 .quotation-content__catalog-kind-pill { background: var(--app-color-control-surface); border-radius: 999px; color: var(--app-color-text-secondary); flex-shrink: 0; font-size: 10px; padding: 2rpx var(--app-space-xs); }
 
-.quotation-content__catalog-item .app-button { flex-shrink: 0; max-width: 88px; min-height: 44px; padding-left: var(--app-space-xs); padding-right: var(--app-space-xs); }
 .quotation-content__catalog-readonly { color: var(--app-color-text-muted); flex-shrink: 0; font-size: var(--app-font-meta); margin-left: var(--app-space-sm); }
 .quotation-content__catalog-state-card { align-items: center; background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); display: flex; flex-direction: column; margin: auto 0; padding: var(--app-space-xl) var(--app-card-padding); text-align: center; }
 .quotation-content__catalog-state-mark { align-items: center; background: var(--app-color-primary-soft); border-radius: 999px; color: var(--app-color-primary); display: flex; font-size: var(--app-font-body); font-weight: 800; height: 48px; justify-content: center; width: 48px; }
