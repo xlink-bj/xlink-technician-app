@@ -94,7 +94,7 @@ for (const viewport of viewports) {
     if (screen === 'DETAIL') {
       await expect(page.getByTestId('task-focus-panel')).toBeVisible()
       await expect(page.getByTestId('task-focus-title')).toHaveText('报价')
-      await expect(page.getByTestId('task-focus-action')).toHaveText(/去下单/)
+      await expect(page.getByTestId('task-focus-action')).toHaveText(/查看报价与订单/)
     } else if (screen === 'Q00') {
       // Explicitly tagged synthetic two-order design state, NOT server data.
       await page.goto(page.url() + '&q00Preview=orders', { waitUntil: 'domcontentloaded' })

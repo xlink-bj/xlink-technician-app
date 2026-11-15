@@ -3,8 +3,10 @@ import {
   isMockOwnedCommand, isMockOwnedRead,
   mockBusinessScenarioFor, mockBusinessScenarios,
   mockCommandScenarioIds, resetBusinessMockCache, setBusinessMockMode,
+  tryMockRead,
 } from '@adapters/api/mock'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
+import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
 
 describe('EQ01 canonical Mock Scenario Registry and no-network ownership', () => {
   afterEach(() => {
@@ -75,6 +77,29 @@ describe('EQ01 canonical Mock Scenario Registry and no-network ownership', () =>
         },
       })).rejects.toMatchObject({ category: 'server_terminal' })
     }
+    expect(request).not.toHaveBeenCalled()
+  })
+
+  it('keeps the unconfigured 26018 Order list unknown in normal DEV Mock DATA, without inventing an empty page or network fallback', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'dev')
+    vi.stubEnv('VITE_XLINK_H5_MOCK_E2E', 'true')
+    vi.stubEnv('VITE_XLINK_R1_MP_UX_FIXTURES', 'true')
+    setBusinessMockMode('data')
+    const workOrderId = mockCommandScenarioIds.quotationFoundation
+    const body = { page: 1, rows: 3, sortField: 'createTime', sortOrder: 'desc',
+      'is:serviceAppointmentId|string#and': workOrderId, 'is:type|integer#and': 1 }
+    // The editor's empty quotation is not evidence of an empty formal Order list.
+    expect(await tryMockRead('basic/order/query', body, { latencyMs: 0 })).toBeNull()
+    expect(isMockOwnedRead('basic/order/query', body)).toBe(true)
+    const request = vi.fn()
+    const transport = createUniApiReadTransport({ apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => 'synthetic-eq01-session' as never, mockLatencyMs: 0, request })
+    const result = await createQuotationOrderReadAdapter(transport, id => id === workOrderId)
+      .listTypeOneOrdersForWorkOrder(workOrderId, 3)
+    expect(result).toMatchObject({ state: 'failed_terminal', error: {
+      category: 'server_terminal', message: 'Synthetic mock read is disabled',
+    } })
+    expect(result.data).toBeUndefined()
     expect(request).not.toHaveBeenCalled()
   })
 

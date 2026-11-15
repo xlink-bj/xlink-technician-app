@@ -245,7 +245,7 @@ describe('G4-UX business mock runtime', () => {
     })
     expect(detailWorkflowUiProjectionFor(second.data ?? null, session).currentTask).toMatchObject({
       title: '下单',
-      actionLabel: '去下单',
+      actionLabel: '查看报价与订单',
     })
     expect(detailWorkflowUiProjectionFor(third.data ?? null, session).currentTask).toMatchObject({
       title: '派工',

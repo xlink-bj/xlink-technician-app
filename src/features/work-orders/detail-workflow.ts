@@ -38,7 +38,7 @@ const currentTaskPresentation: Readonly<
 > = {
   interact_with_form: { actionLabel: '处理表单' },
   open_subworkflow: { actionLabel: '查看子流程' },
-  place_order: { actionLabel: '去下单' },
+  place_order: { actionLabel: '查看报价与订单' },
   set_appointment: { actionLabel: '开始预约' },
 }
 
