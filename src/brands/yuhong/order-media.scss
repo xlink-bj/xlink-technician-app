@@ -1,0 +1,12 @@
+/* Order attachment composition only; queue, removal confirmation and permissions stay in Vue. */
+.order-media-field { display: flex; flex-direction: column; min-width: 0; gap: var(--yh-space-12); }
+.order-media-row, .order-media-confirm {
+  box-sizing: border-box; display: flex; align-items: center; flex-wrap: wrap;
+  gap: var(--yh-space-8) var(--yh-space-12); padding: var(--yh-space-16);
+  border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-card);
+  background: var(--yh-color-surface-card); color: var(--yh-color-text-primary);
+  font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line);
+}
+.order-media-message { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; }
+.order-media-confirm { border-color: var(--yh-color-border-divider); background: var(--yh-color-status-warning-bg); }
+.order-media-error { display: block; color: var(--yh-color-status-error-fg); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); overflow-wrap: anywhere; }

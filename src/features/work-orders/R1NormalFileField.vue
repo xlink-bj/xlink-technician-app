@@ -4,19 +4,19 @@
       <image v-if="safeImage(file)" :src="file.url" mode="aspectFill"
         :data-testid="`r1-normal-file-preview-${field.valueKey}`" class="r1-file-preview" />
       <text v-else class="r1-file-name">{{ file.name }}</text>
-      <AppButton v-if="media || allowRetainedRemoval" variant="text" size="compact" :disabled="disabled || pending"
+      <AppButton class="r1-file-remove" v-if="media || allowRetainedRemoval" variant="text" size="compact" :disabled="disabled || pending"
         :data-testid="`r1-normal-file-remove-${field.valueKey}-${index}`" @tap="change('remove',index)">移除</AppButton>
     </view>
     <template v-if="media">
-      <AppButton :disabled="disabled || pending || !canPick" variant="secondary"
+      <AppButton class="r1-file-add" :disabled="disabled || pending || !canPick" variant="secondary"
         :data-testid="`r1-normal-file-add-${field.valueKey}`" @tap="change('pick')">选择图片</AppButton>
-      <AppButton v-if="hint" :disabled="disabled || pending" variant="text"
+      <AppButton class="r1-file-retry" v-if="hint" :disabled="disabled || pending" variant="text"
         :data-testid="`r1-normal-file-retry-${field.valueKey}`" @tap="change('retry')">重试上传</AppButton>
-      <AppButton v-if="hint" :disabled="disabled || pending" variant="text"
+      <AppButton class="r1-file-discard" v-if="hint" :disabled="disabled || pending" variant="text"
         :data-testid="`r1-normal-file-discard-${field.valueKey}`" @tap="change('discardFailed')">移除失败任务</AppButton>
-      <text v-if="pending" :data-testid="`r1-normal-file-status-${field.valueKey}`">正在处理图片</text>
-      <text v-else-if="hint" :data-testid="`r1-normal-file-status-${field.valueKey}`">{{ hint }}</text>
-      <text v-else-if="files.length" :data-testid="`r1-normal-file-status-${field.valueKey}`">图片已上传</text>
+      <text class="r1-file-status" v-if="pending" :data-testid="`r1-normal-file-status-${field.valueKey}`">正在处理图片</text>
+      <text class="r1-file-status r1-file-status--attention" v-else-if="hint" :data-testid="`r1-normal-file-status-${field.valueKey}`">{{ hint }}</text>
+      <text class="r1-file-status" v-else-if="files.length" :data-testid="`r1-normal-file-status-${field.valueKey}`">图片已上传</text>
       <text v-if="localError" class="r1-file-error">{{ localError }}</text>
     </template>
   </view>
@@ -62,12 +62,6 @@ async function change(kind:'pick'|'retry'|'remove'|'discardFailed',index=0){
   }catch{localError.value='图片尚未处理完成，请核实当前字段和上传状态。'}
 }
 </script>
-<style scoped>
-.r1-file-item{display:flex;align-items:center;gap:8px;margin:8px 0}.r1-file-preview{width:88px;height:88px;border-radius:8px}.r1-file-name{overflow-wrap:anywhere;font-size:13px}.r1-file-error{display:block;color:#a33;font-size:12px}
-
-.r1-file-field--commercial{display:flex;flex-wrap:wrap;align-items:flex-start;gap:var(--app-space-sm)}
-.r1-file-field--commercial .r1-file-item{box-sizing:border-box;flex:0 1 calc(33.333% - var(--app-space-sm));min-width:84px;flex-direction:column;align-items:stretch;margin:0;gap:var(--app-space-xs)}
-.r1-file-field--commercial .r1-file-preview{width:100%;height:96px;border-radius:var(--app-radius-control)}
-.r1-file-field--commercial .r1-file-name{display:flex;align-items:center;min-height:64px;padding:var(--app-space-sm);background:var(--app-color-page);border-radius:var(--app-radius-control);font-size:var(--app-font-body);overflow-wrap:anywhere}
-.r1-file-field--commercial .r1-file-error{width:100%;font-size:var(--app-font-body);line-height:1.5}
+<style scoped lang="scss">
+@import "@brand-ui/form-media.scss";
 </style>

@@ -171,8 +171,8 @@ jobs:
         run: pnpm exec playwright test --config config/playwright/survey-59-read.config.ts
       - name: Verify quotation Home Login and signing read in both build-selected brands
         run: |
-          VITE_XLINK_BRAND=xlink pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts
-          VITE_XLINK_BRAND=yuhong pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts
+          VITE_XLINK_BRAND=xlink pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts tests/h5-main-mock/brand-attachment-states.spec.ts
+          VITE_XLINK_BRAND=yuhong pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts tests/h5-main-mock/brand-attachment-states.spec.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -436,7 +436,9 @@ jobs:
           XLINK_H5_SURVEY_FIRST_MEDIA_SAVE: 'true'
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
-        run: pnpm exec playwright test --config config/playwright/survey-first-media-save.config.ts
+        run: |
+          VITE_XLINK_BRAND=xlink pnpm exec playwright test --config config/playwright/survey-first-media-save.config.ts
+          VITE_XLINK_BRAND=yuhong pnpm exec playwright test --config config/playwright/survey-first-media-save.config.ts
       - name: Verify normal Survey regions and IS read-only option labels
         env:
           XLINK_H5_SURVEY_REGIONS_IS_READ: 'true'

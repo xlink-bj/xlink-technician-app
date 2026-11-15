@@ -1,19 +1,19 @@
 <template>
-  <view :data-testid="'order-media-' + fieldId">
+  <view class="order-media-field" :data-testid="'order-media-' + fieldId">
     <view v-for="(file,index) in modelValue" :key="file.url" class="order-media-row">
-      <text>附件 {{ index + 1 }} · 已上传</text>
+      <text class="order-media-message">附件 {{ index + 1 }} · 已上传</text>
       <AppButton variant="text" size="compact" :disabled="disabled || busy" :data-testid="'order-media-remove-' + fieldId + '-' + index"
         @tap="removing = { url: file.url }">移除</AppButton>
     </view>
     <view v-for="task in tasks.filter(task => task.state !== 'uploaded')" :key="task.taskId" class="order-media-row">
-      <text>{{ task.lastError?.code === 'ambiguous_postprocess' ? '附件结果待核对，请勿重复上传' : task.state === 'failed_retryable' ? '上传失败，附件已保留' : task.state === 'failed_terminal' ? '附件无法上传，请重新选择' : '附件待处理，尚未完成' }}</text>
+      <text class="order-media-message">{{ task.lastError?.code === 'ambiguous_postprocess' ? '附件结果待核对，请勿重复上传' : task.state === 'failed_retryable' ? '上传失败，附件已保留' : task.state === 'failed_terminal' ? '附件无法上传，请重新选择' : '附件待处理，尚未完成' }}</text>
       <AppButton v-if="task.state === 'failed_retryable' && task.lastError?.code !== 'ambiguous_postprocess'" variant="text" size="compact"
         :disabled="disabled || busy" :data-testid="'order-media-retry-' + fieldId" @tap="run(() => media.retry(task.taskId))">重试</AppButton>
       <AppButton variant="text" size="compact" :disabled="disabled || busy" :data-testid="'order-media-discard-' + fieldId"
         @tap="removing = { taskId: task.taskId }">删除</AppButton>
     </view>
     <view v-if="removing" class="order-media-confirm" :data-testid="'order-media-confirm-' + fieldId">
-      <text>确认移除这份附件？</text>
+      <text class="order-media-message">确认移除这份附件？</text>
       <AppButton variant="text" size="compact" :disabled="disabled || busy" :data-testid="'order-media-accept-' + fieldId" @tap="remove">确认移除</AppButton>
       <AppButton variant="text" size="compact" :disabled="busy" :data-testid="'order-media-cancel-' + fieldId" @tap="removing = null">取消</AppButton>
     </view>
@@ -64,7 +64,6 @@ async function remove() {
 onMounted(async () => { busy.value = true; pending(); try { await restore() } catch { error.value = '附件队列暂不可读，请重新进入后核对。' } finally { if (!disposed) { busy.value = false; pending() } } })
 onBeforeUnmount(() => { disposed = true })
 </script>
-<style scoped>
-.order-media-row,.order-media-confirm { display:flex; align-items:center; justify-content:space-between; gap:16rpx; flex-wrap:wrap; margin-bottom:12rpx; }
-.order-media-error { display:block; color:var(--app-color-error); margin-top:12rpx; }
+<style scoped lang="scss">
+@import "@brand-ui/order-media.scss";
 </style>

@@ -1,0 +1,22 @@
+/* Attachment layout and feedback only. AppButton owns every action state. */
+.r1-file-field {
+  display: flex; flex-wrap: wrap; align-items: stretch; justify-content: space-between;
+  gap: var(--yh-space-12); min-width: 0; width: 100%;
+  color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size);
+  font-weight: var(--yh-type-body-weight); line-height: var(--yh-type-body-line);
+}
+.r1-file-item {
+  box-sizing: border-box; display: flex; flex-direction: column; align-items: stretch;
+  flex: 0 1 calc(50% - var(--yh-space-8)); min-width: 0; gap: var(--yh-space-8);
+}
+.r1-file-preview { display: block; width: 100%; height: 120px; border-radius: var(--yh-radius-control); }
+.r1-file-name { box-sizing: border-box; display: block; min-width: 0; padding: var(--yh-space-8); background: var(--yh-color-surface-subtle); border-radius: var(--yh-radius-control); overflow-wrap: anywhere; word-break: break-all; font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.r1-file-add { flex: 1 1 calc(50% - var(--yh-space-8)); align-self: flex-start; }
+.r1-file-retry, .r1-file-discard { flex: 1; min-width: 0; }
+.r1-file-status, .r1-file-error {
+  display: block; flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere;
+  font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line);
+  color: var(--yh-color-text-secondary);
+}
+.r1-file-status--attention { color: var(--yh-color-status-warning-fg); }
+.r1-file-error { color: var(--yh-color-status-error-fg); }
