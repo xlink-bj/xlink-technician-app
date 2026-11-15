@@ -59,3 +59,10 @@ export async function installCustomerInformationEmptyScenario() {
   syntheticDetail = { ...syntheticDetail, informationFields: [] }
   await useWorkOrderDetailStore().loadFromRoute(String(syntheticDetail.id))
 }
+
+/** Keep successful empty, denied and unavailable follow-up reads distinct from failure. */
+export async function installFollowUpReadState(state: 'succeeded' | 'failed' | 'denied' | 'unavailable' | undefined) {
+  if (!syntheticDetail) throw new Error('Open a scoped synthetic archive before setting read outcomes')
+  syntheticDetail = { ...syntheticDetail, activityReadState: state, activities: [] }
+  await useWorkOrderDetailStore().loadFromRoute(String(syntheticDetail.id))
+}

@@ -8,7 +8,7 @@ const server = base.webServer as { env: Record<string, string> }
 
 export default defineConfig({
   ...base,
-  testMatch: ['brand-foundation.spec.ts', 'brand-detail.spec.ts', 'brand-quotation.spec.ts', 'brand-list.spec.ts', 'brand-home.spec.ts', 'brand-signing-read.spec.ts', 'brand-attachment-states.spec.ts', 'brand-appointment.spec.ts', 'brand-entry-archives.spec.ts'],
+  testMatch: ['brand-foundation.spec.ts', 'brand-detail.spec.ts', 'brand-quotation.spec.ts', 'brand-list.spec.ts', 'brand-home.spec.ts', 'brand-signing-read.spec.ts', 'brand-attachment-states.spec.ts', 'brand-appointment.spec.ts', 'brand-entry-archives.spec.ts', 'brand-archive-feedback.spec.ts'],
   reporter: [
     ['list'],
     ['json', { outputFile: rootPath(`test-results/brand-h5/${brand}/results.json`) }],

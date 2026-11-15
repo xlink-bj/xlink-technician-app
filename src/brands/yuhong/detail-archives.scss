@@ -10,6 +10,7 @@
 .archive-entry-title { color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); }
 .archive-copy { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
 .archive-hint { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); margin-top: var(--yh-space-4); }
+.archive-hint.archive-hint--error { color: var(--yh-color-status-error-fg); }
 .archive-failure { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--yh-space-8); }
 .follow-up-timeline { display: flex; flex-direction: column; gap: var(--yh-space-12); margin-top: var(--yh-space-12); }
 .follow-up-timeline__item { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: var(--yh-space-8); }

@@ -125,7 +125,7 @@
       </template>
       <WorkOrderArchiveCards v-if="readView === 'home'"
         :work-order-id="String(detail.id)" :activities="activities"
-        :follow-up-message="followUpReadMessage(detail)" :has-history="canShowHistoricalForms"
+        :follow-up-message="followUpReadMessage(detail)" :follow-up-read-failed="detail.activityReadState === 'failed'" :has-history="canShowHistoricalForms"
         :customer-summary="detail.informationFields === undefined ? (detail.customerName || '查看本次服务资料') : `${informationRows.length} 项可查看资料`"
         :archives="[orderArchiveSummary(quotationBrowse.page)]" :order-state="quotationBrowse.state"
         :order-error="quotationBrowse.errorMessage" @retry-orders="retryQuotationRead" />

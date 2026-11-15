@@ -7,7 +7,7 @@
           {{ activities.length ? `查看全部 ${activities.length} 条` : '查看已完成记录' }} ›
         </navigator>
       </view>
-      <text v-if="followUpMessage" class="archive-hint">{{ followUpMessage }}</text>
+      <text v-if="followUpMessage" class="archive-hint" :class="{ 'archive-hint--error': followUpReadFailed }" data-testid="follow-up-read-message">{{ followUpMessage }}</text>
       <view v-if="activities.length" class="follow-up-timeline" data-testid="follow-up-timeline" role="list">
         <view v-for="(activity, index) in activities.slice(0, 2)" :key="activity.id"
           class="follow-up-timeline__item" data-testid="follow-up-timeline-item" role="listitem">
@@ -55,7 +55,7 @@
         </view>
         <text v-else-if="orderState === 'loading'" class="archive-hint">正在读取订单记录…</text>
         <view v-else-if="orderState !== 'succeeded'" class="archive-failure" data-testid="order-archive-error">
-          <text class="archive-hint">{{ orderError || '订单暂时无法读取' }}</text>
+          <text class="archive-hint" :class="{ 'archive-hint--error': isOrderReadFailure() }" data-testid="order-archive-read-message">{{ orderError || '订单暂时无法读取' }}</text>
           <AppButton variant="text" size="compact" @tap="$emit('retry-orders')">重新读取</AppButton>
         </view>
         <template v-else>
@@ -93,6 +93,7 @@ const props = defineProps<{
   readonly workOrderId: string
   readonly activities: readonly WorkOrderActivity[]
   readonly followUpMessage: string
+  readonly followUpReadFailed?: boolean
   readonly hasHistory: boolean
   readonly customerSummary: string
   readonly archives: readonly OrderArchiveSummary[]
@@ -100,6 +101,12 @@ const props = defineProps<{
   readonly orderError: string
 }>()
 defineEmits<{ 'retry-orders': [] }>()
+// The browse surface combines denial/unknown with failures in its terminal state.
+// Tint only its explicit read-failure copy; permissions and unknowns stay neutral.
+function isOrderReadFailure() {
+  return (props.orderState === 'failed_retryable' || props.orderState === 'failed_terminal')
+    && props.orderError === '暂时无法读取正式订单，请稍后重试。'
+}
 function route(view: DetailReadView, orderId?: string) { return detailReadRoute(props.workOrderId, view, orderId) }
 function orderTitle(order: QuotationOrderBrowseItem) { return order.displayNumber ? `订单 ${order.displayNumber}` : '正式订单' }
 function orderAmount(order: QuotationOrderBrowseItem) { return order.totalPrice === undefined ? '金额暂未确认' : `订单金额 ¥${order.totalPrice.toFixed(2)}` }
