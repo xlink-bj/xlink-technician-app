@@ -86,7 +86,9 @@ async function open(page: Page, historical = false) {
   await page.locator('.method-card').filter({ hasText: '快捷登录' }).click()
   await expect(page.locator('.home-page')).toBeVisible()
   await page.locator('.work-orders-entry').click()
-  await page.locator('.work-order-card').click();if(!historical)await enterNormalFormWorkspace(page)
+  await page.locator('.work-order-card').click()
+  if (historical) await page.getByTestId('follow-up-all').click()
+  else await enterNormalFormWorkspace(page)
   await expect(page.getByTestId(historical ? 'historical-forms-timeline' : 'r1-normal-form-read')).toBeVisible()
 }
 function normalValue(page: Page, key: string) {
