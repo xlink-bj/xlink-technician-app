@@ -1,0 +1,236 @@
+/* Home/Login appearance only. Session, consent and navigation stay in the page. */
+.home-page, .login-page {
+  box-sizing: border-box; width: 100%;
+  min-height: calc(100vh - var(--window-top, 0px) - var(--window-bottom, 0px));
+  background: var(--yh-color-surface-page); color: var(--yh-color-text-primary);
+  font-family: var(--yh-type-family); font-size: var(--yh-type-body-size);
+  font-weight: var(--yh-type-body-weight); line-height: var(--yh-type-body-line);
+  padding-bottom: calc(var(--yh-space-16) + env(safe-area-inset-bottom));
+}
+.home-page .home-hero { background: var(--yh-color-surface-card); padding: var(--yh-space-24) var(--yh-space-16); }
+.home-page .home-hero-circles { display: none; }
+.home-page .home-brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--yh-space-8); }
+.home-page .home-brand-name, .login-page .brand-name { color: var(--yh-action-primary); font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight); line-height: var(--yh-type-title-line); }
+.home-page .home-brand-tagline, .login-page .brand-tagline { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.home-page .home-greeting { display: block; margin-top: var(--yh-space-24); font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight); line-height: var(--yh-type-title-line); overflow-wrap: anywhere; }
+.home-page .home-subtitle { display: block; margin-top: var(--yh-space-8); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.home-page .home-content { padding: var(--yh-space-16); }
+.home-page .home-surface { padding: var(--yh-space-16); border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-card); background: var(--yh-color-surface-card); }
+.home-page .section-heading-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--yh-space-8) var(--yh-space-16); }
+.home-page .section-heading-copy { flex: 1; min-width: 0; }
+.home-page .section-title, .home-page .entry-title { display: block; font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.home-page .section-description, .home-page .entry-subtitle { display: block; margin-top: var(--yh-space-4); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.home-page .section-link { display: flex; align-items: center; gap: var(--yh-space-4); min-height: var(--yh-size-touch); color: var(--yh-link); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.home-page .work-orders-entry { display: block; margin-top: var(--yh-space-16); padding-top: var(--yh-space-16); border-top: var(--yh-border-width) solid var(--yh-border-subtle); }
+.home-page .work-orders-entry-content { display: flex; align-items: center; gap: var(--yh-space-12); min-height: var(--yh-size-touch); width: 100%; }
+.home-page .entry-icon { display: flex; flex: 0 0 var(--yh-size-touch); align-items: center; justify-content: center; height: var(--yh-size-touch); background: var(--yh-color-action-subtle); color: var(--yh-action-primary); border-radius: var(--yh-radius-control); }
+.home-page .entry-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.home-page .entry-arrow { color: var(--yh-link); font-size: var(--yh-type-title-size); }
+.home-page .home-footer { box-sizing: border-box; padding: var(--yh-space-8) var(--yh-space-16); text-align: center; }
+.home-page .home-footer .secondary { background: transparent; color: var(--yh-link); border: 0; border-radius: var(--yh-radius-control); min-height: var(--yh-size-touch); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); padding: var(--yh-space-8) var(--yh-space-16); }
+.home-page .home-footer .secondary::after, .login-page button::after { border: 0; }
+.login-page { padding: var(--yh-space-16); padding-bottom: calc(var(--yh-space-16) + env(safe-area-inset-bottom)); }
+.login-page .login-stage { box-sizing: border-box; display: flex; flex-direction: column; width: 100%; min-width: 0; min-height: calc(100vh - var(--window-top, 0px) - var(--window-bottom, 0px) - var(--yh-space-32) - env(safe-area-inset-bottom)); }
+.login-page .brand-lockup { margin-top: var(--yh-space-16); }
+.login-page .brand-copy { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--yh-space-8); }
+.login-page .launch-message { display: block; margin-top: var(--yh-space-32); font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight); line-height: var(--yh-type-title-line); }
+.login-page .trust-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--yh-space-16); margin-top: var(--yh-space-24); padding-top: var(--yh-space-16); border-top: var(--yh-border-width) solid var(--yh-border-subtle); }
+.login-page .trust-item { display: flex; align-items: center; gap: var(--yh-space-4); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.login-page .trust-icon { color: var(--yh-action-primary); }
+.login-page .launch-cta, .login-page .submit {
+  box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: 100%; min-height: var(--yh-size-primary);
+  padding: var(--yh-space-12) var(--yh-space-16); border: 0; border-radius: var(--yh-radius-control);
+  background: var(--yh-action-primary); color: var(--yh-color-action-on-primary);
+  font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line);
+  white-space: normal;
+}
+.login-page .launch-cta { margin-top: auto; }
+.login-page .submit { margin-top: var(--yh-space-24); }
+.login-page .submit-label { color: inherit; font-size: inherit; font-weight: inherit; line-height: inherit; }
+.login-page .launch-cta:active, .login-page .submit:active { background: var(--yh-color-action-pressed); }
+.login-page .submit.submit--disabled, .login-page .method-card.method-card-disabled, .login-page .code-input-wrap .code-button { background: var(--yh-color-action-disabled-bg); color: var(--yh-color-action-disabled-text); opacity: 1; }
+.login-page .stage-title { margin-top: var(--yh-space-32); font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight); line-height: var(--yh-type-title-line); }
+.login-page .method-list { display: flex; flex-direction: column; gap: var(--yh-space-12); margin-top: var(--yh-space-24); }
+.login-page .method-card { box-sizing: border-box; display: flex; align-items: center; flex-wrap: wrap; gap: var(--yh-space-12); width: 100%; min-height: var(--yh-size-touch); padding: var(--yh-space-16); border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-card); background: var(--yh-color-surface-card); color: var(--yh-color-text-primary); text-align: left; line-height: var(--yh-type-body-line); }
+.login-page .method-icon { display: flex; align-items: center; justify-content: center; width: var(--yh-size-touch); height: var(--yh-size-touch); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-subtle); color: var(--yh-color-text-secondary); }
+.login-page .method-icon-blue { background: var(--yh-color-action-subtle); color: var(--yh-action-primary); }
+.login-page .method-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.login-page .method-title { font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); }
+.login-page .method-subtitle { margin-top: var(--yh-space-4); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.login-page .method-badge { padding: var(--yh-space-4) var(--yh-space-8); background: var(--yh-color-status-success-bg); color: var(--yh-color-status-success-fg); border-radius: var(--yh-radius-control); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.login-page .method-badge-amber { background: var(--yh-color-status-warning-bg); color: var(--yh-color-status-warning-fg); }
+.login-page .policy-note { margin-top: auto; padding-top: var(--yh-space-32); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.login-page .back-link, .login-page .back-button { display: flex; align-items: center; justify-content: center; min-height: var(--yh-size-touch); margin: var(--yh-space-8) 0 0; padding: var(--yh-space-8); border: 0; border-radius: var(--yh-radius-control); background: transparent; color: var(--yh-link); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.login-page .back-button { width: var(--yh-size-touch); margin: 0 0 var(--yh-space-8); font-size: var(--yh-type-title-size); }
+.login-page .form-intro { display: block; margin-top: var(--yh-space-8); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.login-page .field { display: flex; flex-direction: column; gap: var(--yh-space-8); margin-top: var(--yh-space-24); }
+.login-page .label { font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.login-page .input, .login-page .code-input-wrap { box-sizing: border-box; width: 100%; min-height: var(--yh-size-primary); border: var(--yh-border-width) solid var(--yh-border-control); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); }
+.login-page .input, .login-page .code-input { box-sizing: border-box; height: var(--yh-size-primary); padding: var(--yh-space-12); color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.login-page .input.input--disabled, .login-page .code-input-wrap.code-input-wrap--disabled { background: var(--yh-color-field-disabled-bg); color: var(--yh-color-text-secondary); }
+.login-page .code-input-wrap { display: flex; align-items: center; gap: var(--yh-space-4); padding-right: var(--yh-space-4); }
+.login-page .code-input { flex: 1; min-width: 0; }
+.login-page .code-button { flex-shrink: 0; min-height: var(--yh-size-touch); margin: 0; padding: var(--yh-space-8); border: 0; border-radius: var(--yh-radius-control); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.login-page .field-hint, .home-page .feedback, .login-page .feedback, .login-page .in-flight, .login-page .login-consent-panel { font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.login-page .field-hint, .login-page .in-flight { color: var(--yh-color-text-secondary); }
+.home-page .feedback, .login-page .feedback, .login-page .in-flight { display: block; margin-top: var(--yh-space-16); }
+.home-page .feedback, .login-page .feedback, .login-page .login-consent-unavailable { color: var(--yh-color-status-error-fg); }
+.login-page .login-consent-panel { margin-top: var(--yh-space-16); }
+.login-page .login-consent-label { display: flex; align-items: center; gap: var(--yh-space-8); min-height: var(--yh-size-touch); }
+.login-page .login-legal-links { display: flex; flex-wrap: wrap; gap: var(--yh-space-16); }
+.login-page .login-legal-link { display: flex; align-items: center; min-height: var(--yh-size-touch); color: var(--yh-link); }
+.login-page .login-legal-link--disabled { color: var(--yh-color-text-muted); }
+.login-page button:focus-visible, .login-page .input:focus-within, .login-page .code-input-wrap:focus-within, .login-page navigator:focus-visible, .home-page navigator:focus-visible, .home-page button:focus-visible { outline: var(--yh-focus-width) solid var(--yh-focus-ring); outline-offset: var(--yh-focus-offset); }
+
+/* Retain the existing decorative scene; no remote assets or new illustration. */
+.login-page .worker-scene {
+  background: var(--yh-color-surface-card);
+  border-radius: var(--yh-radius-card);
+  height: 344rpx;
+  margin: var(--yh-space-24) auto;
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+  width: 520rpx;
+}
+
+.login-page .scene-building {
+  background: var(--yh-palette-neutral-200);
+  bottom: 80rpx;
+  position: absolute;
+  width: 100rpx;
+}
+
+.login-page .scene-building-left {
+  height: 154rpx;
+  left: 58rpx;
+}
+
+.login-page .scene-building-right {
+  bottom: 68rpx;
+  height: 188rpx;
+  right: 34rpx;
+  width: 112rpx;
+}
+
+.login-page .scene-roof {
+  background: var(--yh-palette-neutral-500);
+  border-radius: 999rpx;
+  height: 8rpx;
+  left: 116rpx;
+  position: absolute;
+  transform: rotate(-10deg);
+  width: 270rpx;
+}
+
+.login-page .scene-roof-back {
+  bottom: 106rpx;
+}
+
+.login-page .scene-roof-front {
+  background: var(--yh-palette-neutral-200);
+  bottom: 90rpx;
+  left: 102rpx;
+  transform: rotate(-8deg);
+  width: 232rpx;
+}
+
+.login-page .scene-worker {
+  bottom: 40rpx;
+  height: 220rpx;
+  left: 250rpx;
+  position: absolute;
+  width: 126rpx;
+}
+
+.login-page .worker-helmet {
+  background: var(--yh-palette-amber-50);
+  border-radius: 36rpx 36rpx 6rpx 6rpx;
+  height: 36rpx;
+  left: 30rpx;
+  position: absolute;
+  top: 0;
+  width: 72rpx;
+}
+
+.login-page .worker-head {
+  background: var(--yh-palette-neutral-200);
+  border-radius: 50%;
+  height: 40rpx;
+  left: 44rpx;
+  position: absolute;
+  top: 28rpx;
+  width: 40rpx;
+}
+
+.login-page .worker-body {
+  background: var(--yh-action-primary);
+  border-radius: 16rpx;
+  height: 96rpx;
+  left: 30rpx;
+  position: absolute;
+  top: 66rpx;
+  width: 70rpx;
+}
+
+.login-page .worker-shirt {
+  background: var(--yh-color-surface-card);
+  height: 46rpx;
+  left: 54rpx;
+  position: absolute;
+  top: 68rpx;
+  transform: skew(-12deg);
+  width: 22rpx;
+}
+
+.login-page .worker-arm {
+  background: var(--yh-color-action-pressed);
+  border-radius: 14rpx;
+  height: 74rpx;
+  position: absolute;
+  top: 68rpx;
+  width: 22rpx;
+}
+
+.login-page .worker-arm-left {
+  left: 12rpx;
+  transform: rotate(34deg);
+}
+
+.login-page .worker-arm-right {
+  right: 8rpx;
+  transform: rotate(-34deg);
+}
+
+.login-page .worker-leg {
+  background: var(--yh-action-primary);
+  bottom: 10rpx;
+  height: 82rpx;
+  position: absolute;
+  width: 12rpx;
+}
+
+.login-page .worker-leg-left {
+  left: 44rpx;
+}
+
+.login-page .worker-leg-right {
+  right: 34rpx;
+}
+
+.login-page .worker-shoe {
+  background: var(--yh-palette-neutral-700);
+  border-radius: 8rpx;
+  bottom: 2rpx;
+  height: 16rpx;
+  position: absolute;
+  width: 40rpx;
+}
+
+.login-page .worker-shoe-left {
+  left: 24rpx;
+}
+
+.login-page .worker-shoe-right {
+  right: 6rpx;
+}

@@ -21,8 +21,10 @@ describe('G4-UX production Login flow', () => {
 
   it('keeps the Login brand lockup text-only', () => {
     expect(loginPage).toContain('class="brand-copy"')
-    expect(loginPage).toContain('class="brand-name">修链</text>')
-    expect(loginPage).toContain('class="brand-tagline">屋顶维修</text>')
+    expect(loginPage).toContain('class="brand-name">{{ homeBrand.name }}</text>')
+    expect(readFileSync('src/brands/xlink/home-brand.ts', 'utf8')).toContain("name: '修链'")
+    expect(loginPage).toContain('class="brand-tagline">{{ homeBrand.tagline }}</text>')
+    expect(readFileSync('src/brands/xlink/home-brand.ts', 'utf8')).toContain("tagline: '屋顶维修'")
     expect(loginPage).not.toContain('brand-mark')
   })
 
