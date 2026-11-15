@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detailReadRoute, detailReadView, followUpReadMessage, orderArchiveSummary } from '@features/work-orders/detail-archive'
+import { detailReadRoute, detailReadTitle, detailReadView, followUpReadMessage, orderArchiveSummary } from '@features/work-orders/detail-archive'
 import { workOrderActivities } from '@adapters/api/read-models/work-order-activity'
 import type { QuotationOrderBrowseItem, WorkOrderDetail } from '@shared/ports'
 
@@ -7,6 +7,15 @@ const order = (id: string, updateTime?: string): QuotationOrderBrowseItem => ({
   id, type: 1, serviceAppointmentId: 'work', updateTime, groups: [], contentSupported: true, pdfState: 'present_no_access',
 })
 describe('verified detail archive projection', () => {
+  it('names only existing read views without creating Contract or Warranty pages', () => {
+    expect(detailReadTitle('home')).toBe('工单详情')
+    expect(detailReadTitle('quotation')).toBe('订单')
+    expect(detailReadTitle('quotation', true)).toBe('订单详情')
+    expect(detailReadTitle('customer')).toBe('客户资料')
+    expect(detailReadTitle('follow-up')).toBe('跟进记录')
+    expect(detailReadTitle(detailReadView('contract'))).toBe('工单详情')
+    expect(detailReadTitle(detailReadView('warranty'))).toBe('工单详情')
+  })
   it('requires explicit first-page total evidence for zero, one and multiple records', () => {
     for (const items of [[], [order('a')], [order('a'), order('b'), order('c')]]) {
       expect(orderArchiveSummary({ items, page: 1, totalCount: items.length })).toMatchObject({ complete: true, total: items.length })

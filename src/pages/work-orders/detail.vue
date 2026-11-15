@@ -306,7 +306,8 @@ import { evaluateVisibility } from '@runtimes/dynamic-form'
 import { r1ReadFieldDisplayValue } from '@features/work-orders/r1-record-read-fields'
 import { onSelectedRoleVisibilityRevoked } from '@shared/form/selected-role-visibility'
 import { computed, inject as injectHistoryReader, onBeforeUnmount, ref, watch } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
+import { setActionWorkspacePageTitle as setDetailPageTitle } from '@app/action-page-title'
 
 import { mockJourneyContext } from '@app/mock-journey'
 import { hasAuthenticatedSession } from '@features/home/access'
@@ -315,7 +316,7 @@ import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
-import { detailReadView, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
+import { detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
 import WorkOrderArchiveCards from '@features/work-orders/WorkOrderArchiveCards.vue'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { selectActionWorkspaceLoadTarget } from '@features/work-orders/action-workspace-load-target'
@@ -574,7 +575,14 @@ onLoad((options) => {
   readView.value = detailReadView(options?.read)
   selectedOrderId.value = typeof options?.order === 'string' ? options.order : ''
   routeReady.value = true
+  updateDetailPageTitle()
 })
+
+function updateDetailPageTitle(): void {
+  if (routeReady.value) setDetailPageTitle(detailReadTitle(readView.value, Boolean(selectedOrderId.value)))
+}
+// Retained parent pages must restore their own title after a read-only child.
+onShow(updateDetailPageTitle)
 
 watch([() => workOrder.loadState, () => detail.value?.id], ([state, id]) => {
   if (state === 'succeeded' && id && readView.value === 'quotation') void loadQuotationRead()

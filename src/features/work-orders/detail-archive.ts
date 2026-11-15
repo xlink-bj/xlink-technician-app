@@ -5,6 +5,13 @@ export function detailReadView(value: unknown): DetailReadView {
   return value === 'follow-up' || value === 'customer' || value === 'quotation' ? value : 'home'
 }
 
+export function detailReadTitle(view: DetailReadView, selectedOrder = false): string {
+  if (view === 'quotation') return selectedOrder ? '订单详情' : '订单'
+  if (view === 'customer') return '客户资料'
+  if (view === 'follow-up') return '跟进记录'
+  return '工单详情'
+}
+
 /** Only the verified Order source is registered here. A form title or service
  * number never creates a customer-deliverable category or document permission. */
 export interface OrderArchiveSummary {
