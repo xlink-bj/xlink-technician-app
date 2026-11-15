@@ -61,3 +61,8 @@ const workOrderCardIconColorByTone: Readonly<Record<WorkOrderCardTone, string>> 
 export function workOrderCardIconColorFor(taskLabel?: string): string {
   return workOrderCardIconColorByTone[workOrderCardToneFor(taskLabel)]
 }
+
+/** Presentation slot only; the build-selected product owns the actual color. */
+export function workOrderCardIconRoleFor(taskLabel?: string): string {
+  return `var(--app-work-order-icon-${workOrderCardToneFor(taskLabel)})`
+}

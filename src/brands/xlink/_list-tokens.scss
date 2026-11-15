@@ -1,0 +1,11 @@
+/* Existing WorkOrder decorative palette, moved behind the brand boundary.
+   These new roles do not alter any existing XLink foundation declaration. */
+:root, page {
+  --app-work-order-icon-blue: #2878f2;
+  --app-work-order-icon-red: #f06445;
+  --app-work-order-icon-orange: #ff941f;
+  --app-work-order-icon-purple: #8a69e8;
+  --app-work-order-icon-green: #35b978;
+  --app-work-order-icon-gray: #8d99aa;
+  --app-work-order-location-icon: #7088ae;
+}

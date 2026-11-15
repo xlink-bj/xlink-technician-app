@@ -165,3 +165,14 @@
   --app-focus-ring: var(--yh-focus-ring);
   --app-primary-pressed: var(--yh-color-action-pressed);
 }
+/* Decorative WorkOrder tone slots retain the shared task classification.
+   Yuhong does not borrow the XLink palette or invent extra VI colors. */
+:root, page, .yh-service {
+  --app-work-order-icon-blue: var(--yh-color-status-info-fg);
+  --app-work-order-icon-red: var(--yh-color-status-error-fg);
+  --app-work-order-icon-orange: var(--yh-color-status-warning-fg);
+  --app-work-order-icon-purple: var(--yh-color-text-secondary);
+  --app-work-order-icon-green: var(--yh-color-status-success-fg);
+  --app-work-order-icon-gray: var(--yh-color-status-neutral-fg);
+  --app-work-order-location-icon: var(--yh-color-text-secondary);
+}

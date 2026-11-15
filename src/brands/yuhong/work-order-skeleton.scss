@@ -1,0 +1,28 @@
+.app-workorder-skeleton--list { box-sizing: border-box; width: 100%; margin-top: var(--yh-space-16); }
+.skeleton-list, .detail-skeleton { display: flex; flex-direction: column; gap: var(--yh-space-16); width: 100%; }
+.skeleton-card, .skeleton-surface { box-sizing: border-box; min-width: 0; background: var(--yh-color-surface-card); border: 1px solid var(--yh-border-subtle); border-radius: var(--yh-radius-card); overflow: hidden; }
+.skeleton-card-main, .skeleton-summary, .skeleton-task, .skeleton-information { padding: var(--yh-space-16); }
+.skeleton-card-main, .skeleton-copy { display: flex; flex-direction: column; gap: var(--yh-space-8); min-width: 0; }
+.skeleton-card-top, .skeleton-card-footer, .skeleton-summary-top, .skeleton-actions, .skeleton-tabs, .skeleton-information-row { display: flex; align-items: center; justify-content: space-between; gap: var(--yh-space-8); min-width: 0; }
+.skeleton-copy { flex: 1; }
+.skeleton-line, .skeleton-rect, .skeleton-mark, .skeleton-phone, .skeleton-button { background: var(--yh-color-surface-skeleton); border-radius: var(--yh-radius-control); animation: yh-skeleton-pulse 1.6s ease-in-out infinite; }
+.skeleton-line { height: 14px; width: 60%; }
+.skeleton-line-main, .skeleton-line--customer { height: 20px; width: 60%; }
+.skeleton-line-part, .skeleton-line-number, .skeleton-line--number { width: 20%; }
+.skeleton-line-location, .skeleton-line--location { width: 85%; margin-top: var(--yh-space-12); }
+.skeleton-line-customer, .skeleton-line--task-title { width: 45%; margin-top: var(--yh-space-8); }
+.skeleton-line-chip, .skeleton-line--eyebrow { width: 25%; }
+.skeleton-mark { width: 32px; height: 32px; flex-shrink: 0; }
+.skeleton-phone { width: var(--yh-size-touch); height: var(--yh-size-touch); }
+.skeleton-card-footer { margin-top: var(--yh-space-8); }
+.skeleton-accent { display: none; }
+.app-workorder-skeleton--detail { width: 100%; }
+.skeleton-actions--summary { margin-top: var(--yh-space-16); }
+.skeleton-actions .skeleton-rect { flex: 1; min-width: 0; height: var(--yh-size-touch); }
+.skeleton-button { margin-top: var(--yh-space-16); height: var(--yh-size-primary); }
+.skeleton-tabs { min-height: var(--yh-size-touch); border-bottom: 1px solid var(--yh-border-subtle); }
+.skeleton-rect { width: 25%; height: 14px; }
+.skeleton-information-row { min-height: var(--yh-size-touch); border-bottom: 1px solid var(--yh-border-subtle); }
+.skeleton-rect--last { width: 40%; }
+@keyframes yh-skeleton-pulse { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .skeleton-line, .skeleton-rect, .skeleton-mark, .skeleton-phone, .skeleton-button { animation: none; } }

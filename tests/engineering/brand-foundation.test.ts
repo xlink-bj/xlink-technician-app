@@ -16,7 +16,12 @@ describe('build-selected product foundation', () => {
   })
 
   it('preserves the existing compiled XLink foundation exactly', () => {
-    expect(css('src/brands/xlink/index.scss')).toBe(css('src/shared/ui/design-system.scss'))
+    const foundation = css('src/shared/ui/design-system.scss').trim()
+    const actual = css('src/brands/xlink/index.scss').trim()
+    expect(actual.startsWith(foundation)).toBe(true)
+    // New decorative slots extend the product; the complete original sheet
+    // must remain byte-for-byte identical, followed only by these new roles.
+    expect(actual.slice(foundation.length).trim()).toBe(css('src/brands/xlink/_list-tokens.scss').trim())
     expect(css('src/brands/xlink/index.scss')).not.toContain('--yh-')
   })
 

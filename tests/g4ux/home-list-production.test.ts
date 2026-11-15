@@ -3,21 +3,22 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 import { workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
+import { presentationSource } from '../support/presentation-source'
 
 const homePage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
 const homeTemplate = homePage.slice(
   homePage.indexOf('<view v-else-if="showHome"'),
   homePage.indexOf('<view v-else class="login-page">'),
 )
-const listPage = readFileSync(new URL('../../src/pages/work-orders/work-orders.vue', import.meta.url), 'utf8')
+const listPage = presentationSource('pages/work-orders/work-orders.vue')
 const listTemplate = listPage.split('<script setup')[0]
 const pagesConfig = readFileSync(new URL('../../src/pages.json', import.meta.url), 'utf8')
 // DS07 moved display-only ownership to components. Verify both the component
 // and its actual business-page use; never keep asserting deleted page-owned CSS.
-const emptyStateSource = readFileSync(new URL('../../src/shared/ui/AppWorkOrderEmptyState.vue', import.meta.url), 'utf8')
-const skeletonSource = readFileSync(new URL('../../src/shared/ui/AppWorkOrderSkeleton.vue', import.meta.url), 'utf8')
-const searchBarSource = readFileSync(new URL('../../src/shared/ui/AppSearchBar.vue', import.meta.url), 'utf8')
-const feedbackSource = readFileSync(new URL('../../src/shared/ui/AppFeedbackState.vue', import.meta.url), 'utf8')
+const emptyStateSource = presentationSource('shared/ui/AppWorkOrderEmptyState.vue')
+const skeletonSource = presentationSource('shared/ui/AppWorkOrderSkeleton.vue')
+const searchBarSource = presentationSource('shared/ui/AppSearchBar.vue')
+const feedbackSource = presentationSource('shared/ui/AppFeedbackState.vue')
 
 describe('G4-UX Phase B2 Home', () => {
   it('keeps an authenticated, task-first work entry without fabricating task data', () => {

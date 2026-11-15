@@ -91,7 +91,7 @@
               <AppRecordMark
                 :icon="workOrderCardIconFor(item.taskLabel)"
                 :size="19"
-                :color="workOrderCardIconColorFor(item.taskLabel)"
+                :color="workOrderCardIconRoleFor(item.taskLabel)"
               />
               <view class="card-title-cluster">
                 <view class="card-title-line">
@@ -103,7 +103,7 @@
             </view>
             <view class="card-details">
               <view v-if="item.serviceDistrict || item.serviceAddress || item.distanceText" class="card-location">
-                <AppIcon class="location-icon" name="location" :size="17" color="#7088ae" aria-hidden="true" />
+                <AppIcon class="location-icon" name="location" :size="17" color="var(--app-work-order-location-icon)" aria-hidden="true" />
                 <text v-if="item.serviceDistrict" class="location-district">{{ item.serviceDistrict }}</text>
                 <text v-if="item.serviceDistrict && item.serviceAddress" class="location-separator" aria-hidden="true"> </text>
                 <text v-if="item.serviceAddress" class="location-address">{{ item.serviceAddress }}</text>
@@ -132,7 +132,7 @@
                   <AppIcon
                     name="phone"
                     :size="19"
-                    :color="workOrderCardIconColorFor(item.taskLabel)"
+                    :color="workOrderCardIconRoleFor(item.taskLabel)"
                     aria-hidden="true"
                   />
                 </view>
@@ -154,6 +154,10 @@
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
       </view>
 
+      <view v-else-if="workOrders.loadState === 'loading'" class="loading-placeholder" aria-hidden="true" />
+
+      <AppLoadingState v-else variant="inline" label="正在准备工单" />
+
       <view v-if="acceptCandidate" class="accept-confirm-backdrop" @tap="cancelAccept">
         <view class="accept-confirm-card" @tap.stop>
           <text class="accept-confirm-title">确认接单</text>
@@ -165,9 +169,6 @@
         </view>
       </view>
 
-      <view v-else-if="workOrders.loadState === 'loading'" class="loading-placeholder" aria-hidden="true" />
-
-      <AppLoadingState v-else variant="inline" label="正在准备工单" />
     </view>
   </view>
 </template>
@@ -177,7 +178,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
-import { workOrderCardIconColorFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
+import { workOrderCardIconRoleFor, workOrderCardIconFor, workOrderCardToneFor } from '@features/work-orders/card'
 import { workOrderDetailRouteFor } from '@features/work-orders/detail'
 import { workOrderListActionFor } from '@features/work-orders/list-actions'
 import { useWorkOrderListStore } from '@features/work-orders/list'
@@ -373,372 +374,6 @@ function cancelAccept(): void {
 }
 </script>
 
-<style>
-.work-orders-page {
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
-}
-
-.work-orders-page,
-.guard-page {
-  background: #f3f6fa;
-  box-sizing: border-box;
-  min-height: 100vh;
-  padding: 18rpx 24rpx calc(40rpx + constant(safe-area-inset-bottom));
-  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
-  width: 100%;
-}
-
-.list-shell {
-  margin: 0 auto;
-  max-width: none;
-}
-
-.production-read-only-notice { display: block; margin: 0 0 14rpx; }
-
-.work-order-categories { margin-top: 16px; border-bottom: 1px solid var(--app-color-border); width: 100%; }
-.work-order-categories-row { display: flex; min-width: max-content; justify-content: space-between; gap: 4px; }
-.work-order-category { flex-shrink: 0; margin: 0; padding: 8px; min-height: 44px; border: 0; border-bottom: 2px solid transparent; border-radius: initial; background: transparent; color: var(--app-content-muted-ink); font-size: var(--app-font-body); font-weight: 500; line-height: 26px; }
-.work-order-category::after { border: 0; }
-.work-order-category--active { color: var(--app-color-primary); border-bottom-color: currentColor; font-weight: 600; }
-
-.list-content {
-  display: flex;
-  flex-direction: column;
-  margin: 18rpx 8rpx 0;
-}
-.work-order-card-surface { width: 100%; min-height: 100px; }
-.list-section-heading { margin: 4px 2px 14px; }
-.list-loaded-count { color: var(--app-content-muted-ink); font-size: 12px; white-space: nowrap; }
-
-.work-order-card {
-  display: block;
-  box-sizing: border-box;
-  margin-bottom: 14px;
-  min-width: 0;
-  width: 100%;
-  overflow: visible;
-}
-
-.work-order-card-hover .work-order-card-surface {
-  transform: translateY(1px);
-  box-shadow: var(--app-elevation-flat);
-}
-
-.card-main {
-  box-sizing: border-box;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  padding: 17px 15px 17px;
-}
-
-.card-top-row {
-  align-items: center;
-  display: flex;
-  gap: 16rpx;
-  min-width: 0;
-}
-
-.card-title-cluster {
-  flex: 1;
-  min-width: 0;
-}
-
-.card-title-line {
-  align-items: center;
-  display: flex;
-  gap: 12rpx;
-  min-width: 0;
-}
-
-.card-task {
-  color: var(--app-text-strong);
-  display: -webkit-box;
-  flex: 0 1 auto;
-  font-size: var(--app-content-title-size);
-  font-weight: 720;
-  line-height: 1.34;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.card-part-badge {
-  flex: 0 1 auto;
-}
-
-.card-number {
-  color: var(--app-content-muted-ink);
-  flex: 0 0 auto;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.3;
-  max-width: 30%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.card-details {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  padding-left: 70rpx;
-}
-
-.card-location {
-  align-items: flex-start;
-  box-sizing: border-box;
-  color: var(--app-content-muted-ink);
-  display: flex;
-  font-size: 12.5px;
-  gap: 8rpx;
-  line-height: 1.5;
-  margin-left: -70rpx;
-  margin-top: 18rpx;
-  min-width: 0;
-  padding-left: 70rpx;
-  position: relative;
-  width: calc(100% + 70rpx);
-}
-
-.location-icon {
-  left: 0;
-  line-height: 1.5;
-  position: absolute;
-  top: -4rpx;
-}
-
-.location-district {
-  color: #667d9f;
-  flex: 0 0 auto;
-  font-weight: 700;
-}
-
-.location-separator {
-  color: #afbac9;
-  flex: 0 0 auto;
-}
-
-.location-address {
-  color: var(--app-content-muted-ink);
-  display: -webkit-box;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.location-distance {
-  align-items: center;
-  color: #627492;
-  display: flex;
-  flex: 0 0 auto;
-  font-size: 22rpx;
-  font-weight: 700;
-  gap: 6rpx;
-  margin-left: 6rpx;
-  white-space: nowrap;
-}
-
-.distance-vehicle-icon {
-  border: 2rpx solid #6f86a8;
-  border-radius: 4rpx;
-  box-sizing: border-box;
-  height: 12rpx;
-  position: relative;
-  width: 22rpx;
-}
-
-.distance-vehicle-icon::before,
-.distance-vehicle-icon::after {
-  background: #6f86a8;
-  border-radius: 50%;
-  bottom: -5rpx;
-  content: '';
-  height: 5rpx;
-  position: absolute;
-  width: 5rpx;
-}
-
-.distance-vehicle-icon::before { left: 2rpx; }
-.distance-vehicle-icon::after { right: 2rpx; }
-
-.card-customer {
-  color: #172239;
-  display: -webkit-box;
-  font-size: 29rpx;
-  font-weight: 800;
-  line-height: 1.4;
-  margin-top: 10rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.card-footer {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-  margin-top: 14rpx;
-  min-height: 32rpx;
-}
-
-.nearby-chip {
-  flex-shrink: 0;
-}
-
-.card-phone-button {
-  align-items: center;
-  background: var(--app-surface-raised);
-  border: 1px solid var(--app-outline-subtle);
-  border-radius: 14px;
-  display: flex;
-  flex: 0 0 44px;
-  height: 44px;
-  justify-content: center;
-  margin-right: 2px;
-  width: 44px;
-  box-sizing: border-box;
-  box-shadow: var(--app-elevation-flat);
-}
-
-.card-phone-button--loading { opacity: 0.48; }
-
-.card-accept-control { flex: 0 0 auto; margin-left: 10px; }
-.card-accept-button { min-width: 80px; }
-
-.accept-confirm-backdrop {
-  align-items: center;
-  background: rgba(15, 28, 48, 0.38);
-  display: flex;
-  inset: 0;
-  justify-content: center;
-  position: fixed;
-  z-index: 20;
-}
-
-.accept-confirm-card {
-  background: #ffffff;
-  border-radius: 24rpx;
-  box-sizing: border-box;
-  margin: 48rpx;
-  padding: 32rpx;
-  width: 100%;
-}
-
-.accept-confirm-title {
-  color: #172239;
-  display: block;
-  font-size: 30rpx;
-  font-weight: 800;
-}
-
-.accept-confirm-copy {
-  color: #6f7f98;
-  display: block;
-  font-size: 24rpx;
-  line-height: 1.6;
-  margin-top: 16rpx;
-}
-
-.accept-confirm-actions {
-  display: flex;
-  gap: 16rpx;
-  margin-top: 28rpx;
-}
-
-.accept-confirm-button {
-  border-radius: 12rpx;
-  flex: 1;
-  font-size: 24rpx;
-  font-weight: 800;
-  height: 72rpx;
-  line-height: 72rpx;
-  margin: 0;
-}
-
-.accept-confirm-button--secondary { background: #f1f4f8; color: #5f708b; }
-.accept-confirm-button--primary { background: #2878f2; color: #ffffff; }
-
-.inline-refresh {
-  background: #e7eef8;
-  border-radius: 999rpx;
-  height: 4rpx;
-  margin: 0 0 14rpx;
-  overflow: hidden;
-  width: 100%;
-}
-
-.inline-refresh-indicator {
-  animation: app-loading-slide var(--app-motion-loading-slide-duration) ease-in-out infinite;
-  background: #2878f2;
-  border-radius: inherit;
-  height: 100%;
-  width: 32%;
-}
-
-/* Auth guard remains page-owned; error and search feedback now share AppFeedbackState. */
-.guard-icon {
-  align-items: center;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-}
-.guard-title {
-  color: #1b2940;
-  font-size: 32rpx;
-  font-weight: 850;
-  line-height: 1.4;
-}
-.guard-copy {
-  color: #7c8ba2;
-  font-size: 25rpx;
-  line-height: 1.6;
-  margin-top: 12rpx;
-}
-
-.load-more {
-  align-self: center;
-}
-
-.guard-page {
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 100vh;
-  text-align: center;
-}
-
-.guard-icon {
-  background: #eaf2ff;
-  color: #2878f2;
-  font-size: 28rpx;
-  font-weight: 900;
-  height: 92rpx;
-  width: 92rpx;
-}
-
-.guard-title {
-  margin-top: 24rpx;
-}
-
-.back-link {
-  color: #2878f2;
-  font-size: 26rpx;
-  font-weight: 800;
-  line-height: 1.4;
-  padding: 16rpx 0;
-}
-
-button::after {
-  border: 0;
-}
+<style lang="scss">
+@import "@brand-ui/work-order-list.scss";
 </style>

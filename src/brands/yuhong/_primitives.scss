@@ -83,3 +83,6 @@
 .app-amount-value--muted { color: var(--yh-color-text-secondary); }
 @keyframes yh-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .app-button__loading-slot--active, .app-loading__spinner { animation-duration: 1.8s; } }
+/* The shared RecordCard/Mark templates own no brand-specific paint. */
+.app-record-card--horizontal { display: flex; }
+.app-record-mark { display: flex; align-items: center; justify-content: center; flex: 0 0 32px; width: 32px; height: 32px; border-radius: var(--yh-radius-control); background: var(--yh-color-surface-subtle); }

@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
 import { detailReadView } from '@features/work-orders/detail-archive'
+import { presentationSource } from '../support/presentation-source'
 
 const detailPage = readFileSync(new URL('../../src/pages/work-orders/detail.vue', import.meta.url), 'utf8')
 const archiveCards = readFileSync(new URL('../../src/features/work-orders/WorkOrderArchiveCards.vue', import.meta.url), 'utf8')
 const quotationWorkspace = readFileSync(new URL('../../src/features/work-orders/quotation/QuotationActionWorkspace.vue', import.meta.url), 'utf8')
 const taskFocusSource = readFileSync(new URL('../../src/features/work-orders/WorkOrderTaskFocus.vue', import.meta.url), 'utf8')
-const skeletonSource = readFileSync(new URL('../../src/shared/ui/AppWorkOrderSkeleton.vue', import.meta.url), 'utf8')
+const skeletonSource = presentationSource('shared/ui/AppWorkOrderSkeleton.vue')
 
 describe('G4-UX detail D3 semantic boundary', () => {
   it('keeps the accepted summary, quick-action shell, and vertically stacked read-only summaries', () => {

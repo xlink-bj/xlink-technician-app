@@ -1,0 +1,13 @@
+.app-feedback-state { box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--yh-space-12); text-align: center; padding: var(--yh-space-32) var(--yh-space-16); }
+.app-feedback-state--list { margin-top: var(--yh-space-16); min-height: 240px; background: var(--yh-color-surface-card); border: 1px solid var(--yh-border-subtle); border-radius: var(--yh-radius-card); }
+.app-feedback-state--detail { min-height: 58vh; }
+.app-feedback-state__icon { display: flex; align-items: center; justify-content: center; width: var(--yh-size-touch); height: var(--yh-size-touch); border-radius: var(--yh-radius-card); background: var(--yh-color-status-error-bg); color: var(--yh-color-status-error-fg); font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight); }
+.app-feedback-state--retry .app-feedback-state__icon { background: var(--yh-color-status-warning-bg); color: var(--yh-color-status-warning-fg); }
+.app-feedback-state__title { display: block; color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.app-feedback-state__description { display: block; color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.app-feedback-state__action { display: flex; align-items: center; justify-content: center; min-height: var(--yh-size-primary); margin: var(--yh-space-4) 0 0; padding: var(--yh-space-8) var(--yh-space-24); border: 0; border-radius: var(--yh-radius-control); background: var(--yh-action-primary); color: var(--yh-color-action-on-primary); font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); }
+.app-feedback-state__action::after { border: 0; }
+.app-feedback-state__action:focus-visible { outline: 2px solid var(--yh-focus-ring); outline-offset: 2px; }
+.app-feedback-state__search-illustration { position: relative; width: var(--yh-size-touch); height: var(--yh-size-touch); }
+.app-feedback-state__search-ring { position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border: 2px solid var(--yh-color-text-muted); border-radius: 50%; }
+.app-feedback-state__search-handle { position: absolute; left: 27px; top: 32px; width: 12px; height: 2px; background: var(--yh-color-text-muted); transform: rotate(45deg); }

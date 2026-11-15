@@ -342,7 +342,7 @@ for (const [component, source] of [
 for (const component of ['AppFeedbackState', 'AppWorkOrderSkeleton']) {
   if (!detailFile.includes(`<${component}`)) fail('DS-07.C3: detail must use shared '+component)
 }
-const listBusinessCSS = listBusiness.split('<style>')[1]?.split('</style>')[0] ?? ''
+const listBusinessCSS = (await Promise.all(['xlink', 'yuhong'].map(brand => read(`src/brands/${brand}/work-order-list.scss`)))).join('\n')
 for (const stale of ['.search-band {', '.skeleton-list {', '.empty-state-card {',
   '.state-icon-error {', '.state-illustration-search {']) {
   if (listBusinessCSS.includes(stale)) fail('DS-07.C3: list reintroduced old component CSS '+stale)

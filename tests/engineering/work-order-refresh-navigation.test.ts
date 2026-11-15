@@ -38,7 +38,7 @@ async function mounted() {
   const imports: Record<string, any> = {
     vue: Vue, '@features/home/access': { hasAuthenticatedSession: (s: string) => s === 'authenticated' },
     '@shared/config': { isProductionReadOnlyRuntime: () => false },
-    '@features/work-orders/card': { workOrderCardToneFor: () => '', workOrderCardIconFor: () => '', workOrderCardIconColorFor: () => '' },
+    '@features/work-orders/card': { workOrderCardToneFor: () => '', workOrderCardIconFor: () => '', workOrderCardIconRoleFor: () => '' },
     '@features/work-orders/detail': { workOrderDetailRouteFor: (id: string) => 'detail/' + id },
     '@features/work-orders/list-actions': { workOrderListActionFor: () => ({ detailAccessible: true }) },
     '@features/work-orders/list': { useWorkOrderListStore: () => store }, '@shared/state': { useSessionStore: () => session },
