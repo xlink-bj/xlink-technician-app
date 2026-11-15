@@ -1,5 +1,7 @@
 # R1 真实数据模型与 DEV Mock 等价清单（v1.0）
 
+普通 Mock 只读接线补充：[19017 普通 Survey reader（2026-11-15）](NORMAL_SURVEY_MOCK_READER_20261115.md)。复用普通 reader 验证合成 Ext/type=1、字段/provider、完整 forms 引用和已保存记录归属；不扩展生产访问、保存或 Workflow 命令。
+
 最新有限能力补充：[已有配置记录编辑预算、placeholder 与只读值保全纠偏（2026-11-13）](R1_CONFIGURED_EDIT_BOUNDED_DYNAMIC_CORRECTION_20261113.md)。本批只修正已确认的过度拒绝，不代表全域动态能力或真实写入验收完成。
 
 后续功能批次：[type0 Map 已有记录 checkbox 协议贯通（2026-11-13）](R1_MAP_EXISTING_CHECKBOX_INTEGRATION_20261113.md)，覆盖显式空选、保序、完整原文与不确定保存保护；条件显示及 cascade 仍是独立待完成项。

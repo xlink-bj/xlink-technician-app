@@ -397,6 +397,7 @@ const currentR1FormNode = computed(() => {
 })
 const normalReader = injectHistoryReader(r1NodeFormsReaderKey,null)
 const normalWorkspaceEntry = computed(() => !productionReadOnly && normalReader?.enabled() === true
+  && !allowLocalMockPreview.value
   && Boolean(currentR1FormNode.value?.formDefinitionId) && ['interact_with_form','set_appointment'].includes(workflowProjection.value.currentTask?.actionIntent??'')
   && ['enabled','disabled_read_only'].includes(workflowProjection.value.currentTask?.execution ?? '') && !aStageDynamicFormNodeKind.value)
 const aStageDynamicFormNodeKind = computed<AStageDynamicFormNodeKind | null>(() => {

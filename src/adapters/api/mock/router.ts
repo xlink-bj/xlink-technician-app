@@ -1,4 +1,5 @@
 import { duplicateFileDefinition } from './duplicate-file-fixture'
+import { normalSurveyMockAppointment, normalSurveyMockNode, normalSurveyMockRead } from './normal-survey-read'
 import { mockOrderFieldsRead } from './order-fields'
 import { mockScaleCatalogRead } from './quotation-catalog-scale'
 import { categoryMockDetail, withCategoryMockRows } from './work-order-category-fixtures'
@@ -177,6 +178,7 @@ function r1MpUxListResponse(raw: unknown): unknown {
   const envelope = mutableRecord(clonedResponse(raw))
   if (!envelope || !Array.isArray(envelope.data)) return raw
   envelope.data.push(...Array.from(clonedResponse(mockR1MpUxListRows)))
+  envelope.data.push(clonedResponse({ ...normalSurveyMockNode, data: normalSurveyMockAppointment }))
   envelope.total = envelope.data.length
   return envelope
 }
@@ -668,6 +670,10 @@ function matchedResponse(
   requestData: Readonly<Record<string, unknown>>,
 ): unknown | null {
   const route = normalizedPath(path)
+  if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_MP_UX_FIXTURES === 'true' && mode === 'data') {
+    const normalSurvey = normalSurveyMockRead(route, requestData)
+    if (normalSurvey !== null) return clonedResponse(normalSurvey)
+  }
   if (isDevMockJourneyEnabled() && mode === 'data'
     && route === 'basic/order/queryById' && requestData.id === mockJourneyOfficialOrderId) {
     const order = readMockJourneyOfficialOrder()

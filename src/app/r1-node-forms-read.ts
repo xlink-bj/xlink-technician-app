@@ -33,6 +33,20 @@ import { assertSurveyLeakageCauseReadValue } from '@features/work-orders/survey-
 import { createNormalR1FileCodec } from '@adapters/api/normal-r1-file-codec'
 
 type Row = Record<string, unknown>
+/** The established offline Mock profile may exercise the same read parser.
+ * Exact actor, role-list ownership and source joins are still checked below;
+ * no write flag or localhost-backed environment is impersonated. */
+function normalMockReadEnabled(env: Record<string, unknown>, origin: string): boolean {
+  return env.DEV === true && env.VITE_XLINK_ENVIRONMENT === 'dev'
+    && env.VITE_XLINK_H5_MOCK_E2E === 'true' && env.VITE_XLINK_R1_MP_UX_FIXTURES === 'true'
+    && env.VITE_XLINK_MOCK === 'true' && env.VITE_XLINK_ENABLE_REAL_WRITES === 'false'
+    && env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES !== 'true'
+    && env.VITE_XLINK_AUTH_ONLY_MOCK_BUSINESS !== 'true'
+    && (env.VITE_XLINK_AUTH_API_BASE_URL === undefined || env.VITE_XLINK_AUTH_API_BASE_URL === '')
+    && env.VITE_XLINK_API_BASE_URL === 'https://example.invalid'
+    && env.VITE_XLINK_AUTH_TENANT === 'synthetic-qa-tenant'
+    && origin === 'http://localhost:5174'
+}
 const deny = (): never => { throw Error('当前表单的身份、关联或完整性无法核实，请重新读取工单。') }
 const row = (v: unknown): Row => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Row : deny()
 const id = (v: unknown): string => typeof v === 'string' && v.trim() === v && v.length > 0 ? v : deny()
@@ -79,8 +93,9 @@ export function assertSurveyReadExtsValues(definition: FormDefinitionRead, origi
   }
 }
 
-/** Explicit local read rollout, not a synthetic record/node adapter. Production stays closed. */
+/** Existing local reader plus the isolated offline Mock read profile. Production stays closed. */
 export function normalNodeFormsReadEnabled(env: Record<string, unknown>, origin: string): boolean {
+  if (normalMockReadEnabled(env, origin)) return true
   const readonlyMode = env.VITE_XLINK_ENABLE_REAL_WRITES === 'false' && env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
   const scopedWriteMode = env.VITE_XLINK_R1_REPEAT_ACTIONS === 'true'
     && env.VITE_XLINK_ENABLE_REAL_WRITES === 'true' && env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'true'
@@ -110,6 +125,7 @@ export function createNormalNodeFormsReader(input: {
 }): R1NodeFormsReader {
   const transport = input.transport ?? createUniApiReadTransport({
     apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
+    blockRealRequests: normalMockReadEnabled(input.env, input.origin),
     getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null,
   })
   let generation = 0
@@ -178,6 +194,9 @@ export function createNormalNodeFormsReader(input: {
     return current
   }
   const enabled = () => normalNodeFormsReadEnabled(input.env, input.origin)
+    && (!normalMockReadEnabled(input.env, input.origin)
+      || input.auth.getCurrentSession()?.user.id === 'synthetic-user'
+        && input.auth.getCurrentSession()?.currentRole?.id === 'synthetic-role')
   const fingerprint = () => {
     const a = input.auth.getCurrentSession()
     return enabled() && a ? sessionAuthorizationFingerprint({ sessionRef: a.sessionRef,
