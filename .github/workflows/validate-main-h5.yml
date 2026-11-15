@@ -169,6 +169,10 @@ jobs:
         env:
           XLINK_H5_SURVEY_59: 'true'
         run: pnpm exec playwright test --config config/playwright/survey-59-read.config.ts
+      - name: Verify quotation pages in both build-selected brands
+        run: |
+          VITE_XLINK_BRAND=xlink pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts
+          VITE_XLINK_BRAND=yuhong pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts
       - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -176,6 +180,7 @@ jobs:
           name: stage1b-main-h5-${{ github.run_id }}
           path: |
             test-results/main-h5-mock/
+            test-results/brand-h5/
             test-results/m08-catalog-scale/
             test-results/input-delivery/
             test-results/search-delivery/

@@ -1,0 +1,83 @@
+.quotation-workspace-shell { font-family:-apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif; }
+
+.quotation-confirm-backdrop { align-items: center; background: rgba(20, 32, 52, .42); display: flex; inset: 0; justify-content: center; padding: var(--app-page-gutter); position: fixed; z-index: 1100; }
+.quotation-confirm-sheet { background: var(--app-color-surface); border: 1rpx solid var(--app-color-border); border-radius: var(--app-radius-card); box-sizing: border-box; max-width: 640rpx; padding: var(--app-card-padding); width: 100%; }
+.quotation-confirm-title { color: var(--app-color-text-primary); display: block; font-size: var(--app-font-section-title); font-weight: 800; }
+.quotation-confirm-actions { display: flex; gap: var(--app-space-sm); justify-content: flex-end; margin-top: var(--app-space-lg); }
+.quotation-production-read-only { display: block; }
+.quotation-workspace-shell .action-workspace-footer { background: var(--app-color-surface); padding-top: 14rpx; }
+.quotation-workspace-footer-summary { align-items: center; display: flex; justify-content: space-between; margin-bottom: 12rpx; }
+.quotation-workspace-footer-summary__copy { display: flex; flex-direction: column; min-width: 0; }
+.quotation-workspace-footer-summary__title { color: var(--app-color-text-primary); font-size: 22rpx; font-weight: 800; }
+.quotation-workspace-footer-summary__meta { color: var(--app-color-text-secondary); font-size: 22rpx; line-height: 1.35; margin-top: 4rpx; }
+.quotation-workspace-shell--review .quotation-workspace-footer-summary__meta { font-size: 20rpx; }
+.quotation-workspace-shell--review .quotation-workspace-footer-summary { margin-bottom: 2rpx; }
+.quotation-workspace-shell--review .action-workspace-footer { padding-top: 8rpx; }
+.quotation-workspace-footer-summary__amount { align-items: flex-end; display: flex; flex-direction: column; flex-shrink: 0; margin-left: var(--app-space-sm); }
+.quotation-workspace-footer-summary__amount-label { color: var(--app-color-text-secondary); font-size: 20rpx; }
+.quotation-workspace-footer-summary__amount-value { margin-top: 4rpx; }
+.quotation-submit-unavailable { margin-top: var(--app-space-sm); }
+.quotation-workspace-shell .action-workspace-body { padding-bottom: calc(320rpx + env(safe-area-inset-bottom)); }
+/* #ifdef H5 */
+.quotation-workspace-shell.action-workspace-page { height: calc(100vh - 44px); min-height: 0; }
+/* #endif */
+
+/* Q01 fixed summary: amount + primary action on the same horizontal row.
+   Disabled preview still appears for visual parity, never issues an intent. */
+.quotation-workspace-shell .action-workspace-footer-inner {
+  display:grid; grid-template-columns:minmax(0, 1fr) minmax(160rpx, 34%); column-gap:12rpx; align-items:center;
+}
+.quotation-workspace-footer-summary { grid-column:1; grid-row:1; margin-bottom:0; display:flex; align-items:flex-start;
+  gap:6rpx; flex-direction:column; min-width:0; }
+.quotation-workspace-footer-summary__amount { align-items:flex-start; margin-left:0; }
+.quotation-workspace-footer-summary__amount-label { color:var(--app-color-text-secondary); font-size:20rpx; }
+.quotation-workspace-footer-summary__amount-value { margin-top:2rpx; }
+.quotation-workspace-footer-summary__copy { display:block; }
+.quotation-workspace-footer-summary__title { display:none; }
+.quotation-workspace-footer-summary__meta { font-size:19rpx; color:var(--app-color-text-secondary); margin-top:4rpx; }
+.quotation-workspace-shell .action-workspace-submit, .quotation-workspace-disabled-submit {
+  grid-column:2; grid-row:1; width:100%; min-width:0; min-height:82rpx; font-size:24rpx; }
+.quotation-workspace-shell .quotation-production-read-only,
+.quotation-workspace-shell .quotation-submit-unavailable { grid-column:1 / -1; }
+.quotation-workspace-disabled-submit { background:#e6eaf1; color:#9ca8b9; border:0; }
+.quotation-workspace-shell--review .quotation-workspace-footer-summary { margin-bottom:0; }
+.quotation-workspace-handoff { display:flex; flex-direction:column; gap:7px; margin-top:11px; }
+.quotation-workspace-handoff-button { min-height:44px; }
+.quotation-workspace-handoff__hint { font-size:11px; line-height:1.55; color:var(--app-content-muted-ink); }
+
+/* The footer is a true two-column row, not separate slot fragments whose
+   uni-app wrapper may cause grid auto-placement and hiding of the CTA. */
+.quotation-workspace-shell .action-workspace-footer-inner { display:block !important; }
+.quotation-workspace-footer-main { display:flex; align-items:center; justify-content:space-between;
+  gap:14rpx; min-width:0; width:100%; }
+.quotation-workspace-footer-main .quotation-workspace-footer-summary { flex:1 1 0; min-width:0; width:auto; margin:0; }
+.quotation-workspace-footer-main .action-workspace-submit,
+.quotation-workspace-footer-main .quotation-workspace-disabled-submit {
+  flex:0 0 38%; width:38%; max-width:38%; height:84rpx; min-height:84rpx; box-sizing:border-box;
+  margin:0; font-size:23rpx;
+}
+.quotation-workspace-footer-main .quotation-workspace-disabled-submit.app-button {
+  opacity:1 !important; background:#ecf0f6 !important; color:#8593a6 !important;
+  border:1rpx solid #dae2ed !important;
+}
+
+/* DS-05: only sticky-CTA COMPOSITION is page-owned; all visual craft is shared. */
+.q01-footer { width: 100%; min-width: 0; padding: 0; }
+.q01-footer-status {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; margin-bottom: 8px;
+  color: var(--xl-caption); font-size: 11px; line-height: 17px;
+}
+.q01-footer-status__amount { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+.q01-footer-actions { display: flex; align-items: stretch; gap: 12px; width: 100%; }
+.q01-footer-actions .q01-footer-save { flex: 0 0 102px; width: 102px; padding-inline: 8px; }
+.q01-footer-actions .q01-footer-save .app-button__label { white-space: nowrap; overflow-wrap: normal; }
+.q01-footer-actions .q01-footer-next { flex: 1 1 auto; min-width: 0; }
+.q01-footer-caution {
+  display: block; margin-top: 7px; text-align: center;
+  color: var(--xl-caption); font-size: 11px; line-height: 16px;
+}
+@media(max-width:360px) {
+  .q01-footer-actions { gap: 8px; }
+  .q01-footer-actions .q01-footer-save { flex-basis: 90px; width: 90px; }
+}

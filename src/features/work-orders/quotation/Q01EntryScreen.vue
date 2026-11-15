@@ -32,6 +32,7 @@
         <view data-testid="quotation-first-step-repair-parts">
           <button
             class="q01-screen__selector xl-craft__control xl-craft__control--selector"
+            :class="{ 'q01-screen__control--disabled': !canEdit || options.length === 0, 'q01-screen__control--invalid': Boolean(errors.repairParts) }"
             type="button"
             :disabled="!canEdit || options.length === 0"
             :aria-expanded="pickerOpen"
@@ -68,6 +69,7 @@
           multiline
           :is-current="isInputCurrent"
           class="q01-screen__description xl-craft__control xl-craft__control--textarea"
+          :class="{ 'q01-screen__control--disabled': !canEdit, 'q01-screen__control--invalid': Boolean(errors.partDescription) }"
           :value="group.partDescription"
           :disabled="!canEdit"
           :aria-invalid="Boolean(errors.partDescription)"
@@ -86,6 +88,7 @@
         <QuotationTextField
           :is-current="isInputCurrent"
           class="q01-screen__quantity xl-craft__control xl-craft__control--input"
+          :class="{ 'q01-screen__control--disabled': !canEdit, 'q01-screen__control--invalid': Boolean(errors.maintainAreaNum) }"
           type="digit"
           :value="group.maintainAreaNum"
           :disabled="!canEdit"
@@ -219,51 +222,6 @@ watch(() => props.group.groupId, cancelPicker)
 
 </script>
 
-<style scoped>
-/* Page only owns composition; typography, shape and controls are shared. */
-.q01-screen { width: 100%; min-width: 0; padding-bottom: 25px; }
-.q01-screen__provenance { margin: 0 0 3px; }
-.q01-screen__progress { margin-top: 19px; }
-.q01-screen__progress-label { color: var(--xl-secondary); font-size: 11px; font-weight: 600; }
-.q01-screen__progress-index { color: var(--xl-blue); font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.q01-screen__heading { margin-top: 20px; }
-.q01-screen__form { display: flex; flex-direction: column; margin-top: 21px; }
-.q01-screen__field { display: flex; flex-direction: column; min-width: 0; margin-top: 21px; }
-.q01-screen__field--first { margin-top: 0; }
-.q01-screen__label { margin-bottom: 10px; }
-.q01-screen__selector { margin: 0; text-align: left; justify-content: space-between; }
-.q01-screen__selector::after { border: 0; }
-.q01-screen__selector-glyph { flex: 0 0 21px; display: flex; align-items: center; justify-content: center; }
-.q01-screen__selector-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.q01-screen__selector-title { color: #315e9b; font-size: 14px; font-weight: 600; line-height: 22px; }
-.q01-screen__selector-detail { color: var(--xl-caption); font-size: 11px; line-height: 17px; }
-.q01-screen__selected-path { display: block; margin-top: 8px; color: var(--xl-secondary); font-size: 12px; line-height: 18px; }
-.q01-screen__state { margin-top: 9px; }
-.q01-screen__empty-error { display: none; }
-.q01-screen__next, .q01-screen__cost { margin-top: 20px; padding: 16px; }
-.q01-screen__next-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
-.q01-screen__next-title { color: var(--xl-ink); font-size: 16px; font-weight: 600; }
-.q01-screen__next-eyebrow { color: var(--xl-caption); font-size: 11px; }
-.q01-screen__next-tile {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%; min-height: 60px; padding: 12px 15px; margin: 0;
-  border: 1px solid var(--xl-stroke); border-radius: var(--xl-radius-control);
-  background: var(--xl-field-bg); text-align: left;
-}
-.q01-screen__next-tile::after { border: 0; }
-.q01-screen__next-tile--disabled { opacity: .6; }
-.q01-screen__next-copy { display: flex; flex: 1; flex-direction: column; gap: 3px; }
-.q01-screen__next-name { color: var(--xl-blue); font-size: 14px; font-weight: 600; }
-.q01-screen__next-detail { color: var(--xl-caption); font-size: 11px; }
-.q01-screen__cost-row { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--xl-divider); font-size: 13px; }
-.q01-screen__cost-row--first { margin-top: 9px; }
-.q01-screen__cost-value { color: var(--xl-caption); }
-.q01-screen__cost-hint, .q01-screen__disclosure { display: block; color: var(--xl-caption); font-size: 11px; line-height: 17px; }
-.q01-screen__disclosure { margin: 15px 3px 0; }
-.q01-screen__disclosure-line { display: block; }
-.q01-screen__overlay { position: fixed; inset: 0; z-index: 1200; display: flex; flex-direction: column; justify-content: flex-end; background: rgba(16,31,53,.38); }
-.q01-screen__sheet { display: flex; flex-direction: column; width: 100%; max-height: 78vh; overflow: hidden; padding: 8px 16px calc(24px + env(safe-area-inset-bottom)); }
-.q01-screen__handle { width: 36px; height: 4px; flex: 0 0 4px; align-self: center; margin-bottom: 9px; background: var(--xl-stroke); border-radius: 100px; }
-.q01-screen__sheet-head { display: flex; align-items: center; justify-content: space-between; min-height: 52px; border-bottom: 1px solid var(--xl-divider); }
-.q01-screen__sheet-content { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 0 10px; }
+<style lang="scss" scoped>
+@use "@brand-ui/quotation-entry";
 </style>

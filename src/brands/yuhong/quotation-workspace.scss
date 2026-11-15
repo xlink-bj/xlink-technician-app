@@ -1,0 +1,22 @@
+/* Sticky footer composition stays in the existing quotation workspace. */
+.quotation-workspace-shell { color: var(--yh-color-text-primary); font-family: var(--yh-type-family); }
+.quotation-confirm-backdrop { display: flex; align-items: center; justify-content: center; position: fixed; inset: 0; z-index: 1100; padding: var(--yh-layout-page-inset); }
+.quotation-confirm-backdrop::before { content: ''; position: absolute; inset: 0; background: var(--yh-color-surface-overlay); opacity: var(--yh-opacity-overlay); pointer-events: none; }
+.quotation-confirm-sheet { position: relative; box-sizing: border-box; width: 100%; max-width: 640rpx; background: var(--yh-color-surface-card); border: var(--yh-border-width) solid var(--yh-color-border-divider); border-radius: var(--yh-radius-card); padding: var(--yh-space-16); }
+.quotation-confirm-title { display: block; color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); line-height: var(--yh-type-section-line); font-weight: var(--yh-type-section-weight); }
+.quotation-confirm-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--yh-space-8); margin-top: var(--yh-space-16); }
+.quotation-production-read-only { display: block; }
+.quotation-workspace-shell .action-workspace-footer-inner { display: flex; align-items: center; flex-wrap: wrap; gap: var(--yh-layout-footer-gap); }
+.quotation-workspace-footer-summary { display: flex; flex: 1; min-width: 0; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--yh-space-8); }
+.quotation-workspace-footer-summary__copy { display: flex; flex-direction: column; min-width: 0; }
+.quotation-workspace-footer-summary__amount-label,
+.quotation-workspace-footer-summary__meta { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-workspace-footer-main { display: flex; flex-wrap: wrap; gap: var(--yh-layout-footer-gap); min-width: 0; max-width: 100%; }
+.quotation-workspace-disabled-submit { min-height: var(--yh-size-primary); }
+.q01-footer { width: 100%; min-width: 0; padding: 0; }
+.q01-footer-status { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--yh-space-8); margin-bottom: var(--yh-space-8); color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.q01-footer-status__amount { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.q01-footer-actions { display: flex; align-items: stretch; gap: var(--yh-layout-footer-gap); width: 100%; }
+.q01-footer-actions .q01-footer-save { flex: 0 1 auto; min-width: var(--yh-size-touch); }
+.q01-footer-actions .q01-footer-next { flex: 1; min-width: 0; }
+.q01-footer-caution { display: block; margin-top: var(--yh-space-8); text-align: center; color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }

@@ -1,0 +1,10 @@
+/* XLink quotation appearance; selected once by the build-time brand alias. */
+@use "./quotation-content";
+@use "./quotation-q01";
+@use "./quotation-q03";
+.quotation-content {
+  --quotation-icon-add: #257cf5;
+  --quotation-icon-chevron: #9caabd;
+  --quotation-icon-search: #91a2ba;
+  --quotation-catalog-icon: #257bf1;
+}

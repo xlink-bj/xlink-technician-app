@@ -2,14 +2,21 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { expect, test } from '@playwright/test'
 
+function localOrigin(baseURL: string | undefined): string {
+  const url = new URL(baseURL!)
+  if (!['localhost', '127.0.0.1'].includes(url.hostname)) throw new Error('Quotation review requires a local App server')
+  return url.origin
+}
+
 for (const width of [375, 390, 430]) {
-  test(`Q03 material price and specification actions remain readable at ${width}`, async ({ page }) => {
+  test(`Q03 material price and specification actions remain readable at ${width}`, async ({ page, baseURL }) => {
+    const origin = localOrigin(baseURL)
     await page.setViewportSize({ width, height: width === 375 ? 667 : width === 390 ? 844 : 932 })
     const remote: string[] = [], errors: string[] = []
     page.on('pageerror', error => errors.push(error.message))
     await page.route('**/*', route => {
       const url = new URL(route.request().url())
-      if (url.origin === 'http://localhost:5174') return route.continue()
+      if (url.origin === origin) return route.continue()
       remote.push(url.origin + url.pathname); return route.abort('blockedbyclient')
     })
     await page.goto('/#/pages/index/index?devReview=1')
@@ -99,14 +106,15 @@ for (const width of [375, 390, 430]) {
 }
 
 /** Owner review: one width, actual uni-app component, source-shaped DEV Mock. */
-test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 375px', async ({ page }, info) => {
+test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 375px', async ({ page, baseURL }, info) => {
+  const origin = localOrigin(baseURL)
   await page.setViewportSize({ width: 375, height: 667 })
   const remote: string[] = []
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.route('**/*', route => {
     const url = new URL(route.request().url())
-    if (url.origin === 'http://localhost:5174') return route.continue()
+    if (url.origin === origin) return route.continue()
     remote.push(url.origin + url.pathname)
     return route.abort('blockedbyclient')
   })
@@ -207,7 +215,8 @@ test('Q03 source-priced roof materials, commercial layout and return-to-Q01 at 3
       background: card.backgroundColor,
     }
   })
-  expect(paint.radius).toBeGreaterThanOrEqual(11)
+  if (process.env.VITE_XLINK_BRAND === 'yuhong') expect(paint.radius).toBe(8)
+  else expect(paint.radius).toBeGreaterThanOrEqual(11)
   expect(paint.titleSize).toBeGreaterThanOrEqual(15)
   expect(paint.priceSize).toBeGreaterThanOrEqual(16)
   expect(paint.background).toBe('rgb(255, 255, 255)')

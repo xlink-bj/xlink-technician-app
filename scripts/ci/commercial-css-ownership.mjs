@@ -10,9 +10,9 @@ import { resolve } from 'node:path'
 const root = process.cwd()
 const read = path => readFileSync(resolve(root, path), 'utf8')
 const failures = []
-const q01 = read('src/features/work-orders/quotation/Q01CommercialBaseline.css')
-const q03 = read('src/features/work-orders/quotation/Q03CommercialBaseline.css')
-const legacy = read('src/features/work-orders/quotation/QuotationActionContent.styles.css')
+const q01 = read('src/brands/xlink/quotation-q01.scss')
+const q03 = read('src/brands/xlink/quotation-q03.scss')
+const legacy = read('src/brands/xlink/quotation-content.scss')
 const template = read('src/features/work-orders/quotation/QuotationActionContent.vue')
 const ownershipFiles = [
   'QuotationShared.css',
@@ -59,10 +59,10 @@ for (const [name, css] of [['Q01', q01], ['Q03', q03], ...owners]) {
   const duplicates = repeatedSelectors(css)
   if (duplicates.length) failures.push(`${name} final CSS has duplicate selectors: ${duplicates.join(', ')}`)
 }
-const expectedImports = [...ownershipFiles, 'QuotationActionContent.styles.css']
+const expectedImports = ownershipFiles
   .map(name => `<style src="./${name}"></style>`).join('\n')
-if (!template.includes(expectedImports)) {
-  failures.push('quotation CSS owners must stay in original cascade order')
+if (!template.includes(expectedImports) || !template.includes('@use "@brand-ui/quotation";')) {
+  failures.push('quotation structure owners must precede the build-selected brand appearance')
 }
 
 // Confirm dead layout code stays deleted while it remains absent from the real

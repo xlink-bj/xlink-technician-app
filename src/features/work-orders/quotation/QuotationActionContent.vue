@@ -1,5 +1,5 @@
 <template>
-  <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep, 'quotation-content--baseline': isCommercialBaseline }" data-testid="quotation-action-content">
+  <view class="quotation-content" :class="{ 'quotation-content--review': props.productReviewOnly, 'quotation-content--q01': isFirstRepairPartStep, 'quotation-content--baseline': isCommercialBaseline, 'quotation-content--readonly': !canEdit }" data-testid="quotation-action-content">
     <view v-if="!catalogBrowser.isOpen && !isInitialEmptyWorkbench && !isFirstRepairPartStep" class="quotation-content__heading" data-testid="quotation-workbench-heading">
       <text class="quotation-content__eyebrow">报价草稿 · 按部位组织</text>
     </view>
@@ -180,12 +180,12 @@
               <text class="quotation-content__initial-cost-title">选择产品</text>
             </view>
             <view class="quotation-content__select-tile quotation-content__select-tile--disabled" aria-disabled="true">
-              <view class="quotation-content__select-icon"><AppIcon name="order" :size="22" color="#257cf5" /></view>
+              <view class="quotation-content__select-icon"><AppIcon name="order" :size="22" color="var(--quotation-icon-add)" /></view>
               <view class="quotation-content__select-tile-copy">
                 <text class="quotation-content__select-tile-name">选择产品</text>
                 <text class="quotation-content__select-tile-help">套餐、工序、材料、机措</text>
               </view>
-              <AppIcon name="chevron-right" :size="17" color="#9caabd" />
+              <AppIcon name="chevron-right" :size="17" color="var(--quotation-icon-chevron)" />
             </view>
             <view class="quotation-content__adjustment-actions">
               <button class="quotation-content__adjustment-button quotation-content__adjustment-button--disabled" disabled>＋ 增项</button>
@@ -595,7 +595,7 @@
 
         <view class="quotation-content__catalog-main" data-testid="quotation-catalog-main">
           <view class="quotation-content__search-wrap">
-            <AppIcon class="quotation-content__search-mark" name="search" :size="19" color="#91a2ba" aria-hidden="true" />
+            <AppIcon class="quotation-content__search-mark" name="search" :size="19" color="var(--quotation-icon-search)" aria-hidden="true" />
             <input
               class="quotation-content__search-input"
               type="search"
@@ -753,7 +753,7 @@
               >
                 <view class="quotation-content__catalog-item-main">
                   <view class="quotation-content__catalog-thumbnail" :class="`quotation-content__catalog-thumbnail--${item.kind}`" aria-hidden="true">
-                    <AppIcon v-if="item.kind === 'package'" name="home" :size="32" color="#257bf1" />
+                    <AppIcon v-if="item.kind === 'package'" name="home" :size="32" color="var(--quotation-catalog-icon)" />
                     <text v-else class="quotation-content__catalog-thumbnail-mark">{{ catalogKindMark(item.kind) }}</text>
                   </view>
                   <view class="quotation-content__catalog-item-copy">
@@ -1801,6 +1801,6 @@ function configuredPackageLayerLabel(
 <style src="./QuotationEditor.css"></style>
 <style src="./QuotationCatalog.css"></style>
 <style src="./QuotationPackageConfiguration.css"></style>
-<style src="./QuotationActionContent.styles.css"></style>
-<style src="./Q01CommercialBaseline.css"></style>
-<style src="./Q03CommercialBaseline.css"></style>
+<style lang="scss">
+@use "@brand-ui/quotation";
+</style>
