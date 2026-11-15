@@ -24,7 +24,11 @@ describe('R1 MP local-only forms and repeat fixtures', () => {
     expect(baseline).toMatchObject({ total: 12 })
     vi.stubEnv('VITE_XLINK_R1_MP_UX_FIXTURES', 'true')
     const reviewList = await tryMockRead('basic/serviceAppointment/querySAWorkflowNode', { page: 1, rows: 20 })
-    expect(reviewList).toMatchObject({ total: 14 })
+    expect(reviewList).toMatchObject({ total: 15,
+      data: expect.arrayContaining([expect.objectContaining({
+        data: expect.objectContaining({ _id: 'mock-work-order-017-survey-success' }),
+      })]),
+    })
     const forms = await tryMockRead(`basic/serviceAppointment/queryById/${mockR1FormsWorkOrderId}`)
     expect(forms).toMatchObject({ data: { workflowNode: [{
       nodeDef: { nodeType: 'forms', addFormCodeId: mockR1AddFormCodeId },
