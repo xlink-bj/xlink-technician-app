@@ -202,10 +202,6 @@
               <text class="row-value customer-info-value customer-info-value--address">{{ customerServiceAddress }}</text>
             </view>
             <view class="detail-row customer-info-row">
-              <text class="row-label">工单编号</text>
-              <text class="row-value customer-info-value">{{ detail.displayNumber ? workOrderNumberDisplay(detail.displayNumber) : '—' }}</text>
-            </view>
-            <view class="detail-row customer-info-row">
               <text class="row-label">联系电话</text>
               <text class="row-value customer-info-value">{{ detail.contact?.displayMask || '—' }}</text>
             </view>
@@ -217,7 +213,7 @@
             <text>工单信息</text>
           </view>
           <view class="order-info-list">
-            <view class="detail-row order-info-row" v-if="detail.displayNumber">
+            <view class="detail-row order-info-row" v-if="detail.displayNumber && !informationRows.some(row => row.field.preset && row.field.valueKey === 'orderNum')">
               <text class="row-label">工单编号</text>
               <text class="row-value order-info-value">{{ workOrderNumberDisplay(detail.displayNumber) }}</text>
             </view>
@@ -932,6 +928,7 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 .quotation-read-intro { padding: 8rpx 0 20rpx; }
 .quotation-read-state { align-items: center; display: flex; flex-direction: column; padding: 24rpx 0; }
 .quotation-retry { margin-top: 16rpx; }
+.quotation-read-card .quotation-retry { display: flex; align-items: center; justify-content: center; min-height: var(--app-button-height-large); }
 .quotation-read-list { display: flex; flex-direction: column; gap: 16rpx; }
 .quotation-read-card { background: #f8fafd; border: 1rpx solid #e6edf6; border-radius: 16rpx; padding: 20rpx; }
 .quotation-read-heading { align-items: baseline; display: flex; flex-wrap: wrap; gap: 8rpx 16rpx; justify-content: space-between; }

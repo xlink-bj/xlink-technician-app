@@ -8,10 +8,19 @@
         </navigator>
       </view>
       <text v-if="followUpMessage" class="archive-hint">{{ followUpMessage }}</text>
-      <view v-for="activity in activities.slice(0, 2)" :key="activity.id" class="archive-entry">
-        <text class="archive-entry-title">{{ activity.title }}</text>
-        <text v-if="activity.content" class="archive-copy">{{ activity.content }}</text>
-        <text class="archive-hint">{{ activity.owner }} · {{ activity.time }}</text>
+      <view v-if="activities.length" class="follow-up-timeline" data-testid="follow-up-timeline" role="list">
+        <view v-for="(activity, index) in activities.slice(0, 2)" :key="activity.id"
+          class="follow-up-timeline__item" data-testid="follow-up-timeline-item" role="listitem">
+          <view class="follow-up-timeline__rail" aria-hidden="true">
+            <view v-if="index < Math.min(activities.length, 2) - 1" class="follow-up-timeline__line" data-testid="follow-up-timeline-line" />
+            <view class="follow-up-timeline__dot" data-testid="follow-up-timeline-dot" />
+          </view>
+          <view class="follow-up-timeline__body">
+            <text class="archive-entry-title">{{ activity.title }}</text>
+            <text v-if="activity.content" class="archive-copy">{{ activity.content }}</text>
+            <text class="archive-hint">{{ activity.owner }} · {{ activity.time }}</text>
+          </view>
+        </view>
       </view>
     </AppRecordCard>
 
@@ -98,4 +107,10 @@ function orderAmount(order: QuotationOrderBrowseItem) { return order.totalPrice 
 .archive-copy{color:var(--app-color-text-primary);font-size:var(--app-font-body)}
 .archive-hint{color:var(--app-color-text-secondary);font-size:var(--app-font-meta);margin-top:var(--app-space-xs)}
 .archive-failure{display:flex;align-items:center;justify-content:space-between;gap:var(--app-space-sm);flex-wrap:wrap}
+.follow-up-timeline{display:flex;flex-direction:column;gap:var(--app-space-md);margin-top:var(--app-space-sm)}
+.follow-up-timeline__item{display:grid;grid-template-columns:12px minmax(0,1fr);gap:var(--app-space-sm)}
+.follow-up-timeline__rail{position:relative;font-size:var(--app-font-body)}
+.follow-up-timeline__dot{position:absolute;top:calc(.8em - 3px);left:3px;width:6px;height:6px;border-radius:50%;background:var(--app-color-text-secondary)}
+.follow-up-timeline__line{position:absolute;top:.8em;left:5.5px;width:1px;height:calc(100% + var(--app-space-md));background:var(--app-color-divider)}
+.follow-up-timeline__body{min-width:0}
 </style>
