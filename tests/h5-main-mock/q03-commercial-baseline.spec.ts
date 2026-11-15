@@ -60,6 +60,12 @@ for (const width of [375, 390, 430]) {
     await quantity.fill('2')
     await quantity.blur()
     await expect(quantity).toHaveValue('2')
+    const inputGeometry = await quantity.evaluate(element => ({
+      height: element.getBoundingClientRect().height,
+      fontSize: Number.parseFloat(getComputedStyle(element).fontSize),
+    }))
+    expect(inputGeometry.height, 'SKU quantity digits must have enough visible height')
+      .toBeGreaterThanOrEqual(inputGeometry.fontSize * 1.3)
     for (const id of ['quotation-sku-preview-back', 'quotation-sku-preview-return']) {
       const button = page.getByTestId(id)
       await expect(button).toHaveAttribute('aria-label', '返回材料目录')

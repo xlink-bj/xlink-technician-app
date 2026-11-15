@@ -877,7 +877,7 @@
             <view v-if="catalogBrowser.materialSkuMatch.state === 'matched'"
               class="quotation-content__line-controls" data-testid="quotation-sku-local-quantity">
               <text class="quotation-content__quantity-label">该 SKU 数量（件）</text>
-              <input class="quotation-content__quantity" type="number"
+              <input class="quotation-content__quantity app-input" type="number"
                 :value="skuQuantityText" :disabled="!canEdit"
                 data-testid="quotation-sku-quantity-input"
                 @input="onSkuQuantityInput($event)" />
