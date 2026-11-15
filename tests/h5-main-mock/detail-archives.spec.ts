@@ -100,7 +100,7 @@ test('actual detail archive cards preserve bounded read outcomes and return cont
   expect(external).toEqual([])
 })
 
-for (const width of [375, 390, 430]) test(`follow-up summary timeline follows the actual records and long content at ${width}`, async ({ page }) => {
+for (const width of [375, 390, 430]) test(`actual detail archive follow-up summary timeline follows the actual records and long content at ${width}`, async ({ page }) => {
   await page.setViewportSize({ width, height: 932 })
   const external: string[] = [], errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
