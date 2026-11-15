@@ -2,7 +2,7 @@
   <view id="order-extfield-editor" data-testid="order-extfield-editor" :data-revision="draft?.revision" :data-draft-status="localDraftStatus">
     <text class="order-fields-title">{{ stage === 'submitOrder' ? '下单资料' : '报价资料' }}</text>
     <AppLoadingState v-if="loading" variant="inline" label="正在读取报价资料" />
-    <AppStatus v-else-if="unavailable" message="报价资料暂不可用，原草稿已保留。请返回后重试。" tone="warning" quiet />
+    <AppStatus v-else-if="unavailable" message="报价资料暂不可用，原草稿已保留。请返回后重试。" tone="danger" quiet />
     <template v-else-if="draft && evaluated">
       <AppField v-for="field in evaluated.fields" :key="field.fieldId" :label="draft.labels[field.fieldId]"
         :required="field.required" :error="evaluated.errors[field.fieldId] ?? ''"

@@ -1,6 +1,7 @@
 <template>
   <ActionWorkspaceShell
     commercial-quotation
+    :h5-navigation-fit="true"
     :compact-quote-entry="firstStepActive"
     class="quotation-workspace-shell"
     :class="{ 'quotation-workspace-shell--review': productReviewOnly }"

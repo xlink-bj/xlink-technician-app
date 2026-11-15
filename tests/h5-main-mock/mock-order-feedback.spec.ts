@@ -2,13 +2,13 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 
 const brand = process.env.VITE_XLINK_BRAND || 'xlink'
-for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{width:430,fault:true}]) test(`${brand} existing Mock quote to Order flow at ${width} ${fault?'ack-loss':'normal'}`, async ({ page, baseURL }) => {
+for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{width:430,fault:true},{width:375,fault:true}]) test(`${brand} existing Mock quote to Order flow at ${width} ${fault?'ack-loss':'normal'}`, async ({ page, baseURL }) => {
   await page.setViewportSize({ width, height: width === 430 ? 932 : 667 })
   const remote: string[] = [], errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
   await page.route('**/*', route => new URL(route.request().url()).origin === baseURL
     ? route.continue() : (remote.push(route.request().method()), route.abort('blockedbyclient')))
-  const dir = `.review/mock-order-feedback/${brand}/${fault?'engineering-ack-loss':'commercial'}/${width}`
+  const dir = `.review/quotation-footer-read-error/${brand}/${fault?'engineering-ack-loss':'commercial'}/${width}`
   await mkdir(dir, { recursive: true })
   const geometry:unknown[]=[]
   const shot = async (name: string, targetId?: string, engineering=false) => {
@@ -18,11 +18,21 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
       const box=(await target.boundingBox())!, footer=(await page.locator('.action-workspace-footer').boundingBox())!
       expect(box.y+box.height).toBeLessThanOrEqual(footer.y+1)
     }
-    const shotDir=engineering ? `.review/mock-order-feedback/${brand}/engineering-support/${width}` : dir
+    const shotDir=engineering ? `.review/quotation-footer-read-error/${brand}/engineering-support/${width}` : dir
     await mkdir(shotDir,{recursive:true})
     await expect(page.locator('.app-button--pressed,.app-button__loading-slot--active')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    geometry.push(await page.evaluate(name=>{const rect=(selector:string)=>{const e=document.querySelector(selector);if(!e)return null;const r=e.getBoundingClientRect();return {y:r.y,height:r.height,bottom:r.bottom}};const warning=document.querySelector('#order-extfield-editor .app-status--warning .app-status__message');return {name,warningColor:warning?getComputedStyle(warning).color:null,scrollY,innerHeight,header:rect('.uni-page-head'),shell:rect('.quotation-workspace-shell'),footer:rect('.action-workspace-footer')}},name))
+    geometry.push(await page.evaluate(name=>{const rect=(selector:string)=>{const e=document.querySelector(selector);if(!e)return null;const r=e.getBoundingClientRect();return {y:r.y,height:r.height,bottom:r.bottom}};const failure=document.querySelector('#order-extfield-editor .app-status--danger .app-status__message');return {name,failureColor:failure?getComputedStyle(failure).color:null,scrollY,innerHeight,header:rect('.uni-page-head'),shell:rect('.quotation-workspace-shell'),footer:rect('.action-workspace-footer')}},name))
+    if(await page.locator('.quotation-workspace-shell').count()){
+      const layout=await page.evaluate(()=>{
+        const footer=document.querySelector('.action-workspace-footer')!
+        const last=document.querySelector('.quotation-workspace-handoff__hint')
+        return {scrollY,innerHeight,bottom:footer.getBoundingClientRect().bottom,lastBottom:last?.getBoundingClientRect().bottom}
+      })
+      expect(layout.scrollY).toBe(0)
+      expect(layout.bottom).toBeLessThanOrEqual(layout.innerHeight+1)
+      if(layout.lastBottom!==undefined)expect(layout.lastBottom).toBeLessThanOrEqual(layout.innerHeight+1)
+    }
     await page.screenshot({ path: `${shotDir}/${name}.png`, animations: 'disabled', caret: 'hide' })
   }
   // Existing DEV-only identity-scoped journey, reached by actual clicks.
@@ -143,7 +153,9 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
     await page.getByTestId('order-extfield-editor').scrollIntoViewIfNeeded()
     await shot('10-fields-read-failure')
     await expect(page.locator('[data-testid="a-stage-order-convert"][aria-disabled="false"],[data-testid="a-stage-order-create"][aria-disabled="false"]')).toHaveCount(0)
+    if(brand==='yuhong')await expect(page.locator('#order-extfield-editor .app-status--danger .app-status__message')).toHaveCSS('color','rgb(180, 35, 24)')
+    else await expect(page.locator('#order-extfield-editor .app-status--danger')).toBeVisible()
   }
-  await writeFile(`test-results/mock-order-feedback/${brand}-${width}-${fault?'fault':'normal'}-geometry.json`,JSON.stringify(geometry,null,2))
+  await writeFile(`test-results/quotation-footer-read-error/${brand}-${width}-${fault?'fault':'normal'}-geometry.json`,JSON.stringify(geometry,null,2))
   expect(remote).toEqual([]); expect(errors).toEqual([])
 })
