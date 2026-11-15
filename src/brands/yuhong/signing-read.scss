@@ -29,6 +29,11 @@
   display: block; font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight);
   line-height: var(--yh-type-title-line); color: var(--yh-color-text-primary);
 }
+.signing-read-page .signing-read-stage--error .signing-read-phase,
+.signing-read-page .signing-read-stage--error .signing-read-progress-title,
+.signing-read-page .signing-read-stage--error .signing-read-next .signing-read-body,
+.signing-read-page .signing-read-error,
+.signing-read-page .signing-read-contract-state.signing-read-error { color: var(--yh-color-status-error-fg); }
 .signing-read-page .signing-read-next { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--yh-space-8) var(--yh-space-16); padding-top: var(--yh-space-12); border-top: var(--yh-border-width) solid var(--yh-border-subtle); }
 .signing-read-page .signing-read-next-label { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
 .signing-read-page .signing-read-body { display: block; font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }

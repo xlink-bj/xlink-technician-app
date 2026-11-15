@@ -10,7 +10,7 @@
       class="signing-read-section xl-craft__surface xl-craft__surface--flat"
       data-testid="signing-order-read-blocked"
     >
-      <text>当前订单暂无法完成签约前只读核验。请从当前账号可见工单中的正式订单重新进入。</text>
+      <text :class="{ 'signing-read-error': review.snapshot.state === 'failed_retryable' }">当前订单暂无法完成签约前只读核验。请从当前账号可见工单中的正式订单重新进入。</text>
       <AppButton
         v-if="session.status === 'authenticated' && review.snapshot.state === 'failed_retryable'"
         block variant="secondary" data-testid="signing-order-read-retry"
@@ -20,7 +20,7 @@
         @tap="returnToWorkOrder">返回工单</AppButton>
     </AppRecordCard>
     <template v-else>
-      <view class="signing-read-stage xl-craft__surface" data-testid="signing-review-progress">
+      <view class="signing-read-stage xl-craft__surface" :class="{ 'signing-read-stage--error': signingFeedbackError }" data-testid="signing-review-progress">
         <view class="xl-craft__progress-labels">
           <text class="xl-craft__caption">当前签约状态</text>
           <text v-if="signingStepIndex > 0" class="signing-read-stage-index">步骤 {{ signingStepIndex }}/3</text>
@@ -100,7 +100,7 @@
           <view v-for="contract in review.contractSnapshot.items" :key="contract.id" class="signing-read-contract-item"
             data-testid="signing-contract-matched">
             <text class="signing-read-contract-number">{{ contract.displayNumber || '合同编号未返回' }}</text>
-            <text class="signing-read-contract-state">{{ contractStatusDisplay(contract.contractStatus) }}</text>
+            <text class="signing-read-contract-state" :class="{ 'signing-read-error': contract.state === 1 && contract.contractStatus === '-3' }">{{ contractStatusDisplay(contract.contractStatus) }}</text>
             <text v-if="contract.signedDate" class="signing-read-meta xl-craft__meta">记录中的签约日期：{{ contract.signedDate }}</text>
           </view>
         </template>
@@ -200,6 +200,13 @@ const signingStage = computed(() => reconcileR1SigningRead(
   review.snapshot.state === 'ready' ? review.snapshot.review?.order : null,
   review.contractSnapshot,
 ))
+// Presentation only: failed reads and a verified exception are distinct from
+// unverified, unknown, processing or conflicting records.
+const signingFeedbackError = computed(() =>
+  review.contractSnapshot.state === 'failed_retryable'
+  || review.contractSnapshot.state === 'failed_terminal'
+  || signingStage.value.stage === 'signing_exception',
+)
 const signingProgress = computed(() => signingReviewProgress({
   orderVerified: review.snapshot.state === 'ready',
   contractState: review.contractSnapshot.state,
