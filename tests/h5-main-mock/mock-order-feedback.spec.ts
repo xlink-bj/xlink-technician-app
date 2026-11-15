@@ -75,6 +75,18 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
   await page.getByTestId('order-field-mock-order-number').locator('input').fill('0')
   await expect(editor).toHaveAttribute('data-draft-status', 'saved_local')
   await expect(page.getByTestId('a-stage-order-create')).toHaveAttribute('aria-disabled','false')
+  if(brand==='yuhong'){
+    const layout=await page.locator('.quotation-content__selection .quotation-content__line-heading').evaluateAll(nodes=>nodes.map(el=>{
+      const title=el.querySelector('.quotation-content__line-title')!,subtotal=el.querySelector('.quotation-content__line-money')!
+      const box=title.getBoundingClientRect()
+      return {titleHeight:box.height,lineHeight:parseFloat(getComputedStyle(title).lineHeight),titleBottom:box.bottom,subtotalTop:subtotal.getBoundingClientRect().top}
+    }))
+    expect(layout).toHaveLength(2)
+    for(const line of layout){
+      expect(line.titleHeight).toBeLessThanOrEqual(line.lineHeight*2+1)
+      expect(line.subtotalTop).toBeGreaterThanOrEqual(line.titleBottom-1)
+    }
+  }
   await page.getByTestId('a-stage-order-create').scrollIntoViewIfNeeded()
   await shot('02-quote-fields-filled')
   await page.getByTestId('a-stage-order-create').click()

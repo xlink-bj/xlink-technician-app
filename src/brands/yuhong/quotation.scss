@@ -69,6 +69,13 @@
 .quotation-content__context-input--multiline { min-height: 120px; width: 100%; }
 .quotation-content__context-input--multiline :deep(.uni-textarea-wrapper) { min-height: 120px; }
 .quotation-content__quantity { min-height: var(--yh-size-touch); border-radius: var(--yh-radius-control); }
+.quotation-content__line-heading { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: var(--yh-space-8); }
+.quotation-content__line-title-wrap { display: flex; flex-direction: column; gap: var(--yh-space-4); min-width: 0; }
+.quotation-content__line-title { display: block; min-width: 0; overflow-wrap: anywhere; }
+.quotation-content__line-unit-price { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-content__line-money { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--yh-space-8); min-width: 0; }
+.quotation-content__line-money-label { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-content__line-money-value { color: var(--yh-color-text-primary); font-size: var(--yh-type-amount-size); line-height: var(--yh-type-amount-line); font-weight: var(--yh-type-amount-weight); overflow-wrap: anywhere; }
 .quotation-content--readonly .quotation-content__context-input,
 .quotation-content--readonly .quotation-content__quantity { background: var(--yh-color-field-disabled-bg); }
 

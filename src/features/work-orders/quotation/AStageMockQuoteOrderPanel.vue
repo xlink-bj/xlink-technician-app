@@ -89,7 +89,8 @@ const fieldStage = ref<'placeOrder' | 'submitOrder'>('placeOrder')
 const fieldReady = ref(true)
 const fieldVersion = ref(0)
 function onFieldsChange(ready: boolean): void { fieldReady.value = ready; fieldVersion.value += 1 }
-const canSubmit = computed(() => Boolean(fieldReady.value && engine.value?.state === 'ready' && engine.value.payload
+const canSubmit = computed(() => Boolean(fieldReady.value && !Object.values(composition.quantityErrorBySelection).some(Boolean)
+  && engine.value?.state === 'ready' && engine.value.payload
   && engine.value.payload.totalPrice > 0 && composition.draft
   && engine.value.draftVersion === composition.draft.draftVersion
   && (status.value === 'ready' || status.value === 'quote_created')))

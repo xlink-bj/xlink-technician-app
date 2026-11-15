@@ -1,3 +1,7 @@
+/* XLink keeps its legacy line heading; Yuhong owns its price-aware layout. */
+.quotation-content__line-heading { align-items: flex-start; display: flex; gap: var(--app-space-sm); justify-content: space-between; }
+.quotation-content__line-title-wrap { align-items: flex-start; display: flex; flex: 1; gap: var(--app-space-sm); min-width: 0; }
+.quotation-content__line-title { color: var(--app-color-text-primary); flex: 1; font-size: var(--app-font-body); font-weight: 700; line-height: 1.4; min-width: 0; overflow-wrap: anywhere; }
 /* Legacy compact catalog actions belong to XLink; Yuhong uses its own flexible sizing. */
 .quotation-content__catalog-item .app-button { flex-shrink: 0; max-width: 88px; min-height: 44px; padding-left: var(--app-space-xs); padding-right: var(--app-space-xs); }
 /* G4-F visual master v1: quote-first hierarchy, truthful data, and compact controls. */
