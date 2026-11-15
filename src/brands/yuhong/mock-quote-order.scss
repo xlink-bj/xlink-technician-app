@@ -1,0 +1,9 @@
+/* This confirmation card owns composition and typography; AppButton owns actions. */
+.mock-quote-order { border-radius: var(--yh-radius-card); margin: var(--yh-space-16) 0; padding: var(--yh-space-16); color: var(--yh-color-text-primary); }
+.mock-quote-order__title { display: block; font-size: var(--yh-type-section-size); line-height: var(--yh-type-section-line); font-weight: var(--yh-type-section-weight); }
+.mock-quote-order__amount-label, .mock-quote-order__warning { display: block; margin-top: var(--yh-space-4); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); color: var(--yh-color-text-secondary); }
+.mock-quote-order__summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: var(--yh-space-12); padding: var(--yh-space-16) 0; }
+.mock-quote-order__amount { display: block; margin-top: var(--yh-space-4); color: var(--yh-color-text-primary); font-size: var(--yh-type-amount-size); line-height: var(--yh-type-amount-line); font-weight: var(--yh-type-amount-weight); overflow-wrap: anywhere; }
+.mock-quote-order__actions, .mock-quote-order__feedback, .mock-quote-order__readback { display: block; margin-top: var(--yh-space-12); }
+.mock-quote-order__confirm { display: flex; flex-wrap: wrap; align-items: center; gap: var(--yh-space-12); }
+.mock-quote-order__feedback { font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); color: var(--yh-color-text-secondary); }
