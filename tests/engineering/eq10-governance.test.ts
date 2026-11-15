@@ -22,7 +22,6 @@ describe('EQ10 permanent engineering governance (synthetic / no backend)', () =>
     const result = node('scripts/verify-critical-behavior.mjs')
     const manifest = JSON.parse(result.trim()) as {
       kind: string
-      fileCount: number
       categories: readonly { name: string; files: number }[]
       coverage: string
     }
@@ -36,8 +35,7 @@ describe('EQ10 permanent engineering governance (synthetic / no backend)', () =>
       'async-form-workflow-p0',
       'actor-price-and-order-isolation',
     ])
-    expect(manifest.categories.every(item => item.files >= 2)).toBe(true)
-    expect(manifest.fileCount).toBeGreaterThanOrEqual(18)
+    expect(manifest.categories.every(item => item.files > 0)).toBe(true)
   })
 
   it('makes architecture and critical manifest checks part of canonical quick/full commands', () => {

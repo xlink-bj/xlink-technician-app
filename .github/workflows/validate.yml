@@ -26,6 +26,8 @@ jobs:
     steps:
       - name: Check out PR source
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Install pnpm
         uses: pnpm/action-setup@v4
       - name: Set up Node.js
@@ -44,7 +46,7 @@ jobs:
           pnpm run check:critical
           pnpm run check:ui-governance
           pnpm run typecheck
-      - name: Fast actor, read-only, quotation and changed Vitest tests
+      - name: Critical baseline and affected Vitest tests
         id: changed_tests
         env:
           VITE_XLINK_ENVIRONMENT: test
@@ -52,24 +54,78 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch --no-tags --depth=1 origin "$BASE_SHA"
-          ci_changed_files=$(git diff --name-only "$BASE_SHA" HEAD -- .github/workflows)
-          if [[ -n "$ci_changed_files" ]]; then
-            echo "ci_workflow_changed=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ci_workflow_changed=false" >> "$GITHUB_OUTPUT"
-          fi
-          mapfile -t changed_tests < <(git diff --name-only "$BASE_SHA" HEAD -- ':(glob)tests/**/*.test.ts')
-          printf 'Changed Vitest test files: %s\n' "${#changed_tests[@]}"
-          pnpm exec vitest run \
-            tests/g4f/production-read-only.test.ts \
-            tests/g4f/quotation-order-read.test.ts \
-            tests/g4f/quotation-order-reconstruction.test.ts \
-            tests/g4f/quotation-order-signing-read-boundary.test.ts \
-            tests/engineering/r1-action-workspace-foundation.test.ts \
-            tests/engineering/eq07-command-state-consistency.test.ts \
-            tests/g4d/action-workspace.test.ts \
-            "${changed_tests[@]}"
+          git fetch --no-tags origin "$BASE_SHA"
+          node --input-type=module <<'JS'
+          import { execFileSync, spawnSync } from 'node:child_process'
+          import { appendFileSync, existsSync, readFileSync } from 'node:fs'
+          import { relative, resolve } from 'node:path'
+          import { createVitest } from 'vitest/node'
+
+          const base = process.env.BASE_SHA
+          if (!/^[0-9a-f]{40}$/.test(base)) throw new Error('Invalid PR base SHA')
+          const git = (...args) => execFileSync('git', args, { encoding: 'utf8' })
+          git('cat-file', '-e', `${base}^{commit}`)
+          const diff = (...args) => git('diff', '--name-only', '-z', ...args, base, 'HEAD').split('\0').filter(Boolean)
+          const changed = diff('--no-renames')
+          const current = new Set(diff('--diff-filter=ACMR', '--find-renames'))
+          appendFileSync(process.env.GITHUB_OUTPUT, `ci_workflow_changed=${changed.some(p => p.startsWith('.github/workflows/'))}\n`)
+          const baseline = [
+            'tests/g4f/production-read-only.test.ts',
+            'tests/g4f/quotation-order-read.test.ts',
+            'tests/g4f/quotation-order-reconstruction.test.ts',
+            'tests/g4f/quotation-order-signing-read-boundary.test.ts',
+            'tests/engineering/r1-action-workspace-foundation.test.ts',
+            'tests/engineering/eq07-command-state-consistency.test.ts',
+            'tests/g4d/action-workspace.test.ts',
+          ]
+          for (const path of baseline) if (!existsSync(path)) throw new Error(`Missing critical baseline: ${path}`)
+          const isTest = p => p.startsWith('tests/') && p.endsWith('.test.ts')
+          const changedTests = [...current].filter(p => isTest(p) && existsSync(p))
+          console.log('Existing added/modified/copied/renamed tests:', changedTests)
+          console.log('Removed test paths (not executed):', changed.filter(p => isTest(p) && !existsSync(p)))
+          const selected = new Set([...baseline, ...changedTests])
+          const sources = []
+          let fullReason = ''
+          for (const path of changed) {
+            if (isTest(path) || path.endsWith('.md')) continue
+            if (path.startsWith('src/') && path.endsWith('.ts') && current.has(path) && existsSync(path)) sources.push(path)
+            else fullReason ||= `configuration, fixture, deleted source or untracked dependency kind: ${path}`
+          }
+          // Vitest tracks static imports. Filesystem reads and computed/module-loader
+          // dependencies cannot be treated as complete affected-test coverage.
+          const opaque = /['"](?:node:)?fs(?:\/promises)?['"]|\b(?:readFileSync|readFile|readdirSync|readdir|require|createRequire)\s*\(|\bimport\s*\(|import\.meta\.glob/
+          if (!fullReason && sources.length) {
+            const ctx = await createVitest('test', { watch: false, run: true })
+            try {
+              for (const source of sources) {
+                ctx.config.related = [resolve(source)]
+                const related = await ctx.listFiles([])
+                console.log(`Vitest related tests for ${source}:`, related.map(s => relative(process.cwd(), s.moduleId)))
+                if (!related.length) { fullReason = `no related tests found: ${source}`; break }
+                for (const spec of related) selected.add(relative(process.cwd(), spec.moduleId))
+              }
+              // A source-string test outside the import graph can still protect this
+              // change. Do not silently omit it just because Vitest cannot link it.
+              if (!fullReason) {
+                ctx.config.related = undefined
+                for (const spec of await ctx.listFiles([])) {
+                  const dependencies = await ctx.getTestDependencies(spec)
+                  if ([spec.moduleId, ...dependencies].some(p => opaque.test(readFileSync(p, 'utf8')))) {
+                    fullReason = `unit suite has an opaque dependency: ${relative(process.cwd(), spec.moduleId)}`
+                    break
+                  }
+                }
+              }
+            } finally { await ctx.close() }
+          }
+          if (process.exitCode) throw new Error('Vitest selection reported an error')
+          // Empty/no-unit-test changes still execute the baseline; they are never
+          // presented as proof that a removed test or an untested source passed.
+          console.log(fullReason ? `Full unit suite: ${fullReason}` : `Selected unit suites (${selected.size}):`, fullReason ? '' : [...selected])
+          const result = spawnSync('pnpm', ['exec', 'vitest', 'run', ...(fullReason ? [] : selected)], { stdio: 'inherit' })
+          if (result.error) throw result.error
+          process.exitCode = result.status ?? 1
+          JS
 
 
   verify:

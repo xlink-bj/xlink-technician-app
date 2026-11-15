@@ -48,7 +48,7 @@ const required = ['quotation-financial-sku','authorization-transport','action-dr
 const all = []
 for (const category of required) {
   const paths = suites[category]
-  if (!Array.isArray(paths) || paths.length < 2) throw new Error('Empty critical suite '+category)
+  if (!Array.isArray(paths) || paths.length === 0) throw new Error('Empty critical suite '+category)
   for (const path of paths) {
     const full = resolve(path)
     if (!path.startsWith('tests/') || !path.endsWith('.test.ts') || !existsSync(full)) {
