@@ -319,7 +319,7 @@ import R1FormActionContentHost from '@features/work-orders/R1FormActionContentHo
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
 import SurveyLeakageCauseExperience from '@features/work-orders/components/SurveyLeakageCauseExperience.vue'
-import SurveyCompleteConfirmation from '@features/work-orders/components/SurveyCompleteConfirmation.vue'
+import SurveyCompleteConfirmation, { useSurveyCompleteConfirmation } from '@features/work-orders/components/SurveyCompleteConfirmation.vue'
 import MockJourneyContextPanel from '@features/work-orders/components/MockJourneyContextPanel.vue'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -701,24 +701,14 @@ async function continueToConfirmation(): Promise<void> {
   if (result.state !== 'succeeded') isNavigating.value = false
 }
 
-const surveyConfirmOpen = ref(false)
-function closeSurveyConfirmation(): boolean {
-  if (!surveyConfirmOpen.value) return false
-  surveyConfirmOpen.value = false
-  return true
-}
+const { open: surveyConfirmOpen, close: closeSurveyConfirmation, confirm: confirmSurveyCompletion } =
+  useSurveyCompleteConfirmation(() => inputsValid.value && workspace.canSubmit && workspace.lifecycle !== 'submitting', submitWorkspace)
 function requestSurveyCompletion(): void {
   if (workspace.descriptor?.formPurpose === 'survey') {
     if (inputsValid.value && workspace.canSubmit && workspace.lifecycle !== 'submitting') surveyConfirmOpen.value = true
     return
   }
   void submitWorkspace()
-}
-
-async function confirmSurveyCompletion(): Promise<void> {
-  if (!inputsValid.value || !surveyConfirmOpen.value || !workspace.canSubmit || workspace.lifecycle === 'submitting') return
-  surveyConfirmOpen.value = false
-  await submitWorkspace()
 }
 
 async function submitWorkspace(): Promise<void> {

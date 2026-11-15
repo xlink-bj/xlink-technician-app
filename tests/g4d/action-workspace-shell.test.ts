@@ -116,7 +116,10 @@ describe('Action Workspace Shell structural contract', () => {
     expect(time).toContain(':disabled="!selectedOption || isNavigating"')
     expect(time).toContain('const result = await workspace.openConfirmation()')
     expect(confirmation).toContain(':transitioning="isNavigating"')
-    expect(confirmation).toContain('const result = await workspace.backToAppointmentWorkspace()')
+    expect(confirmation).toContain('const result = await workspace.backToAppointmentWorkspace(hasWorkspaceBack.value)')
+    expect(confirmation).toContain('appointmentWorkspaceHasBack(options,')
+    expect(confirmation).toContain('if (isNavigating.value) return')
+    expect(confirmation).toContain('if (result.state !== \'succeeded\') isNavigating.value = false')
   })
 
   it('provides a deterministic long-content fixture for independent shell checks', () => {
