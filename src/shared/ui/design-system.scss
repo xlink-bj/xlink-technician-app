@@ -68,6 +68,7 @@ page {
   --app-radius-card: 24rpx;
   --app-radius-large: 28rpx;
 
+  --app-font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", "Microsoft YaHei", sans-serif;
   --app-font-major-title: 34rpx;
   --app-font-section-title: 30rpx;
   --app-font-field-label: 22rpx;
@@ -166,6 +167,12 @@ page {
   --app-journey-title-size: 20px;
   --app-journey-tap-height: 48px;
 
+}
+
+/* Inherit the existing native/system stack on every business page. Keep
+   component-owned size, weight and line-height roles unchanged. */
+page {
+  font-family: var(--app-font-family);
 }
 
 /* Surface / card grammar */

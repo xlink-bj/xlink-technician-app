@@ -6,7 +6,7 @@
  */
 .app-visual-scope--craft {
   color: var(--app-craft-ink);
-  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: var(--app-font-family);
   -webkit-font-smoothing: antialiased;
 }
 .app-visual-scope--craft .app-field { margin-top: 0; }
