@@ -57,18 +57,24 @@ jobs:
           git fetch --no-tags origin "$BASE_SHA"
           node --input-type=module <<'JS'
           import { execFileSync, spawnSync } from 'node:child_process'
-          import { appendFileSync, existsSync, readFileSync } from 'node:fs'
-          import { relative, resolve } from 'node:path'
-          import { createVitest } from 'vitest/node'
+          import { appendFileSync, existsSync } from 'node:fs'
 
           const base = process.env.BASE_SHA
           if (!/^[0-9a-f]{40}$/.test(base)) throw new Error('Invalid PR base SHA')
           const git = (...args) => execFileSync('git', args, { encoding: 'utf8' })
           git('cat-file', '-e', `${base}^{commit}`)
-          const diff = (...args) => git('diff', '--name-only', '-z', ...args, base, 'HEAD').split('\0').filter(Boolean)
-          const changed = diff('--no-renames')
-          const current = new Set(diff('--diff-filter=ACMR', '--find-renames'))
-          appendFileSync(process.env.GITHUB_OUTPUT, `ci_workflow_changed=${changed.some(p => p.startsWith('.github/workflows/'))}\n`)
+          const diff = (...args) => git('diff', '-z', ...args, base, 'HEAD').split('\0').filter(Boolean)
+          const current = new Set(diff('--name-only', '--diff-filter=ACMR', '--find-renames', '--find-copies'))
+          const tokens = diff('--name-status', '--find-renames', '--find-copies')
+          const changes = []
+          for (let i = 0; i < tokens.length;) {
+            const status = tokens[i++]
+            const previous = /^[RC]/.test(status) ? tokens[i++] : undefined
+            const path = tokens[i++]
+            if (!path) throw new Error('Incomplete Git change record')
+            changes.push({ status, previous, path })
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `ci_workflow_changed=${changes.some(c => [c.previous, c.path].some(p => p?.startsWith('.github/workflows/')))}\n`)
           const baseline = [
             'tests/g4f/production-read-only.test.ts',
             'tests/g4f/quotation-order-read.test.ts',
@@ -80,48 +86,23 @@ jobs:
           ]
           for (const path of baseline) if (!existsSync(path)) throw new Error(`Missing critical baseline: ${path}`)
           const isTest = p => p.startsWith('tests/') && p.endsWith('.test.ts')
+          const kind = p => isTest(p) ? 'test'
+            : p.endsWith('.md') && (p.startsWith('docs/') || !p.includes('/') || p === 'scripts/README.md') ? 'documentation' : 'other'
           const changedTests = [...current].filter(p => isTest(p) && existsSync(p))
+          console.log('Git changes:', changes)
           console.log('Existing added/modified/copied/renamed tests:', changedTests)
-          console.log('Removed test paths (not executed):', changed.filter(p => isTest(p) && !existsSync(p)))
           const selected = new Set([...baseline, ...changedTests])
-          const sources = []
           let fullReason = ''
-          for (const path of changed) {
-            if (isTest(path) || path.endsWith('.md')) continue
-            if (path.startsWith('src/') && path.endsWith('.ts') && current.has(path) && existsSync(path)) sources.push(path)
-            else fullReason ||= `configuration, fixture, deleted source or untracked dependency kind: ${path}`
+          for (const { status, previous, path } of changes) {
+            if (previous && kind(previous) !== kind(path)) {
+              fullReason ||= `cross-category rename/copy: ${previous} -> ${path}`
+            } else if (kind(path) === 'documentation') continue
+            else if (/^[ACMR]/.test(status) && kind(path) === 'test' && current.has(path) && existsSync(path)) continue
+            else fullReason ||= `source, configuration, fixture, deleted test or unknown change: ${path}`
           }
-          // Vitest tracks static imports. Filesystem reads and computed/module-loader
-          // dependencies cannot be treated as complete affected-test coverage.
-          const opaque = /['"](?:node:)?fs(?:\/promises)?['"]|\b(?:readFileSync|readFile|readdirSync|readdir|require|createRequire)\s*\(|\bimport\s*\(|import\.meta\.glob/
-          if (!fullReason && sources.length) {
-            const ctx = await createVitest('test', { watch: false, run: true })
-            try {
-              for (const source of sources) {
-                ctx.config.related = [resolve(source)]
-                const related = await ctx.listFiles([])
-                console.log(`Vitest related tests for ${source}:`, related.map(s => relative(process.cwd(), s.moduleId)))
-                if (!related.length) { fullReason = `no related tests found: ${source}`; break }
-                for (const spec of related) selected.add(relative(process.cwd(), spec.moduleId))
-              }
-              // A source-string test outside the import graph can still protect this
-              // change. Do not silently omit it just because Vitest cannot link it.
-              if (!fullReason) {
-                ctx.config.related = undefined
-                for (const spec of await ctx.listFiles([])) {
-                  const dependencies = await ctx.getTestDependencies(spec)
-                  if ([spec.moduleId, ...dependencies].some(p => opaque.test(readFileSync(p, 'utf8')))) {
-                    fullReason = `unit suite has an opaque dependency: ${relative(process.cwd(), spec.moduleId)}`
-                    break
-                  }
-                }
-              }
-            } finally { await ctx.close() }
-          }
-          if (process.exitCode) throw new Error('Vitest selection reported an error')
-          // Empty/no-unit-test changes still execute the baseline; they are never
-          // presented as proof that a removed test or an untested source passed.
-          console.log(fullReason ? `Full unit suite: ${fullReason}` : `Selected unit suites (${selected.size}):`, fullReason ? '' : [...selected])
+          // Empty/doc-only changes run the baseline; deletion and unknown scope
+          // run all unit tests. Never pass removed/old rename paths to Vitest.
+          console.log(fullReason ? `Full unit suite: ${fullReason}` : `Baseline and surviving changed tests (${selected.size}):`, fullReason ? '' : [...selected])
           const result = spawnSync('pnpm', ['exec', 'vitest', 'run', ...(fullReason ? [] : selected)], { stdio: 'inherit' })
           if (result.error) throw result.error
           process.exitCode = result.status ?? 1

@@ -35,11 +35,10 @@ whether it is needed to regenerate a tracked contract or historical evidence.
 Do not interpret an archival document's snapshot list as proof of an active
 dependency, nor silence a release gate by deleting its checker.
 
-PR quick CI always runs its existing actor/read-only/quotation/draft/async baseline.
-Surviving added, modified, copied and renamed unit tests are included; deleted
-paths are logged but never passed to Vitest. TypeScript source changes use the
-locked Vitest dependency graph. Missing related tests, filesystem/dynamic imports
-anywhere in the unit graph, Vue/other source kinds, fixtures, scripts and
-configuration changes conservatively run all unit tests. Documentation-only or empty unit selections run the baseline,
-not a claimed affected-test pass. Selection/collection/test failures fail CI.
+PR quick CI has two paths. Documentation-only and surviving unit-test changes
+run the existing actor/read-only/quotation/draft/async baseline plus added,
+modified, copied and renamed tests. Git paths are NUL-delimited; old rename
+paths are never passed to Vitest. Source, configuration, script, fixture, test
+deletion, cross-category rename/copy and unknown changes run all unit tests.
+An empty diff still runs the baseline. Git/selection/test failures fail CI.
 Critical behavior categories must remain nonempty; there is no file-count quota.
