@@ -4,7 +4,7 @@ import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-form-workspace-entry'
 const brand = selectBrand(process.env.VITE_XLINK_BRAND).id
 const phase = process.env.NODE_REVIEW_PHASE === 'before' ? 'before' : 'after'
-const base = phase === 'before' ? `.review/存档/雨虹动态节点接入前/${brand}` : `.review/雨虹完整业务流程-20261115/02-动态表单与节点操作/${brand}`
+const base = process.env.NODE_REVIEW_DIR ? `${process.env.NODE_REVIEW_DIR}/${brand}` : phase === 'before' ? `.review/存档/雨虹动态节点接入前/${brand}` : `.review/雨虹完整业务流程-20261115/02-动态表单与节点操作/${brand}`
 async function open(page: Page, kind: 'forms' | 'repeat') {
   await page.goto('/#/pages/index/index')
   await expect(page.locator('.home-page')).toBeVisible()
@@ -28,6 +28,9 @@ async function shot(page: Page, folder: string, name: string, anchor?: string) {
   expect(await page.locator('body').innerText()).not.toMatch(/DEV|Mock|fixture|SYNTHETIC|源协议|事务协议/)
   await page.screenshot({ path: `${base}/${folder}/${name}.png`, animations: 'disabled', caret: 'hide' })
 }
+test.beforeEach(({}, info) => {
+  test.skip(info.config.metadata.brandNodeWorkspace !== true, 'Dedicated protocol-shaped node Mock profile only')
+})
 test.beforeEach(async ({ page, baseURL }) => {
   page.on('pageerror', error => { throw error })
   await page.route('**/*', route => {
@@ -81,12 +84,12 @@ for (const kind of ['forms', 'repeat'] as const) test(`${kind}: real task naviga
   await expect(page.getByTestId('a-special-complete')).toBeVisible()
   await shot(page, kind, '11-重新进入已完成记录', 'a-special-complete')
 })
-test('outdated edit conflicts and preserves the authoritative saved record', async ({ page, context }) => {
+test('outdated edit conflicts and preserves the authoritative saved record', async ({ page, context, baseURL }) => {
   await open(page, 'forms'); await fill(page, '原始记录'); await page.getByTestId('a-special-save').click()
   const id = 'mock-special-form-data-forms-1'
   await expect(page.getByTestId('a-special-row-' + id)).toBeVisible()
   const other = await context.newPage()
-  await other.route('**/*', route => new URL(route.request().url()).origin === 'http://localhost:5174' ? route.continue() : route.abort())
+  await other.route('**/*', route => new URL(route.request().url()).origin === baseURL ? route.continue() : route.abort())
   await open(other, 'forms')
   await page.getByTestId('a-special-edit-' + id).click(); await other.getByTestId('a-special-edit-' + id).click()
   await fill(page, '已保存的新版本'); await page.getByTestId('a-special-save').click()
