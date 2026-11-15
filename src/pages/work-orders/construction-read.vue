@@ -11,8 +11,8 @@ import { useSessionStore } from '@shared/state';
 import { useWorkOrderDetailStore } from '@features/work-orders/detail';
 import { useWorkOrderListStore } from '@features/work-orders/list';
 import ConstructionReadPanel from '@features/work-orders/downstream/ConstructionReadPanel.vue';
-import { constructionReadRequest, parseConstructionLogs, type ConstructionLog } from '@features/work-orders/downstream/construction-read';
-import { constructionMockEnabled, constructionMockReadPort, constructionMockParts } from '@adapters/api/mock/construction-read';
+import { constructionReadRequest, parseConstructionLogs, type ConstructionLog } from '@shared/construction-read-contract';
+import { constructionMockEnabled, constructionMockReadPort, constructionMockParts } from '@app/dev-construction-read';
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization';
 const session = useSessionStore(), detail = useWorkOrderDetailStore(), list = useWorkOrderListStore();
 const id = ref(''), identity = ref(''), logs = ref<ConstructionLog[]>([]), state = ref<'idle' | 'loading' | 'ready' | 'failed'>('idle');
@@ -45,5 +45,5 @@ async function load() {
 onLoad(options => { id.value = typeof options?.id === 'string' ? options.id : ''; identity.value = currentIdentity.value || ''; void load(); });
 </script>
 <style scoped lang="scss">
-@import '@brand-ui/construction-read.scss';
+@import '@brand-ui/construction-page.scss';
 </style>

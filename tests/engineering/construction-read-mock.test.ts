@@ -1,5 +1,5 @@
 import { it, expect, vi } from 'vitest'
-import { constructionReadRequest } from '../../src/features/work-orders/downstream/construction-read'
+import { constructionReadRequest } from '../../src/shared/construction-read-contract'
 const gate = vi.hoisted(() => ({ enabled: true }))
 vi.mock('../../src/adapters/api/mock/journey', () => ({ isDevMockJourneyEnabled: () => gate.enabled }))
 import { queryConstructionMock, constructionMockEnabled, constructionMockWorkOrderId } from '../../src/adapters/api/mock/construction-read'

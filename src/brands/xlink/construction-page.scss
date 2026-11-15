@@ -1,0 +1,3 @@
+/* Page canvas only; scoped record typography belongs to ConstructionReadPanel. */
+.construction-page {box-sizing:border-box;min-height:100vh;background:var(--app-color-page);padding:16px 16px calc(24px + env(safe-area-inset-bottom));color:var(--app-color-text-primary)}
+.construction-blocked {display:flex;flex-direction:column;gap:16px;padding:24px 0;line-height:1.6}

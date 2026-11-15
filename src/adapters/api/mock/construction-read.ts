@@ -1,5 +1,5 @@
 import { isDevMockJourneyEnabled } from './journey';
-import { constructionReadRequest, type ConstructionReadRequest } from '../../../features/work-orders/downstream/construction-read';
+import { constructionReadRequest, type ConstructionReadRequest } from '../../../shared/construction-read-contract';
 /** A fixed, offline R1-contract fixture. No network transport or mutation port. */
 export const constructionMockWorkOrderId = 'mock-work-order-002';
 export function constructionMockEnabled(id: string): boolean { return isDevMockJourneyEnabled() && id === constructionMockWorkOrderId; }
