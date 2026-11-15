@@ -6,7 +6,9 @@ const source = (path: string) => readFileSync(new URL(`../../src/${path}`, impor
 const home = parse(source('pages/index/index.vue')).descriptor
 const list = parse(source('pages/work-orders/work-orders.vue')).descriptor
 const detail = parse(source('pages/work-orders/detail.vue')).descriptor
-const css = (descriptor: typeof home) => descriptor.styles.map(style => style.content).join('\n')
+const css = (descriptor: typeof home) => descriptor.styles.map(style => style.content
+  .replace(/@import ["']@brand-ui\/([a-z-]+\.scss)["'];/g,
+    (_, file: string) => source(`brands/xlink/${file}`))).join('\n')
 
 describe('baseline page-local presentation safeguards (source contracts)', () => {
   it('owns system typography at the three page roots, without a body/global font reset', () => {

@@ -1,0 +1,19 @@
+.archive-stack { display: flex; flex-direction: column; gap: var(--yh-layout-mobile-group-gap); margin-top: var(--yh-layout-mobile-group-gap); }
+.archive-card { box-sizing: border-box; margin: 0; padding: var(--yh-space-16); }
+.archive-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--yh-space-8); flex-wrap: wrap; }
+.archive-title { color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.archive-link { display: flex; align-items: center; min-height: var(--yh-size-touch); margin-block: -8px; color: var(--yh-link); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); overflow-wrap: anywhere; }
+.archive-link:focus-visible, .archive-navigator:focus-visible { outline: 2px solid var(--yh-focus-ring); outline-offset: 2px; }
+.archive-navigator { display: block; min-width: 0; }
+.archive-entry { border-top: 1px solid var(--yh-border-subtle); padding-top: var(--yh-space-12); margin-top: var(--yh-space-12); }
+.archive-entry-title, .archive-copy, .archive-hint { display: block; overflow-wrap: anywhere; white-space: pre-wrap; }
+.archive-entry-title { color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); }
+.archive-copy { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.archive-hint { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); margin-top: var(--yh-space-4); }
+.archive-failure { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--yh-space-8); }
+.follow-up-timeline { display: flex; flex-direction: column; gap: var(--yh-space-12); margin-top: var(--yh-space-12); }
+.follow-up-timeline__item { display: grid; grid-template-columns: 12px minmax(0, 1fr); gap: var(--yh-space-8); }
+.follow-up-timeline__rail { position: relative; font-size: var(--yh-type-body-size); }
+.follow-up-timeline__dot { position: absolute; top: calc(.75em - 3px); left: 3px; width: 6px; height: 6px; border-radius: 50%; background: var(--yh-color-text-muted); }
+.follow-up-timeline__line { position: absolute; top: .75em; left: 5.5px; width: 1px; height: calc(100% + var(--yh-space-12)); background: var(--yh-border-subtle); }
+.follow-up-timeline__body { min-width: 0; }

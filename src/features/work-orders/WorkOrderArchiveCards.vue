@@ -70,6 +70,17 @@
         </template>
       </AppRecordCard>
     </view>
+
+    <!-- Neither category has a verified detail-page read port. A separate
+         signing read route does not prove document access or applicability. -->
+    <AppRecordCard class="archive-card" data-testid="contract-archive-unverified">
+      <view class="archive-heading"><text class="archive-title">合同</text></view>
+      <text class="archive-hint">合同状态待确认</text>
+    </AppRecordCard>
+    <AppRecordCard class="archive-card" data-testid="warranty-archive-unverified">
+      <view class="archive-heading"><text class="archive-title">质保</text></view>
+      <text class="archive-hint">质保状态待确认</text>
+    </AppRecordCard>
   </view>
 </template>
 
@@ -94,23 +105,6 @@ function orderTitle(order: QuotationOrderBrowseItem) { return order.displayNumbe
 function orderAmount(order: QuotationOrderBrowseItem) { return order.totalPrice === undefined ? '金额暂未确认' : `订单金额 ¥${order.totalPrice.toFixed(2)}` }
 </script>
 
-<style scoped>
-.archive-stack{display:flex;flex-direction:column;gap:var(--app-space-md);margin-top:var(--app-space-md)}
-.archive-card{margin:0;padding:var(--app-space-lg);border:1px solid var(--app-color-border);box-shadow:none}
-.archive-heading{display:flex;align-items:baseline;justify-content:space-between;gap:var(--app-space-sm);flex-wrap:wrap}
-.archive-title{color:var(--app-color-text-primary);font-size:var(--app-font-section-title);font-weight:650;line-height:1.5}
-.archive-link{color:var(--app-color-text-secondary);font-size:var(--app-font-meta);line-height:1.6;min-height:40px;display:flex;align-items:center;overflow-wrap:anywhere}
-.archive-navigator{display:block;min-width:0}
-.archive-entry{border-top:1px solid var(--app-color-divider);padding-top:var(--app-space-md);margin-top:var(--app-space-md)}
-.archive-entry-title,.archive-copy,.archive-hint{display:block;overflow-wrap:anywhere;white-space:pre-wrap;line-height:1.6}
-.archive-entry-title{color:var(--app-color-text-primary);font-size:var(--app-font-body);font-weight:600}
-.archive-copy{color:var(--app-color-text-primary);font-size:var(--app-font-body)}
-.archive-hint{color:var(--app-color-text-secondary);font-size:var(--app-font-meta);margin-top:var(--app-space-xs)}
-.archive-failure{display:flex;align-items:center;justify-content:space-between;gap:var(--app-space-sm);flex-wrap:wrap}
-.follow-up-timeline{display:flex;flex-direction:column;gap:var(--app-space-md);margin-top:var(--app-space-sm)}
-.follow-up-timeline__item{display:grid;grid-template-columns:12px minmax(0,1fr);gap:var(--app-space-sm)}
-.follow-up-timeline__rail{position:relative;font-size:var(--app-font-body)}
-.follow-up-timeline__dot{position:absolute;top:calc(.8em - 3px);left:3px;width:6px;height:6px;border-radius:50%;background:var(--app-color-text-secondary)}
-.follow-up-timeline__line{position:absolute;top:.8em;left:5.5px;width:1px;height:calc(100% + var(--app-space-md));background:var(--app-color-divider)}
-.follow-up-timeline__body{min-width:0}
+<style scoped lang="scss">
+@import "@brand-ui/detail-archives.scss";
 </style>

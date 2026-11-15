@@ -306,7 +306,7 @@ if (/\bfetch\s*\(|axios|submitOrder|useWorkOrder|WorkflowRuntime|readContracts/.
 // DS-07.C2: the current-task visual contract has one authority only.
 // New task chrome belongs to WorkOrderTaskFocus, never duplicate page CSS.
 const detailFile = await read('src/pages/work-orders/detail.vue')
-const detailCSS = detailFile.split('<style>')[1]?.split('</style>')[0] ?? ''
+const detailCSS = (await Promise.all(['xlink', 'yuhong'].map(brand => read(`src/brands/${brand}/detail.scss`)))).join('\n')
 const taskPresentation = await read('src/features/work-orders/WorkOrderTaskFocus.vue')
 if (detailCSS.includes('.current-task-card {')
   || detailCSS.includes('.primary-task-action {')

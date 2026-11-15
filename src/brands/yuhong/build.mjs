@@ -78,6 +78,9 @@ export function build(source) {
   }
   return new Map([
     ['theme.css', [...cssLines, '}',''].join('\n')],
+    // App integration: same aliases at the standalone platform roots. Sass
+    // consumes this local file without emitting an external CSS @import.
+    ['_root-tokens.scss', [...cssLines, '}',''].join('\n').replace('.yh-service {', ':root, page, .yh-service {')],
     ['_theme.scss', [...sassLines, ''].join('\n')],
     ['contrast.tsv', [...report, ''].join('\n')]
   ])

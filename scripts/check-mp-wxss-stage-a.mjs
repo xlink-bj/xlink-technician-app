@@ -32,8 +32,12 @@ for (const path of componentFiles) {
 
 const pageCss = readFileSync(resolve(root, 'pages/work-orders/detail.wxss'), 'utf8')
 const pageWxml = readFileSync(resolve(root, 'pages/work-orders/detail.wxml'), 'utf8')
+const yuhong = readFileSync(resolve(root, 'app.wxss'), 'utf8').includes('--yh-palette-brand-600:')
+const contentInset = yuhong
+  ? /\.summary-card__content\s*\{[^}]*box-sizing:border-box;[^}]*padding:var\(--yh-space-16\) var\(--yh-space-16\) 0/
+  : /\.summary-card__content\s*\{[^}]*box-sizing:border-box;[^}]*padding:28rpx 28rpx 24rpx/
 if (!/\.summary-card\s*\{[^}]*box-sizing:border-box;[^}]*padding:0/.test(pageCss)
-  || !/\.summary-card__content\s*\{[^}]*box-sizing:border-box;[^}]*padding:28rpx 28rpx 24rpx/.test(pageCss)
+  || !contentInset.test(pageCss)
   || !pageWxml.includes('class="summary-card__content"')) {
   throw new Error('MP WorkOrder cards must share the same border-box host/slot layout for Real and Mock')
 }

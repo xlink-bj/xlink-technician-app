@@ -48,8 +48,17 @@ for (const path of [...sources].sort()) {
   const styles = [...source.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)]
     .map(match => match[1]).join('\n')
   const allowed = baseline.allowed[path] ?? { hex: 0, rgb: 0, fontSize: 0, radius: 0, sharedOverrides: 0 }
+  // Moving a page skin must not hide existing debt from the ratchet.
+  // Count each build-selected owner and keep the worst product count.
+  const variants = await Promise.all(['xlink', 'yuhong'].map(async brand => {
+    let expanded = styles
+    for (const [statement, file] of styles.matchAll(/@import ["']@brand-ui\/([a-z-]+\.scss)["'];/g)) {
+      expanded = expanded.replace(statement, await read(`src/brands/${brand}/${file}`))
+    }
+    return expanded
+  }))
   for (const [name, pattern] of Object.entries(indicators)) {
-    const found = (styles.match(pattern) ?? []).length
+    const found = Math.max(...variants.map(style => (style.match(pattern) ?? []).length))
     if (!Number.isSafeInteger(allowed[name]) || allowed[name] < 0) fail(path + ' has invalid baseline ' + name)
     if (found > allowed[name]) fail(path + ': ' + name + ' local declarations ' + found
       + ' exceed frozen limit ' + allowed[name] + '. Use shared tokens/primitives; do not raise the baseline.')
