@@ -330,6 +330,7 @@ import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailTabs, type DetailTabKey } from '@features/work-orders/detail-tabs'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
+import { selectActionWorkspaceLoadTarget } from '@features/work-orders/action-workspace-load-target'
 import { useLocalUnitDisplay } from '@features/work-orders/quotation/local-unit-display'
 import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
 import { signingOrderReadRouteFor } from '@features/work-orders/signing/signing-review-read-workspace'
@@ -481,12 +482,20 @@ const productionChildParents = computed(() => (productionReadOnly
 const allowLocalMockPreview = computed(() => {
   const stage = mockJourneyContext(String(detail.value?.id ?? ''))
   const task = workflowProjection.value.currentTask
-  // Synthetic-only navigation never changes the R1 command permission. The
-  // store still requires DEV H5-E2E + exact MOCK-019 identity to load drafts.
-  return !productionReadOnly && stage?.stage === 'survey'
-    && task?.actionIntent === 'interact_with_form'
-    && task?.sourceNodeType === 'forms'
-    && task?.execution === 'disabled_read_only'
+  const currentDetail = detail.value
+  const actor = session.session
+  if (productionReadOnly || !stage || stage.stage === 'quotation' || !task || !currentDetail || !actor
+    || task.actionIntent !== (stage.stage === 'appointment' ? 'set_appointment' : 'interact_with_form')
+    || task.sourceNodeType !== 'forms' || task.execution !== 'disabled_read_only') return false
+  // Use the Store's existing exact-019 read/local-draft eligibility for both
+  // appointment and survey. This never upgrades Workflow command execution.
+  return selectActionWorkspaceLoadTarget({
+    detail: currentDetail, session: actor, currentTask: task,
+    request: { workOrderId: currentDetail.id, workflowNodeId: task.nodeId,
+      actionIntent: task.actionIntent, localPreviewOnly: true },
+    devMockE2EBuildEnabled: import.meta.env.DEV === true
+      && import.meta.env.VITE_XLINK_H5_MOCK_E2E === 'true',
+  }).kind === 'ready'
 })
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),

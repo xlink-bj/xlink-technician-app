@@ -48,8 +48,40 @@ for (const width of [375, 390, 430]) {
         expect(action.right).toBeLessThanOrEqual(geometry.right + 1)
       }
     }
+    await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-sealant').click()
+    await page.getByTestId('quotation-browse-quotation-group-1').click()
+    await page.getByTestId('quotation-catalog-kind-material').click()
     await page.getByTestId('quotation-material-options-mock-catalog-material-sealant').click()
     await expect(page.getByTestId('quotation-sku-field-thickness')).toBeVisible()
+    await page.getByTestId('quotation-sku-option-thickness-2').click()
+    await page.getByTestId('quotation-sku-option-color-black').click()
+    const quantity = page.getByTestId('quotation-sku-quantity-input').locator('input')
+      .or(page.locator('input[data-testid="quotation-sku-quantity-input"]')).first()
+    await quantity.fill('2')
+    await quantity.blur()
+    await expect(quantity).toHaveValue('2')
+    for (const id of ['quotation-sku-preview-back', 'quotation-sku-preview-return']) {
+      const button = page.getByTestId(id)
+      await expect(button).toHaveAttribute('aria-label', '返回材料目录')
+      const label = await button.locator('.app-button__label').evaluate(element => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        return { lines: new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size,
+          overflow: element.scrollWidth - element.clientWidth }
+      })
+      expect(label.lines).toBe(1)
+      expect(label.overflow).toBeLessThanOrEqual(1)
+      const box = await button.boundingBox()
+      expect(box!.height).toBeGreaterThanOrEqual(44)
+      expect(box!.x).toBeGreaterThanOrEqual(0)
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+    }
+    if (process.env.XLINK_FORM_ENTRY_SCREENSHOTS && width === 430) {
+      await page.screenshot({ path: resolve(process.env.XLINK_FORM_ENTRY_SCREENSHOTS, '05d-报价-材料规格与数量.png'), animations: 'disabled', caret: 'hide' })
+    }
+    await page.getByTestId('quotation-sku-preview-return').click()
+    await expect(card).toBeVisible()
+    await page.getByTestId('quotation-material-options-mock-catalog-material-sealant').click()
     await page.getByTestId('quotation-sku-preview-back').click()
     const ordinary = page.getByTestId('quotation-catalog-item-material-mock-catalog-material-butyl-tape')
     await expect(ordinary).toContainText('¥38.60/卷')

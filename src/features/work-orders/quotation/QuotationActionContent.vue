@@ -840,7 +840,7 @@
       <template v-else-if="catalogBrowser.selectedMaterialId">
         <view class="quotation-content__catalog-topbar" data-testid="quotation-material-sku-preview">
           <AppButton class="quotation-content__catalog-back" variant="text"
-            data-testid="quotation-sku-preview-back" @tap="catalogBrowser.backToList()">‹ 返回材料目录</AppButton>
+            aria-label="返回材料目录" data-testid="quotation-sku-preview-back" @tap="catalogBrowser.backToList()">‹ 材料</AppButton>
           <view class="quotation-content__catalog-topbar-title">
             <text class="quotation-content__catalog-title">选择材料规格</text>
           </view>
@@ -895,8 +895,8 @@
             tone="warning" quiet data-testid="quotation-sku-preview-unavailable" />
           <view class="quotation-content__catalog-footer">
             <text class="quotation-content__catalog-footer-note">SKU 单价按实际数量计入报价；总金额按报价规则计算。</text>
-            <AppButton variant="secondary" data-testid="quotation-sku-preview-return"
-              @tap="catalogBrowser.backToList()">返回材料目录</AppButton>
+            <AppButton variant="secondary" aria-label="返回材料目录" data-testid="quotation-sku-preview-return"
+              @tap="catalogBrowser.backToList()">返回目录</AppButton>
           </view>
         </view>
       </template>
