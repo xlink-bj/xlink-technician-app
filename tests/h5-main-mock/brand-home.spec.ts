@@ -85,7 +85,10 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   await page.locator('.method-card').filter({ hasText: '验证码登录' }).click()
   await expect(page.locator('.form-stage')).toBeVisible()
   await expect(page.locator('.code-button')).toHaveAttribute('disabled', 'true')
-  await expect(page.locator('.login-consent-unavailable')).toBeVisible()
+  // Public policy URLs may be configured locally; both states keep consent explicit.
+  const unavailable = page.locator('.login-consent-unavailable')
+  if (await unavailable.count()) await expect(unavailable).toBeVisible()
+  else await expect(page.locator('.login-legal-links uni-navigator')).toHaveCount(2)
   if (brand === 'yuhong') {
     await expect(page.locator('.submit')).toHaveCSS('background-color', 'rgb(200, 32, 43)')
     await expect(page.locator('.code-button')).toHaveCSS('background-color', 'rgb(229, 231, 232)')

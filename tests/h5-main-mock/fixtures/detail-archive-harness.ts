@@ -52,3 +52,10 @@ export async function installArchiveScenario(mode: 'zero' | 'one' | 'many' | 'pa
   })) }
   await detailStore.loadFromRoute(id)
 }
+
+/** Successful empty visible-field configuration; not a read failure or missing provider. */
+export async function installCustomerInformationEmptyScenario() {
+  if (!syntheticDetail) throw new Error('Open the actual synthetic detail before configuring customer fields')
+  syntheticDetail = { ...syntheticDetail, informationFields: [] }
+  await useWorkOrderDetailStore().loadFromRoute(String(syntheticDetail.id))
+}
