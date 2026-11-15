@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { constructionReadRequest, parseConstructionLogs, constructionPartLabels } from '../../src/features/work-orders/downstream/construction-read'
+import { constructionReadRequest, parseConstructionLogs, constructionPartLabels } from '../../src/shared/construction-read-contract'
 const dictionary = [{ type: 'parts', children: [{ value: 'roof', name: '屋面', children: [{ value: 'joint', name: '接缝' }] }] }]
 const row = { _id: 'log1', serviceAppointmentId: 'wo1', state: 1, orderId: 'O1', repairParts: [['roof', 'joint']], data: [{ content: '基层检查' }, { content: '节点复核' }] }
 describe('R1 construction readonly contract', () => {

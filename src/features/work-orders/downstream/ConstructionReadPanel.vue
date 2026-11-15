@@ -22,7 +22,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { AppButton, AppRecordCard } from '@shared/ui';
-import type { ConstructionLog } from './construction-read';
+import type { ConstructionLog } from '@shared/construction-read-contract';
 const props = defineProps<{
     logs: readonly ConstructionLog[];
     state: 'idle' | 'loading' | 'ready' | 'failed';

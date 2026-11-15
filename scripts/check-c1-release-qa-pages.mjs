@@ -5,7 +5,10 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+// Explicitly approved DEV-only routes; every listed asset and route reference
+// must be absent from release output, including the offline construction reader.
 const qaRoutes = [
+  'pages/work-orders/construction-read',
   'pages/work-orders/signing-mock-review',
   'pages/work-orders/material-sku-mock-review',
   'pages/work-orders/child-subflow-mock-review',
@@ -24,7 +27,7 @@ function read(relativePath) {
 function checkSource() {
   const raw = read('src/pages.json')
   const match = guardedBlock.exec(raw)
-  if (!match) fail('four QA routes must be protected by XLINK_DEV_QA')
+  if (!match) fail('approved QA routes must be protected by XLINK_DEV_QA')
   const releaseSource = raw.replace(guardedBlock, '')
   const devSource = raw
     .replace(/^\s*\/\/ #ifdef XLINK_DEV_QA\s*$/m, '')
@@ -49,9 +52,8 @@ function checkSource() {
     fail('QA pages must exist in DEV only')
   }
   const devOnlyRoutes = devRoutes.filter(route => !releaseRoutes.includes(route))
-  if (devOnlyRoutes.length !== qaRoutes.length ||
-    devOnlyRoutes.some(route => !qaRoutes.includes(route))) {
-    fail('conditional block must contain exactly the four approved QA routes')
+  if (devOnlyRoutes.some(route => !qaRoutes.includes(route))) {
+    fail('conditional block must match the explicit approved QA route set')
   }
   if (JSON.stringify(devRoutes.filter(route => !qaRoutes.includes(route))) !==
     JSON.stringify(releaseRoutes)) {
@@ -111,7 +113,7 @@ function checkH5(expectDev) {
       fail(`H5 release JS still references QA route ${route}`)
     }
   }
-  console.log(`C1 H5 QA boundary: PASS (four routes ${expectDev ? 'present in DEV' : 'absent in release'})`)
+  console.log(`C1 H5 QA boundary: PASS (${qaRoutes.length} routes ${expectDev ? 'present in DEV' : 'absent in release'})`)
 }
 
 function checkMp(expectDev) {
@@ -127,10 +129,15 @@ function checkMp(expectDev) {
       fail(`MP-WEIXIN route ${route} expected ${expectDev ? 'present' : 'absent'}`)
     }
   }
-  if (pages.length !== (expectDev ? 12 : 8)) {
-    fail('MP-WEIXIN route count differs from approved baseline')
+  const pageSource = read('src/pages.json')
+  const expectedSource = expectDev
+    ? pageSource.replace(/^\s*\/\/ #ifdef XLINK_DEV_QA\s*$/m, '').replace(/^\s*\/\/ #endif\s*$/m, '')
+    : pageSource.replace(guardedBlock, '')
+  const expectedPages = JSON.parse(expectedSource).pages.map(page => page.path)
+  if (JSON.stringify(pages) !== JSON.stringify(expectedPages)) {
+    fail('MP-WEIXIN route table differs from the source build profile')
   }
-  console.log(`C1 MP-WEIXIN QA boundary: PASS (four routes ${expectDev ? 'present in DEV' : 'absent in release'})`)
+  console.log(`C1 MP-WEIXIN QA boundary: PASS (${qaRoutes.length} routes ${expectDev ? 'present in DEV' : 'absent in release'})`)
 }
 
 const [target = 'source', profile] = process.argv.slice(2)
