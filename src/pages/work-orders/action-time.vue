@@ -94,8 +94,8 @@ const feedback = computed(() => actionErrorCopy(workspace.error))
 function loadWorkspace(): void {
   if (!routeReady.value || session.status !== 'authenticated') return
   if (!routeId.value || !routeNodeId.value) {
+    // An invalid child route must not erase its still-mounted parent draft.
     routeError.value = 'invalid-route'
-    workspace.clear()
     return
   }
   routeError.value = ''

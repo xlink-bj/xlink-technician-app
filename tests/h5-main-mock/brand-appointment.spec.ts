@@ -65,8 +65,13 @@ test('appointment real navigation, time selection, cancellation, confirmation an
   await page.locator('.action-content-field--choice').getByText('暂不上门', { exact: true }).click()
   await expect(page.locator('.appointment-time-selector')).toHaveCount(0)
   await shot('07-预约填写-暂不上门')
-  await page.goto('/#/pages/work-orders/action-time')
-  await expect(page.locator('.workspace-state-title')).toContainText('暂不可用')
-  await shot('08-选时异常-缺少工单上下文')
+  for (const [route, name] of [['action-time', '08-选时异常-缺少工单上下文'], ['action-confirmation', '09-确认异常-返回保留草稿']]) {
+    await page.goto('/#/pages/work-orders/' + route)
+    await expect(page.locator('.workspace-state-title')).toContainText('暂不可用')
+    await shot(name)
+    await page.goBack()
+    await expect(note).toHaveValue('已与客户沟通，请到达前联系。')
+    await expect(page.locator('.action-content-field--choice')).toBeVisible()
+  }
   expect(external).toEqual([]); expect(errors).toEqual([])
 })
