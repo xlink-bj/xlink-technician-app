@@ -32,6 +32,10 @@
     },
     // #ifdef XLINK_DEV_QA
     {
+      "path": "pages/work-orders/construction-read",
+      "style": { "navigationBarTitleText": "施工日志" }
+    },
+    {
       "path": "pages/work-orders/signing-mock-review",
       "style": {
         "navigationBarTitleText": "签约工作台 · Mock"

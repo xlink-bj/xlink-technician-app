@@ -123,6 +123,8 @@
       <AppButton v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'"
         data-testid="special-completed-workspace-entry" variant="secondary" @tap="openDevMockDynamicFormReceipt">查看已完成记录</AppButton>
       </template>
+      <AppButton v-if="readView === 'home' && constructionMockEnabled(String(detail.id))" variant="secondary"
+        data-testid="construction-read-entry" @tap="openConstructionRead">查看施工日志</AppButton>
       <WorkOrderArchiveCards v-if="readView === 'home'"
         :work-order-id="String(detail.id)" :activities="activities"
         :follow-up-message="followUpReadMessage(detail)" :follow-up-read-failed="detail.activityReadState === 'failed'" :has-history="canShowHistoricalForms"
@@ -317,6 +319,7 @@ import { workOrderCardToneFor } from '@features/work-orders/card'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
+import { constructionMockEnabled } from '@adapters/api/mock/construction-read'
 import WorkOrderArchiveCards from '@features/work-orders/WorkOrderArchiveCards.vue'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { selectActionWorkspaceLoadTarget } from '@features/work-orders/action-workspace-load-target'
@@ -686,6 +689,11 @@ async function handleQuickAction(action: QuickActionKey): Promise<void> {
 
   if (action === 'navigate') {
     actionFeedback.value = '导航能力将在地图边界完成核验后提供。'
+  }
+}
+function openConstructionRead() {
+  if (detail.value && constructionMockEnabled(String(detail.value.id))) {
+    uni.navigateTo({ url: '/pages/work-orders/construction-read?id=' + encodeURIComponent(String(detail.value.id)) })
   }
 }
 </script>

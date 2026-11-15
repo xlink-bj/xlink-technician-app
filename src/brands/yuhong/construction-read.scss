@@ -1,0 +1,18 @@
+.construction-page { box-sizing:border-box;min-height:100vh;background:var(--yh-color-surface-page);padding:var(--yh-space-16) var(--yh-page-inset-mobile) calc(var(--yh-space-24) + env(safe-area-inset-bottom));color:var(--yh-color-text-primary);font-family:var(--yh-type-family); }
+.construction-reader { max-width:640px;margin:0 auto;min-width:0;font-size:var(--yh-type-body-size);line-height:var(--yh-type-body-line); }
+.construction-heading,.construction-record-heading {display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:var(--yh-space-8)}
+.construction-title {font-size:var(--yh-type-title-size);line-height:var(--yh-type-title-line);font-weight:var(--yh-type-title-weight)}
+.construction-subtitle {font-size:var(--yh-type-section-size);line-height:var(--yh-type-section-line);font-weight:var(--yh-type-section-weight);overflow-wrap:anywhere}
+.construction-context,.construction-order,.construction-meta,.construction-notice {display:block;overflow-wrap:anywhere}
+.construction-context {margin-top:var(--yh-space-4)}
+.construction-meta,.construction-notice {font-size:var(--yh-type-meta-size);line-height:var(--yh-type-meta-line);color:var(--yh-color-text-secondary)}
+.construction-notice {margin:var(--yh-space-12) 0 var(--yh-space-16)}
+.construction-card {box-sizing:border-box;padding:var(--yh-space-16);margin-bottom:var(--yh-space-12);min-width:0}
+.construction-order {margin:var(--yh-space-12) 0 var(--yh-space-4)}
+.construction-procedures {margin-top:var(--yh-space-16);border-top:1px solid var(--yh-border-subtle);padding-top:var(--yh-space-12)}
+.construction-label {font-weight:var(--yh-type-section-weight)}
+.construction-procedure {display:flex;align-items:baseline;gap:var(--yh-space-12);margin-top:var(--yh-space-12);overflow-wrap:anywhere}
+.construction-procedure>text:last-child {flex:1;min-width:0}
+.construction-index {color:var(--yh-color-text-secondary);font-size:var(--yh-type-meta-size)}
+.construction-state,.construction-blocked {display:flex;flex-direction:column;gap:var(--yh-space-16);padding:var(--yh-space-24) 0;line-height:var(--yh-type-body-line)}
+.construction-error {color:var(--yh-color-status-error-fg)}
