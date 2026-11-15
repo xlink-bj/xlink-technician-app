@@ -1,5 +1,5 @@
 <template>
- <ActionWorkspaceShell :customer-name="customerName" :service-address="serviceAddress" :service-district="serviceDistrict" :display-number="displayNumber" lifecycle="available" draft-status="clean" :can-submit="false" submit-label="返回工单详情">
+ <ActionWorkspaceShell h5-navigation-fit :customer-name="customerName" :service-address="serviceAddress" :service-district="serviceDistrict" :display-number="displayNumber" lifecycle="available" draft-status="clean" :can-submit="false" submit-label="返回工单详情">
   <view v-if="visible" data-testid="special-form-workspace-content">
    <AppActionContentHeading :title="content.node.displayName || '现场记录'" caption="按当前节点核对现场记录" icon="task" />
    <R1DevMockDynamicFormTransactionPanel v-if="content.mode!=='completed'" :key="panelKey" ref="panel"
@@ -8,12 +8,13 @@
   </view>
   <template #actions>
    <text v-if="exitMessage" role="alert">{{ exitMessage }}</text>
-   <AppButton block data-testid="special-form-workspace-back" @tap="emit('back')">返回工单详情</AppButton>
+   <AppButton :variant="nodeRecordProfile.backVariant" block data-testid="special-form-workspace-back" @tap="emit('back')">返回工单详情</AppButton>
   </template>
  </ActionWorkspaceShell>
 </template>
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { nodeRecordProfile } from '@brand-ui/node-record-profile'
 import type { DevMockDynamicFormWorkspaceContent } from './dev-mock-dynamic-form-workspace-content'
 import type { AStageDynamicFormMockControllerFactory } from './a-stage-dynamic-form-mock-port'
 import R1DevMockDynamicFormTransactionPanel from './R1DevMockDynamicFormTransactionPanel.vue'

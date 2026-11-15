@@ -1,5 +1,5 @@
 <template>
-  <view class="special-forms app-surface" data-testid="a-stage-special-panel">
+  <view class="special-forms app-surface" :class="{ 'special-forms--confirming': confirmFinish || confirmSaveFinish }" data-testid="a-stage-special-panel">
     <view class="special-forms__header">
       <view class="special-forms__header-copy">
         <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检' : '现场记录' }}</text>
@@ -14,7 +14,8 @@
     <template v-else-if="viewState">
       <AppStatus v-if="networkState === 'offline'" tone="warning" quiet
         message="网络不可用，可继续填写；连接恢复后请主动保存。" data-testid="a-special-offline" />
-      <text v-if="draftFeedback" class="special-forms__finish-copy" data-testid="a-special-local-draft">{{ draftFeedback }}</text>
+      <text v-if="draftFeedback" class="special-forms__finish-copy"
+        :class="{ 'special-forms__draft-error': draftFeedback.startsWith('本机保存失败') || draftFeedback.startsWith('本机草稿读取失败') }" data-testid="a-special-local-draft">{{ draftFeedback }}</text>
       <AppStatus v-if="operationFeedback" tone="warning" quiet
         :message="operationFeedback" data-testid="a-special-operation-feedback" />
       <view class="special-forms__task-state" data-testid="a-special-task-state">
@@ -654,35 +655,7 @@ async function recoverCompleted(): Promise<void> {
 </script>
 
 <style scoped>
-.special-forms { margin-top: 22rpx; padding: 26rpx 24rpx; border-radius: var(--app-radius-card); }
-.special-forms__header,.special-forms__section-heading,.special-forms__record,.special-forms__buttons,.special-forms__row-actions,.special-forms__confirmation { display:flex; align-items:center; gap:16rpx; }
-.special-forms__header,.special-forms__section-heading { justify-content:space-between; }
-.special-forms__header-copy,.special-forms__record-main { flex:1; min-width:0; }
-.special-forms__title { display:block; font-size:var(--app-font-section-title); font-weight:700; color:var(--app-color-text-primary); }
-.special-forms__count,.special-forms__record-summary,.special-forms__muted,.special-forms__finish-copy { display:block; font-size:26rpx; line-height:1.5; color:var(--app-color-text-secondary); }
-.special-forms__task-state { margin-top: 12rpx; }
-.special-forms__task-marker { font-weight: 600; font-size: 26rpx; color: var(--app-color-text-secondary); }
-.special-forms__section-heading { margin-top:28rpx; margin-bottom:8rpx; font-weight:700; font-size:29rpx; color:var(--app-color-text-primary); }
-.special-forms__record { align-items:flex-start; border-top:1rpx solid var(--app-color-border); min-height:100rpx; padding:22rpx 0; }
-.special-forms__record-index { color:var(--app-color-text-secondary); font-size:25rpx; min-width:30rpx; }
-.special-forms__record-title { display:block; font-size:27rpx; font-weight:600; color:var(--app-color-text-primary); }
-.special-forms__record-summary { margin-top:8rpx; overflow-wrap:anywhere; }
-.special-forms__row-actions { margin-top:10rpx; }
-.special-forms__editor,.special-forms__finish { border-top:1rpx solid var(--app-color-border); margin-top:22rpx; padding-top:24rpx; }
-.special-forms__recovery { border-top:1rpx solid var(--app-color-border); margin-top:18rpx; padding-top:18rpx; }
-.special-forms__section-title { display:block; font-size:29rpx; font-weight:700; color:var(--app-color-text-primary); margin-bottom:20rpx; }
-.special-forms__label { display:block; font-size:26rpx; font-weight:600; margin-bottom:12rpx; }
-.special-forms__field { margin-top:20rpx; }
-.special-forms__reference { margin-top:16rpx; padding:16rpx 18rpx; border-radius:12rpx; background:var(--app-color-surface, #f5f7fa); color:var(--app-color-text-secondary); font-size:26rpx; }
-.special-forms__validation { display:block; margin-top:16rpx; font-size:26rpx; color:#985919; }
-.special-forms__required { color:#b55343; }
-.special-forms__buttons { margin-top:22rpx; }
-.special-forms__save-button { flex:1 1 0; min-width:0; }
-.special-forms__cancel-button { flex:0 0 auto; min-width:96rpx; }
-.special-forms__finish-copy { margin-bottom:16rpx; }
-.special-forms__message,.special-forms__empty { display:block; padding:24rpx 0; font-size:25rpx; line-height:1.5; color:var(--app-color-text-secondary); }
-.special-forms__message--error { color:#985919; }
-.special-forms__confirmation { flex-wrap:wrap; padding:16rpx 0; font-size:24rpx; }
+@import "@brand-ui/node-records.scss";
 .special-forms__media { display:flex; flex-direction:column; align-items:flex-start; gap:12rpx; }
 .special-forms__media-item { display:flex; align-items:center; gap:12rpx; width:100%; box-sizing:border-box; padding:12rpx 16rpx; border:1rpx solid var(--app-color-border); border-radius:12rpx; }
 .special-forms__media-name { flex:1; min-width:0; overflow-wrap:anywhere; font-size:25rpx; }

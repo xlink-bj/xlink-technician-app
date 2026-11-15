@@ -1,0 +1,31 @@
+/* Non-media record workspace. The transaction controller and field/media
+   components retain their own responsibilities; XLink keeps its original skin. */
+.special-forms { margin-top: var(--yh-space-16); padding: var(--yh-space-16); border-radius: var(--yh-radius-card); }
+.special-forms__header { display: none; } /* Host already displays the actual node name. */
+.special-forms__section-heading, .special-forms__record, .special-forms__buttons, .special-forms__row-actions, .special-forms__confirmation { display: flex; align-items: center; gap: var(--yh-space-8); }
+.special-forms__section-heading { justify-content: space-between; margin-top: var(--yh-space-24); margin-bottom: var(--yh-space-8); font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.special-forms__record-main { flex: 1; min-width: 0; }
+.special-forms__count, .special-forms__record-summary, .special-forms__muted, .special-forms__finish-copy { display: block; color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.special-forms__task-state { margin-top: var(--yh-space-8); }
+.special-forms__task-marker { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.special-forms__record { align-items: flex-start; border-top: var(--yh-border-width) solid var(--yh-color-border-divider); padding: var(--yh-space-16) 0; }
+.special-forms__record-index { flex: none; min-width: 20px; color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-body-line); }
+.special-forms__record-title { display: block; color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); font-weight: var(--yh-type-section-weight); }
+.special-forms__record-summary { margin-top: var(--yh-space-4); overflow-wrap: anywhere; }
+.special-forms__row-actions { margin-top: var(--yh-space-8); }
+.special-forms__editor, .special-forms__finish, .special-forms__recovery { border-top: var(--yh-border-width) solid var(--yh-color-border-divider); margin-top: var(--yh-space-16); padding-top: var(--yh-space-16); }
+.special-forms__section-title { display: block; margin-bottom: var(--yh-space-16); color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); line-height: var(--yh-type-section-line); font-weight: var(--yh-type-section-weight); }
+.special-forms__label { display: block; margin-bottom: var(--yh-space-8); color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.special-forms__field { margin-top: var(--yh-space-16); }
+.special-forms__reference { margin-top: var(--yh-space-16); padding: var(--yh-space-12); background: var(--yh-color-surface-subtle); border-radius: var(--yh-radius-control); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.special-forms__validation { display: block; margin-top: var(--yh-space-8); color: var(--yh-color-status-warning-fg); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.special-forms__required { color: var(--yh-color-status-error-fg); }
+.special-forms--confirming .special-forms__buttons { display: none; }
+.special-forms__buttons { margin-top: var(--yh-space-16); }
+.special-forms__save-button { flex: 1; min-width: 0; }
+.special-forms__cancel-button { flex: none; min-width: var(--yh-size-touch); }
+.special-forms__finish-copy { margin-bottom: var(--yh-space-12); }
+.special-forms__message, .special-forms__empty { display: block; padding: var(--yh-space-16) 0; color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.special-forms__draft-error { color: var(--yh-color-status-error-fg); }
+.special-forms__message--error { color: var(--yh-color-status-error-fg); }
+.special-forms__confirmation { flex-wrap: wrap; padding: var(--yh-space-16) 0; font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }

@@ -1,6 +1,6 @@
-/* Appointment choices use the same product control contract as time slots. */
-.action-workspace-content .app-choice-group { display: flex; gap: var(--yh-space-8); }
-.action-workspace-content .app-choice { box-sizing: border-box; flex: 1; margin: 0; border: var(--yh-border-width) solid var(--yh-color-border-control); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); }
-.action-workspace-content .app-choice::after { border: 0; }
-.action-workspace-content .app-choice--selected { background: var(--yh-palette-brand-50); color: var(--yh-action-primary); border-color: var(--yh-action-primary); }
-.action-workspace-content .app-choice--disabled { background: var(--yh-color-field-disabled-bg); color: var(--yh-color-text-muted); }
+/* Workspace single-choice controls share one brand-owned appearance. */
+.action-workspace-content .app-choice-group, .special-forms__field .app-choice-group { display: flex; gap: var(--yh-space-8); }
+.action-workspace-content .app-choice, .special-forms__field .app-choice { box-sizing: border-box; flex: 1; margin: 0; border: var(--yh-border-width) solid var(--yh-color-border-control); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); }
+.action-workspace-content .app-choice::after, .special-forms__field .app-choice::after { border: 0; }
+.action-workspace-content .app-choice--selected, .special-forms__field .app-choice--selected { background: var(--yh-palette-brand-50); color: var(--yh-action-primary); border-color: var(--yh-action-primary); }
+.action-workspace-content .app-choice--disabled, .special-forms__field .app-choice--disabled { background: var(--yh-color-field-disabled-bg); color: var(--yh-color-text-muted); }
