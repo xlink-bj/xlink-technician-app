@@ -153,7 +153,15 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
     await page.getByTestId('order-extfield-editor').scrollIntoViewIfNeeded()
     await shot('10-fields-read-failure')
     await expect(page.locator('[data-testid="a-stage-order-convert"][aria-disabled="false"],[data-testid="a-stage-order-create"][aria-disabled="false"]')).toHaveCount(0)
-    if(brand==='yuhong')await expect(page.locator('#order-extfield-editor .app-status--danger .app-status__message')).toHaveCSS('color','rgb(180, 35, 24)')
+    if(brand==='yuhong'){
+      await expect(page.locator('#order-extfield-editor .app-status--danger .app-status__message')).toHaveCSS('color','rgb(180, 35, 24)')
+      // Legacy CSS class compatibility; `error` is not an AppStatus tone API.
+      const legacyColor=await page.evaluate(()=>{
+        const probe=document.createElement('span');probe.className='app-status app-status--error app-status--quiet'
+        document.body.append(probe);const color=getComputedStyle(probe).color;probe.remove();return color
+      })
+      expect(legacyColor).toBe('rgb(180, 35, 24)')
+    }
     else await expect(page.locator('#order-extfield-editor .app-status--danger')).toBeVisible()
   }
   await writeFile(`test-results/quotation-footer-read-error/${brand}-${width}-${fault?'fault':'normal'}-geometry.json`,JSON.stringify(geometry,null,2))

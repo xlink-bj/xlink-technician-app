@@ -63,7 +63,7 @@
 .app-meta-tag--success { background: var(--yh-color-status-success-bg); color: var(--yh-color-status-success-fg); }
 .app-meta-tag--warning { background: var(--yh-color-status-warning-bg); color: var(--yh-color-status-warning-fg); }
 .app-status { display: block; padding: var(--yh-space-8) var(--yh-space-12); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); color: var(--yh-color-text-secondary); background: var(--yh-color-surface-subtle); border-radius: var(--yh-radius-control); }
-.app-status--error { color: var(--yh-color-status-error-fg); background: var(--yh-color-status-error-bg); }
+.app-status--danger, .app-status--error { color: var(--yh-color-status-error-fg); background: var(--yh-color-status-error-bg); }
 .app-status--warning { color: var(--yh-color-status-warning-fg); background: var(--yh-color-status-warning-bg); }
 .app-status--success { color: var(--yh-color-status-success-fg); background: var(--yh-color-status-success-bg); }
 .app-status--quiet { background: transparent; padding: var(--yh-space-4) 0; }
