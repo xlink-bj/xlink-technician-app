@@ -5,6 +5,8 @@
   font-weight: var(--yh-type-meta-weight); line-height: var(--yh-type-meta-line);
   overflow-wrap: anywhere;
 }
+.form-read__hint--error { color: var(--yh-color-status-error-fg); }
+.form-read__hint--success { color: var(--yh-color-status-success-fg); }
 .form-read__draft {
   box-sizing: border-box; margin: var(--yh-space-12) 0; padding: var(--yh-space-12);
   border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-control);

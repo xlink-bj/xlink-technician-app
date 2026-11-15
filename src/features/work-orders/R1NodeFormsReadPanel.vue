@@ -4,7 +4,7 @@
     <AppButton variant="secondary" size="compact" :disabled="loading || busy || fileBusy || fileCancelling || draftWorking" @tap="load">
       {{ loading ? '正在读取…' : '读取已保存表单' }}
     </AppButton>
-    <text v-if="displayMessage" class="form-read__hint" data-testid="r1-normal-form-read-message">{{ displayMessage }}</text>
+    <text v-if="displayMessage" class="form-read__hint" :class="`form-read__hint--${feedback.tone}`" data-testid="r1-normal-form-read-message">{{ displayMessage }}</text>
     <view v-if="draftMessage" class="form-read__draft" data-testid="r1-normal-draft-status" aria-live="polite">
       <text class="form-read__hint">{{ draftMessage }}</text>
       <AppButton v-if="draftRead?.state === 'recoverable'" variant="secondary" :disabled="draftWorking" data-testid="r1-normal-draft-restore" @tap="restoreDraft">恢复填写</AppButton>
@@ -144,7 +144,14 @@ let viewReader = readerView.reader
 // Preserve the reader's exact identity while keeping the empty→loaded change reactive.
 const snapshot = shallowRef<R1NodeFormsSnapshot | null>(null)
 const snapshotActorScope = ref<string | null>(null)
-const loading = ref(false), message = ref('')
+const loading = ref(false)
+// Plain notices stay neutral; only guarded reader/action outcomes set a tone.
+const feedback = ref<{ text: string; tone: 'neutral' | 'error' | 'success' }>({ text: '', tone: 'neutral' })
+const message = computed({
+  get: () => feedback.value.text,
+  set: (text: string) => { feedback.value = { text, tone: 'neutral' } },
+})
+function setFeedback(text: string, tone: 'error' | 'success') { feedback.value = { text, tone } }
 const busy = ref(false), confirmCompletion = ref(false), confirmSaveCompletion = ref(false)
 const editing = ref(false), editingId = ref<string | undefined>()
 const fileEditorClosed=ref(false),fileCancelling=ref(false)
@@ -275,9 +282,9 @@ async function load() {
     if (pendingEditor?.id && !pendingEditor.identity?.isSameActor()) {
       pendingEditor=null;editorSource=null;editorIdentity=null;values.value={};invalidatedEditor=true
     }
-    message.value = invalidatedEditor
+    setFeedback(invalidatedEditor
       ? '编辑身份或记录来源已失效，未保存内容已失效；记录暂时无法完整核实，请重新读取。'
-      : '记录暂时无法完整核实，请重新读取工单后再试。'
+      : '记录暂时无法完整核实，请重新读取工单后再试。', 'error')
   } }
   finally { if (ticket === version) loading.value = false }
 }
@@ -467,15 +474,15 @@ async function save(finish=false) {
       await action.saveAndComplete!(values.value,editingId.value)
       if(ticket!==version||props.actorScope!==actorScope)return
       await finalizeLocalDraft(session);if(ticket!==version||props.actorScope!==actorScope)return;draftSession=null;draftRead.value=null;
-      pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value=null;values.value={};editing.value=false;editingId.value=undefined;message.value='记录已保存，已重新读取并确认当前节点完成。';emit('changed');return
+      pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value=null;values.value={};editing.value=false;editingId.value=undefined;setFeedback('记录已保存，已重新读取并确认当前节点完成。', 'success');emit('changed');return
     }
     const saved = await action.saveOnly(values.value,editingId.value)
     if (ticket !== version || props.actorScope !== actorScope || !viewReader.isCurrent(saved)) return
     await finalizeLocalDraft(session)
     if(ticket!==version||props.actorScope!==actorScope)return
     draftSession=null;draftRead.value=null;
-    pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value = saved; values.value = {}; editing.value=false; editingId.value=undefined; confirmSaveCompletion.value=false; message.value = '记录已保存并从后台重新读取，当前节点尚未完成。'
-  } catch { if (ticket === version) {if(pendingEditor?.id){editing.value=false;editingId.value=undefined};message.value = '保存未完成或结果尚未核实，请勿重复提交。';if(session){draftRead.value={state:'uncertain',message:message.value};draftMessage.value='上次保存结果尚未核实。本地草稿已保留，请核对已保存记录，勿重复提交。'}} }
+    pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value = saved; values.value = {}; editing.value=false; editingId.value=undefined; confirmSaveCompletion.value=false; setFeedback('记录已保存并从后台重新读取，当前节点尚未完成。', 'success')
+  } catch { if (ticket === version) {if(pendingEditor?.id){editing.value=false;editingId.value=undefined};setFeedback('保存未完成或结果尚未核实，请勿重复提交。', 'error');if(session){draftRead.value={state:'uncertain',message:message.value};draftMessage.value='上次保存结果尚未核实。本地草稿已保留，请核对已保存记录，勿重复提交。'}} }
   finally { if (ticket === version) busy.value = false }
 }
 async function complete() {
