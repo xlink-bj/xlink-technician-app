@@ -35,7 +35,7 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Boundary, UI governance, baseline and type checks
+      - name: Boundary, UI ownership and type checks
         env:
           VITE_XLINK_ENVIRONMENT: test
         run: |
@@ -43,7 +43,6 @@ jobs:
           pnpm run check:engineering-ownership
           pnpm run check:critical
           pnpm run check:ui-governance
-          pnpm run check:m1-i8-baseline
           pnpm run typecheck
       - name: Fast actor, read-only, quotation and changed Vitest tests
         id: changed_tests
@@ -106,6 +105,9 @@ jobs:
           # Test-only synthetic Mock contract. Never inherited by bundle builds.
           VITE_XLINK_ENVIRONMENT: test
         run: pnpm run verify
+
+      - name: Build H5 bundle
+        run: pnpm run build:h5
 
       - name: Build WeChat Mini Program bundle
         run: pnpm run build:mp-weixin

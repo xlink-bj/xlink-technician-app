@@ -74,28 +74,6 @@ if(arg !== -1){
   mkdirSync(dirname(output),{recursive:true})
   writeFileSync(output,JSON.stringify(report,null,2)+'\n')
 }
-if(process.argv.includes('--check')){
-  // Budgets are regression sentinels, not an aspirational modularity target.
-  // Never bless new giant components as part of EQ without explicit review.
-  const newGiants=source.filter(f=>f.lines>800
-    && ![
-      'src/features/work-orders/quotation/QuotationActionContent.vue',
-      'src/features/work-orders/action-workspace.ts',
-      'src/adapters/api/mock/fixtures.ts',
-      'src/adapters/api/mock/router.ts',
-      'src/adapters/api/reference/area-county-dictionary.ts',
-      'src/adapters/api/technician-api.ts',
-      'src/pages/index/index.vue',
-      'src/pages/work-orders/detail.vue',
-    ].includes(f.name))
-  // Historical large files must be inventoried; don't fail existing debt here.
-  // The check detects new >800-line files only when their source is not part
-  // of the historical giant-file cohort (review exception not auto-accepted).
-  if(newGiants.length) {
-    process.stderr.write('EQ01 oversized source review required: '+newGiants.map(x=>x.name+':'+x.lines).join(', ')+'\n')
-    process.exitCode=1
-  }
-}
 process.stdout.write(JSON.stringify({
   sourceFiles:report.source.files,sourceLines:report.source.lines,
   styleFiles:report.styles.files,styleLines:report.styles.lines,

@@ -68,24 +68,22 @@ for (const path of [...sources].sort()) {
 }
 
 // Existing Mobile Craft naming is a compatibility shim, not a competing theme.
-// All 19 formerly self-owned aliases must point into the canonical global root.
+// Every compatibility alias must point into the canonical global root.
 const canonical = await read('src/shared/ui/design-system.scss')
 const adapter = await read('src/shared/ui/mobile-craft-v1.scss')
-const declaration = adapter.split('.xl-craft {')[1]?.split('\n  color: var(--xl-ink);')[0]
+const declaration = /\.xl-craft\s*\{([^}]+)\}/.exec(adapter)?.[1]
 if (!declaration) fail('Craft compatibility adapter missing')
-const aliases = [...declaration.matchAll(/--xl-[\w-]+:\s*var\((--app-craft-[\w-]+)\);/g)]
-if (aliases.length !== 19) fail('expected exactly 19 canonical bridge aliases; found ' + aliases.length)
-for (const [_, token] of aliases) {
-  if (!canonical.includes(token + ':')) fail('canonical foundation token not found: ' + token)
+const canonicalTokens = new Set([...canonical.matchAll(/(--app-craft-[\w-]+)\s*:/g)].map(match => match[1]))
+const definitions = [...declaration.matchAll(/(--xl-[\w-]+):\s*([^;]+);/g)]
+const aliases = new Map(definitions.map(([, name, value]) => [name, value.trim()]))
+if (aliases.size !== definitions.length) fail('duplicate compatibility token mapping')
+for (const [name, value] of aliases) {
+  const token = /^var\((--app-craft-[\w-]+)\)$/.exec(value)?.[1]
+  if (!token || !canonicalTokens.has(token)) fail('invalid canonical mapping: ' + name)
 }
-// Parse values explicitly: a regex lookahead after optional spaces can
-// backtrack and incorrectly flag valid "var(...)" aliases.
-const definitions = [...declaration.matchAll(/--xl-[\w-]+:\s*([^;]+);/g)]
-if (definitions.length !== 19 || definitions.some(([, value]) =>
-  !value.trim().startsWith('var(--app-craft-'))) {
-  fail('visual values must be owned by design-system.scss, not the --xl adapter')
+for (const [, name] of adapter.matchAll(/var\((--xl-[\w-]+)\)/g)) {
+  if (!aliases.has(name)) fail('compatibility token has no canonical mapping: ' + name)
 }
-
 process.stdout.write('DS-07 UI ownership ratchet PASS: ' + checked
-  + ' page/feature files, 19 global bridge tokens; CSS debt at or below frozen limits: '
+  + ' page/feature files, ' + aliases.size + ' canonical bridge tokens; CSS debt at or below frozen limits: '
   + JSON.stringify(sum) + '\n')
