@@ -1,0 +1,70 @@
+/* Host presentation only; reader, fields, media and action states keep their owners. */
+.form-read__hint {
+  display: block; margin: var(--yh-space-12) 0; min-width: 0;
+  color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size);
+  font-weight: var(--yh-type-meta-weight); line-height: var(--yh-type-meta-line);
+  overflow-wrap: anywhere;
+}
+.form-read__draft {
+  box-sizing: border-box; margin: var(--yh-space-12) 0; padding: var(--yh-space-12);
+  border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-control);
+  background: var(--yh-color-surface-subtle); overflow-wrap: anywhere;
+}
+.form-read__draft .form-read__hint { margin: 0 0 var(--yh-space-8); }
+.form-read__record {
+  min-width: 0; margin-top: var(--yh-space-16); padding-top: var(--yh-space-16);
+  border-top: var(--yh-border-width) solid var(--yh-border-subtle);
+}
+.form-read__title {
+  display: block; margin-bottom: var(--yh-space-8); color: var(--yh-color-text-secondary);
+  font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight);
+  line-height: var(--yh-type-body-line); overflow-wrap: anywhere;
+}
+.form-read__field {
+  display: flex; justify-content: space-between; gap: var(--yh-space-16); min-width: 0;
+  padding: var(--yh-space-12) 0; border-bottom: var(--yh-border-width) solid var(--yh-border-subtle);
+}
+.form-read__label {
+  flex: 0 1 90px; min-width: 0; color: var(--yh-color-text-secondary);
+  font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); overflow-wrap: anywhere;
+}
+.form-read__value {
+  min-width: 0; color: var(--yh-color-text-primary); text-align: right;
+  font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); overflow-wrap: anywhere;
+}
+.form-read--commercial { min-width: 0; font-family: var(--yh-type-family); }
+.form-read--commercial .form-read__record { border: 0; padding-top: 0; }
+.form-read__group {
+  box-sizing: border-box; min-width: 0; padding: var(--yh-space-16); margin-bottom: var(--yh-space-16);
+  border: var(--yh-border-width) solid var(--yh-border-subtle); border-radius: var(--yh-radius-card);
+  background: var(--yh-color-surface-card);
+}
+.form-read__group-fields { display: flex; flex-wrap: wrap; gap: var(--yh-space-16); }
+.form-read__group-fields .app-field { width: 100%; min-width: 0; margin: 0; }
+.form-read__group-fields .form-read__numeric { flex: 1 1 calc(50% - var(--yh-space-16)); min-width: 0; }
+.form-read--commercial .form-read__field { display: block; padding: var(--yh-space-8) 0; border: 0; }
+.form-read--commercial .form-read__label { display: block; margin-bottom: var(--yh-space-8); }
+.form-read--commercial .form-read__value { display: block; text-align: left; }
+@media (max-width: 390px) {
+  .form-read__group-fields .form-read__numeric { flex-basis: 100%; }
+}
+/* Heading paint is local to this host; other shared-heading consumers keep their brand owner. */
+.form-read__group :deep(.app-task-heading) {
+  flex-wrap: wrap; gap: var(--yh-space-8); padding-bottom: var(--yh-space-8); margin-bottom: var(--yh-space-12);
+  border-bottom: var(--yh-border-width) solid var(--yh-border-subtle);
+}
+.form-read__group :deep(.app-task-heading .app-task-heading__icon) {
+  width: var(--yh-size-icon-lg); height: var(--yh-size-icon-lg);
+  border-radius: var(--yh-radius-control); background: var(--yh-action-primary);
+}
+.form-read__group :deep(.app-task-heading__title) {
+  font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight);
+  line-height: var(--yh-type-section-line); color: var(--yh-color-text-primary); overflow-wrap: anywhere;
+}
+.form-read__group :deep(.app-task-heading__status) {
+  max-width: 100%; box-sizing: border-box; padding: var(--yh-space-4) var(--yh-space-8);
+  border-radius: var(--yh-radius-control); background: var(--yh-color-status-neutral-bg);
+  color: var(--yh-color-status-neutral-fg); font-size: var(--yh-type-meta-size);
+  font-weight: var(--yh-type-meta-weight); line-height: var(--yh-type-meta-line);
+  white-space: normal; overflow-wrap: anywhere;
+}
