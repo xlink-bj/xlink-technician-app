@@ -4,6 +4,21 @@ import type {
   QuotationMaterialSkuVariantRead,
 } from '@shared/ports'
 
+/** Labels describe raw draft values; they never participate in SKU matching or pricing. */
+export function materialSkuSummary(
+  attributes: Readonly<Record<string, string>>,
+  fields: readonly QuotationMaterialSaleFieldRead[] | null,
+): string {
+  return Object.entries(attributes).map(([name, value]) => {
+    const matches = fields?.filter(field => field.name === name) ?? []
+    const field = matches.length === 1 ? matches[0] : undefined
+    const options = field?.options.filter(option => option.value === value) ?? []
+    const label = options.length === 1 ? options[0]?.label.trim() : ''
+    return label ? `${field?.label || name}：${label}`
+      : `${name}：${value}（${fields ? '未识别' : '标签暂不可用'}）`
+  }).join(' / ')
+}
+
 /** R1 placeOrders.vue:2983-3018, 6243-6264.
  * A read-only selection proof. It MUST NOT modify a QuotationDraft or infer price.
  * R1 getMaterialSKU() drops SKU exts before later skuMatch() reads them;

@@ -13,6 +13,11 @@ for (const width of [430, 375]) test(`${brand} catalog actions fit their labels 
   await (await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })).click()
   await page.getByTestId('task-focus-action').click()
   await page.getByTestId('quotation-hub-create-unverified').click()
+  if (brand === 'yuhong') {
+    await expect(page.locator('.quotation-content__initial-empty-heading')).toHaveCSS('display', 'flex')
+    await expect(page.locator('.quotation-content__initial-field-label').first()).toHaveCSS('display', 'block')
+    await expect(page.getByTestId('quotation-empty-illustration')).not.toBeVisible()
+  }
   await page.getByTestId('quotation-add-group').click()
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
   await page.getByRole('dialog', { name: '选择维修部位' }).locator('.app-cascade-selector__parents').getByText('屋面', { exact: true }).click()
@@ -42,6 +47,26 @@ for (const width of [430, 375]) test(`${brand} catalog actions fit their labels 
     expect(box.x + box.width).toBeLessThanOrEqual(width + 1)
     if (brand === 'yuhong') expect(await action.locator('.app-button__label').evaluate(el => el.getBoundingClientRect().height - parseFloat(getComputedStyle(el).lineHeight))).toBeLessThanOrEqual(1)
   }
+  await page.getByTestId('quotation-catalog-add-material-mock-catalog-material-sealant').click()
+  if (await page.getByTestId('quotation-catalog-close').isVisible()) await page.getByTestId('quotation-catalog-close').click()
+  await page.getByTestId('quotation-browse-quotation-group-1').click()
+  await page.getByTestId('quotation-catalog-kind-material').click()
+  await page.getByTestId('quotation-material-options-mock-catalog-material-sealant').click()
+  await page.getByTestId('quotation-sku-option-thickness-2').click()
+  await page.getByTestId('quotation-sku-option-color-black').click()
+  await page.getByTestId('quotation-sku-save-local').click()
+  await page.getByTestId('quotation-catalog-close').click()
+  if (await page.getByTestId('quotation-group-collapsed-summary-quotation-group-1').isVisible()) {
+    await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
+  }
+  await expect(page.locator('[data-testid^="quotation-material-skus-"]')).toContainText('厚度：2毫米 / 颜色：黑色')
+  await expect(page.getByTestId('quotation-commercial-draft-badge')).toContainText('草稿已保存')
+  await page.reload()
+  await page.getByTestId('quotation-hub-create-unverified').click()
+  if (await page.getByTestId('quotation-group-collapsed-summary-quotation-group-1').isVisible()) {
+    await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
+  }
+  await expect(page.locator('[data-testid^="quotation-material-skus-"]')).toContainText('厚度：2毫米 / 颜色：黑色')
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
   expect(remote).toEqual([]); expect(errors).toEqual([])
 })

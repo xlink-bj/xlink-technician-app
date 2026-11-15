@@ -428,7 +428,7 @@
                       <text class="quotation-content__package-summary-note">SKU 规格明细 · 尚未核验报价金额</text>
                       <view v-for="sku in selection.skuChoices" :key="sku.skuId"
                         class="quotation-content__package-summary-row">
-                        <text>规格 SKU · {{ Object.values(sku.attributes).join(' / ') }} · {{ sku.quantity }} 件</text>
+                        <text>规格 · {{ materialSkuSummary(sku.attributes, catalogBrowser.materialSummaryFields) }} · {{ sku.quantity }} 件</text>
                         <AppButton variant="text" :disabled="!canEdit"
                           :data-testid="`quotation-material-sku-remove-${group.groupId}-${sku.skuId}`"
                           @tap="removeLocalSkuFromRepairGroup(group.groupId, selection.selectionId, selection.catalogId, sku.skuId)">
@@ -1065,6 +1065,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import { useActionWorkspaceStore } from '../action-workspace'
 import { useQuotationCompositionStore } from './composition-store'
 import { formatQuotationMoney, quotationAmountPresentation } from './amount-presentation'
+import { materialSkuSummary } from './material-sku-selection-preview'
 import { catalogUnitPricePresentation } from './catalog-price-presentation'
 import { useLocalUnitDisplay, useVerifiedLocalQuotationDisplay } from './local-unit-display'
 import { localCatalogDescription, localCatalogMinimumCharge, localSelectionMinimumCharge } from './local-catalog-presentation'
@@ -1206,6 +1207,8 @@ const productReviewReadiness = computed(() => {
 })
 
 let engineRefreshTimer: ReturnType<typeof setTimeout> | undefined
+watch(() => composition.groups.some(group => group.materials.some(selection => selection.skuChoices?.length)),
+  hasSkus => { if (hasSkus) void catalogBrowser.loadMaterialSummaryFields() }, { immediate: true })
 watch(
   () => [
     composition.draft?.draftVersion,

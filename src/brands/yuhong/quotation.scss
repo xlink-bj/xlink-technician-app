@@ -16,6 +16,39 @@
   background: transparent; border: 0; box-shadow: none; padding: 0;
 }
 .quotation-content__groups { display: flex; flex-direction: column; gap: var(--yh-space-16); }
+.quotation-content__initial-empty { display: flex; flex-direction: column; gap: var(--yh-space-16); }
+.quotation-content__initial-empty .quotation-content__section-heading {
+  display: flex; align-items: center; gap: var(--yh-space-8); margin-bottom: var(--yh-space-16);
+}
+.quotation-content__initial-draft-notice { display: flex; align-items: baseline; gap: var(--yh-space-8); color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-content__initial-empty-surface { display: flex; flex-direction: column; gap: var(--yh-space-8); }
+.quotation-content__initial-field-label { display: block; margin-top: var(--yh-space-8); }
+.quotation-content__initial-field-value,
+.quotation-content__initial-field-placeholder {
+  display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; width: 100%; margin: 0;
+  min-height: var(--yh-size-touch); padding: var(--yh-space-12); border: var(--yh-border-width) solid var(--yh-color-border-control);
+  border-radius: var(--yh-radius-control); font: inherit; text-align: left; line-height: var(--yh-type-body-line);
+  color: var(--yh-color-text-muted); background: var(--yh-color-field-disabled-bg); overflow-wrap: anywhere;
+}
+.quotation-content__initial-field-value { color: var(--yh-color-text-primary); background: var(--yh-color-surface-card); }
+.quotation-content__initial-field-value::after { border: 0; }
+.quotation-content__initial-empty-copy { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+/* Decorative legacy artwork has no role in the compact Yuhong first step. */
+.quotation-content__initial-empty-artwork { display: none; }
+.quotation-content__initial-cost-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--yh-space-8); padding: var(--yh-space-12) 0; }
+.quotation-content__initial-cost-unavailable { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-content__initial-empty .quotation-content__select-tile {
+  display: flex; align-items: center; gap: var(--yh-space-12); padding: var(--yh-space-12);
+  border-radius: var(--yh-radius-control); background: var(--yh-color-field-disabled-bg); color: var(--yh-color-text-muted);
+}
+.quotation-content__initial-empty .quotation-content__select-tile-copy { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: var(--yh-space-4); }
+.quotation-content__initial-empty .quotation-content__select-tile-help { font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-content__initial-empty .quotation-content__adjustment-actions { display: flex; gap: var(--yh-space-8); margin-top: var(--yh-space-12); }
+.quotation-content__initial-empty .quotation-content__adjustment-button {
+  flex: 1; min-height: var(--yh-size-touch); margin: 0; border: 0; border-radius: var(--yh-radius-control);
+  color: var(--yh-color-action-disabled-text); background: var(--yh-color-action-disabled-bg); font: inherit;
+}
+.quotation-content__initial-empty .quotation-content__order-explainer { display: flex; flex-direction: column; gap: var(--yh-space-8); color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
 .quotation-content__group,
 .quotation-content__commercial-section,
 .quotation-content__initial-card,

@@ -8,6 +8,7 @@ import type {
   QuotationCatalogReadPort,
   QuotationPackageDetailRead,
   QuotationPackageMaterialRead,
+  QuotationMaterialSaleFieldRead,
   ReadPage,
 } from '@shared/ports'
 import type { OperationState } from '@shared/types'
@@ -116,6 +117,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
   const materialSkuPreview = ref<MaterialSkuSelectionPreview | null>(null)
   const materialSkuErrorCopy = ref('')
   const materialSkuSelections = ref<Readonly<Record<string, string>>>({})
+  const materialSummaryFields = ref<readonly QuotationMaterialSaleFieldRead[] | null>(null)
   const materialSkuMatch = computed(() => materialSkuPreview.value
     ? matchMaterialSkuSelectionPreview(materialSkuPreview.value, materialSkuSelections.value)
     : { state: 'incomplete' as const })
@@ -128,6 +130,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
   let generation = 0
   let packageRequestGeneration = 0
   let materialRequestGeneration = 0
+  let materialSummaryRequest: Promise<void> | null = null
   let catalogFilterOptionsRequest: Promise<void> | null = null
   let catalogFilterOptionsVersion = 0
   const listRequests: ListRequestsByKind = {}
@@ -141,6 +144,8 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     materialRequestGeneration += 1
     port = null
     context = null
+    materialSummaryFields.value = null
+    materialSummaryRequest = null
     for (const kind of quotationCatalogKinds) {
       delete listRequests[kind]
       delete pageRequests[kind]
@@ -385,6 +390,21 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     return promise
   }
 
+  /** Context-scoped descriptive metadata, including restored drafts. No SKU authorization. */
+  function loadMaterialSummaryFields(): Promise<void> {
+    if (materialSummaryFields.value || !port?.listMaterialSalesFields || !context) return Promise.resolve()
+    if (materialSummaryRequest) return materialSummaryRequest
+    const current = generation
+    const request = port.listMaterialSalesFields(context).then(result => {
+      if (current === generation && result.state === 'succeeded' && result.data) {
+        materialSummaryFields.value = result.data.items
+      }
+    }).catch(() => { /* Raw values remain visible when descriptive metadata is unavailable. */ })
+      .finally(() => { if (current === generation) materialSummaryRequest = null })
+    materialSummaryRequest = request
+    return request
+  }
+
   /** Read-only preview on the REAL material catalog surface; it does not
    * add a SKU or mutate the local quotation draft. R1 backend APIs only.
    */
@@ -416,6 +436,7 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
         materialSkuErrorCopy.value = '销售属性来源暂不可用，未请求 SKU。'
         return
       }
+      materialSummaryFields.value = fields.data.items
       const selectedFieldNames = fields.data.items
         .filter(field => item.saleOptionCandidates?.[field.name]?.length)
         .map(field => field.name)
@@ -524,6 +545,8 @@ export const useQuotationCatalogBrowserStore = defineStore('quotationCatalogBrow
     materialSkuErrorCopy,
     materialSkuSelections,
     materialSkuMatch,
+    materialSummaryFields,
+    loadMaterialSummaryFields,
     visibleCatalogItems,
     packageMaterialLayers,
     configure,
