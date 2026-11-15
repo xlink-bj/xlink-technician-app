@@ -48,3 +48,16 @@ export function parseActionWorkspaceNodeId(value: unknown): WorkflowNodeRuntimeI
   return value.trim() as WorkflowNodeRuntimeId
 }
 
+/** Cold/reloaded confirmations must not infer a predecessor from their query alone. */
+export function appointmentWorkspaceHasBack(
+  options: Record<string, unknown> | undefined,
+  pages: readonly { route?: string; options?: Record<string, unknown> }[],
+): boolean {
+  const previous = pages[pages.length - 2]
+  return typeof options?.id === 'string' && options.id.length > 0
+    && typeof options.node === 'string' && options.node.length > 0
+    && previous?.route === actionWorkspaceRoute.slice(1)
+    && previous.options?.id === options.id && previous.options?.node === options.node
+    && previous.options?.action === options.action
+}
+

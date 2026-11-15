@@ -139,6 +139,7 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import { appointmentDisplayFor } from '@features/work-orders/appointment-time'
+import { appointmentWorkspaceHasBack } from '@features/work-orders/action-workspace-routes'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppButton from '@shared/ui/AppButton.vue'
@@ -155,6 +156,7 @@ const routeNodeId = ref<ReturnType<typeof parseActionWorkspaceNodeId>>(null)
 const routeAction = ref<string | undefined>(undefined)
 const routeError = ref('')
 const isNavigating = ref(false)
+const hasWorkspaceBack = ref(false)
 
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const isSuccess = computed(() => workspace.lifecycle === 'succeeded' && workspace.businessResult === 'succeeded')
@@ -200,6 +202,7 @@ function loadWorkspace(): void {
 }
 
 onLoad((options) => {
+  hasWorkspaceBack.value = appointmentWorkspaceHasBack(options, typeof getCurrentPages === 'function' ? getCurrentPages() : [])
   routeId.value = parseActionWorkspaceId(options?.id)
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
   routeAction.value = typeof options?.action === 'string' ? options.action : undefined
@@ -222,7 +225,7 @@ watch(
 async function backToEdit(): Promise<void> {
   if (isNavigating.value) return
   isNavigating.value = true
-  const result = await workspace.backToAppointmentWorkspace()
+  const result = await workspace.backToAppointmentWorkspace(hasWorkspaceBack.value)
   if (result.state !== 'succeeded') isNavigating.value = false
 }
 

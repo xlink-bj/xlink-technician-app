@@ -19,6 +19,7 @@ import {
   useActionWorkspaceStore,
 } from '@features/work-orders/action-workspace'
 import { beginActionMutation, recordActionFormSaved } from '@features/work-orders/action-mutation-receipt'
+import { appointmentWorkspaceHasBack } from '@features/work-orders/action-workspace-routes'
 import type {
   AppointmentFormRead,
   SubmitAppointmentInput,
@@ -156,6 +157,16 @@ async function openWorkspace(
 }
 
 describe('Action Workspace runtime and Appointment content boundary', () => {
+  it('accepts only the actual same-workspace predecessor as confirmation Back evidence', () => {
+    const options = { id: 'order', node: 'node', action: 'set_appointment' }
+    const previous = { route: 'pages/work-orders/action-workspace', options }
+    expect(appointmentWorkspaceHasBack(options, [previous, {}])).toBe(true)
+    expect(appointmentWorkspaceHasBack(options, [{}])).toBe(false)
+    for (const patch of [{ id: 'other' }, { node: 'other' }, { action: 'place_order' }]) {
+      expect(appointmentWorkspaceHasBack(options, [{ ...previous, options: { ...options, ...patch } }, {}])).toBe(false)
+    }
+    expect(appointmentWorkspaceHasBack(options, [{ ...previous, route: 'pages/work-orders/detail' }, {}])).toBe(false)
+  })
   beforeEach(() => setActivePinia(createPinia()))
 
   it('keeps the synthetic appointment dispatch scope tied to actor, stage and current session', async () => {
@@ -567,7 +578,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
 
     const result = await store.continueToConfirmation()
     expect(result.state).toBe('succeeded')
-    expect(navigation.replace).toHaveBeenLastCalledWith(actionWorkspaceConfirmationRouteFor(
+    expect(navigation.navigate).toHaveBeenLastCalledWith(actionWorkspaceConfirmationRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
@@ -646,7 +657,7 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(result.state).toBe('succeeded')
     expect(store.appointmentDatetimeApplicable).toBe(false)
     expect(store.appointmentTimeValue).toBeUndefined()
-    expect(navigation.replace).toHaveBeenLastCalledWith(actionWorkspaceConfirmationRouteFor(
+    expect(navigation.navigate).toHaveBeenLastCalledWith(actionWorkspaceConfirmationRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
       asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
       'set_appointment',
@@ -704,49 +715,27 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
     expect(navigation.reset).toHaveBeenNthCalledWith(2, '/pages/work-orders/work-orders')
   })
 
-  it('pushes the time picker for native cancel and replaces confirmation to preserve the edit route', async () => {
-    const { store, navigation } = configureWorkspace()
+  it('keeps edit below time/confirmation and returns to it without stacking copies', async () => {
+    const { store, navigation, command } = configureWorkspace()
     await openWorkspace(store)
     store.setField('need', '1')
     store.setAppointmentTime('2026-04-20 14:00')
-
     await store.openAppointmentTimeSelection()
-    await store.openConfirmation()
-    await store.backToAppointmentWorkspace()
-    await store.openAppointmentTimeSelection()
-    await store.openConfirmation()
-
+    await store.openConfirmation() // Replace only the time picker above the edit page.
+    await store.backToAppointmentWorkspace(true)
+    await store.continueToConfirmation() // Direct confirmation pushes above edit.
+    await store.backToAppointmentWorkspace(true)
     expect(navigation.navigate).toHaveBeenCalledTimes(2)
-    expect(navigation.replace).toHaveBeenCalledTimes(3)
-    expect(navigation.back).not.toHaveBeenCalled()
-    expect(navigation.navigate).toHaveBeenNthCalledWith(1, actionWorkspaceTimeRouteFor(
+    expect(navigation.replace).toHaveBeenCalledTimes(1)
+    expect(navigation.back).toHaveBeenCalledTimes(2)
+    expect(navigation.navigate).toHaveBeenLastCalledWith(actionWorkspaceConfirmationRouteFor(
       asOpaqueId<'WorkOrderId'>('workspace-work-order'),
-      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
-      'set_appointment',
-    ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(1, actionWorkspaceConfirmationRouteFor(
-      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
-      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
-      'set_appointment',
-    ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(2, actionWorkspaceRouteFor(
-      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
-      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
-      'set_appointment',
-    ))
-    expect(navigation.navigate).toHaveBeenNthCalledWith(2, actionWorkspaceTimeRouteFor(
-      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
-      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
-      'set_appointment',
-    ))
-    expect(navigation.replace).toHaveBeenNthCalledWith(3, actionWorkspaceConfirmationRouteFor(
-      asOpaqueId<'WorkOrderId'>('workspace-work-order'),
-      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'),
-      'set_appointment',
-    ))
+      asOpaqueId<'WorkflowNodeRuntimeId'>('workspace-appointment-node'), 'set_appointment'))
+    expect(store.appointmentForm?.values.datetime).toBe('2026-04-20 14:00')
+    expect(command.submitAppointment).not.toHaveBeenCalled()
   })
 
-  it('returns from confirmation to the explicit edit route instead of native back', async () => {
+  it('uses the explicit edit route when confirmation has no matching predecessor', async () => {
     const { store, navigation } = configureWorkspace()
     await openWorkspace(store)
     store.setField('need', '1')
@@ -762,6 +751,20 @@ describe('Action Workspace runtime and Appointment content boundary', () => {
       'set_appointment',
     ))
     expect(navigation.back).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate away when the local draft cannot be saved', async () => {
+    const { store, navigation, storage, command } = configureWorkspace()
+    await openWorkspace(store)
+    store.setField('need', '0')
+    vi.mocked(storage.storage.write).mockResolvedValue({ state: 'failed_retryable',
+      error: { category: 'network_retryable', message: 'synthetic storage failure', retryable: true } })
+    expect((await store.exit()).state).not.toBe('succeeded')
+    expect(store.appointmentForm?.values.need).toBe('0')
+    expect(store.draftStatus).toBe('save_failed')
+    expect(navigation.reset).not.toHaveBeenCalled()
+    expect(navigation.back).not.toHaveBeenCalled()
+    expect(command.submitAppointment).not.toHaveBeenCalled()
   })
 
   it('returns action errors to the explicit detail route instead of native back', async () => {

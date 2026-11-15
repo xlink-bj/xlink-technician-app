@@ -16,7 +16,8 @@
         block variant="secondary" data-testid="signing-order-read-retry"
         @tap="retryScopedRead"
       >重新核验当前订单</AppButton>
-      <navigator open-type="navigateBack" :delta="1">返回工单</navigator>
+      <AppButton variant="secondary" :disabled="returning" data-testid="signing-order-read-return"
+        @tap="returnToWorkOrder">返回工单</AppButton>
     </AppRecordCard>
     <template v-else>
       <view class="signing-read-stage xl-craft__surface" data-testid="signing-review-progress">
@@ -137,11 +138,12 @@
         <text v-for="reason in eligibilityFeedback.notes" :key="reason" class="signing-read-help" data-testid="signing-eligibility-reason">{{ reason }}</text>
         <text class="signing-read-help">{{ eligibilityFeedback.notice }}</text>
       </AppRecordCard>
-      <navigator class="signing-read-return xl-craft__action-secondary" open-type="navigateBack" :delta="1"
-        data-testid="signing-order-read-return">
+      <AppButton variant="secondary" class="signing-read-return xl-craft__action-secondary" :disabled="returning"
+        data-testid="signing-order-read-return" @tap="returnToWorkOrder">
         返回
-      </navigator>
+      </AppButton>
     </template>
+    <AppStatus v-if="returnError" tone="danger" :message="returnError" />
     <view class="signing-read-footer xl-craft__caption" data-testid="signing-order-read-no-write">
       全程只读
     </view>
@@ -166,8 +168,31 @@ import { isDevSyntheticContractReadPreviewEnabled } from '@app/business-mock'
 import { reconcileR1SigningRead } from '@features/work-orders/signing/r1-signing-read-reconciliation'
 import { signingEligibilityFeedback } from '@features/work-orders/signing/r1-signing-ui-rules'
 import { signingReviewProgress } from '@features/work-orders/signing/signing-review-progress'
+import { createDefaultNavigationPort } from '@app/composition'
 
 const session = useSessionStore()
+const navigation = createDefaultNavigationPort()
+const returning = ref(false)
+const returnError = ref('')
+
+async function returnToWorkOrder(): Promise<void> {
+  if (returning.value) return
+  returning.value = true
+  returnError.value = ''
+  try {
+    if (typeof getCurrentPages === 'function' && getCurrentPages().length > 1 && navigation.back) {
+      try { await navigation.back(); return } catch { /* Fall back to a known business page. */ }
+    }
+    const target = routeWorkOrderId.value.trim()
+      ? `/pages/work-orders/detail?id=${encodeURIComponent(routeWorkOrderId.value.trim())}`
+      : '/pages/work-orders/work-orders'
+    await (navigation.reset ?? navigation.replace ?? navigation.navigate)(target)
+  } catch {
+    returnError.value = '暂时无法返回，请重试。'
+  } finally {
+    returning.value = false
+  }
+}
 const review = useSigningReviewReadStore()
 const eligibilityFeedback = computed(() => signingEligibilityFeedback(review.initialSigningIntent.assessment, review.handlerSnapshot.state))
 const productionReadOnly = isProductionReadOnlyRuntime()

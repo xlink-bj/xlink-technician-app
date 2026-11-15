@@ -70,6 +70,7 @@
       />
     </template>
     <template #after-content>
+      <AppStatus v-if="exitFeedback" tone="danger" :message="exitFeedback" data-testid="workspace-exit-feedback" />
       <AStageMockQuoteOrderPanel ref="aStageOrderPanel" v-if="aStageMockOrderEnabled"
         :create-controller="createAStageMockQuoteOrderControllerForUi"
         @draft-status="orderFieldsDraftStatus = $event"
@@ -327,6 +328,7 @@ import AppField from '@shared/ui/AppField.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppInput from '@shared/ui/AppInput.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
+import AppStatus from '@shared/ui/AppStatus.vue'
 import AppSelector from '@shared/ui/AppSelector.vue'
 import AppTextarea from '@shared/ui/AppTextarea.vue'
 import type { AppChoiceOption } from '@shared/ui/types'
@@ -436,6 +438,7 @@ async function openExistingQuotationEditor(orderId: string): Promise<void> {
   }
 }
 const routeError = ref('')
+const exitFeedback = ref('')
 const localJourneyContext = ref<MockJourneyContextSummary | null>(null)
 const suggestionFeedback = ref('')
 const journeyFeedback = ref('')
@@ -472,7 +475,7 @@ async function loadMockOrderRead(): Promise<void> {
 watch(() => [aStageMockOrderEnabled.value, quotationHubVisible.value,
   session.session?.sessionRef, session.session?.currentRole?.id,
   session.session?.roleVersion] as const, () => { void loadMockOrderRead() }, { immediate: true })
-const feedback = computed(() => actionErrorCopy(workspace.error))
+const feedback = computed(() => exitFeedback.value || actionErrorCopy(workspace.error))
 const mockJourney = computed(() => mockJourneyContext(routeId.value))
 const canAdoptSurveySuggestion = computed(() =>
   routeAction.value === 'place_order'
@@ -611,7 +614,7 @@ onShow(() => {
   if(normalPage.show()&&routeReady.value&&session.status==='authenticated')void loadWorkspace()
 })
 onHide(normalPage.hide)
-onBackPress(normalPage.backPress)
+onBackPress(options => closeSurveyConfirmation() || normalPage.backPress(options))
 
 onUnload(() => {
   workspace.leavePage(mountedWorkspaceAction, workspacePageLease)
@@ -632,9 +635,11 @@ watch(
 )
 
 async function exit(): Promise<void> {
+  if (closeSurveyConfirmation()) return
   if(await normalPage.exit())return
+  exitFeedback.value = ''
   const result = await workspace.exit()
-  if (result.state !== 'succeeded') routeError.value = 'draft-save-failed'
+  if (result.state !== 'succeeded') exitFeedback.value = '本地草稿尚未安全保存，请保留页面后重试。'
 }
 
 async function advanceJourney(): Promise<void> {
@@ -697,6 +702,11 @@ async function continueToConfirmation(): Promise<void> {
 }
 
 const surveyConfirmOpen = ref(false)
+function closeSurveyConfirmation(): boolean {
+  if (!surveyConfirmOpen.value) return false
+  surveyConfirmOpen.value = false
+  return true
+}
 function requestSurveyCompletion(): void {
   if (workspace.descriptor?.formPurpose === 'survey') {
     if (inputsValid.value && workspace.canSubmit && workspace.lifecycle !== 'submitting') surveyConfirmOpen.value = true

@@ -1592,7 +1592,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       currentDescriptor.workOrderId,
       currentDescriptor.workflowNodeId,
       currentDescriptor.actionIntent,
-    ), true)
+    ))
     return { state: 'succeeded', data: undefined }
   }
 
@@ -1621,7 +1621,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     return { state: 'succeeded', data: undefined }
   }
 
-  async function backToAppointmentWorkspace(): Promise<OperationSnapshot<void>> {
+  async function backToAppointmentWorkspace(hasWorkspaceBack = false): Promise<OperationSnapshot<void>> {
     const currentDescriptor = descriptor.value
     const configured = dependencies
     if (!currentDescriptor || !configured) return failure('validation', 'Action content is not ready')
@@ -1630,7 +1630,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       error.value = flushed.error ?? null
       return flushed
     }
-    await returnTo(actionWorkspaceRouteFor(
+    if (hasWorkspaceBack && configured.navigation.back) await configured.navigation.back()
+    else await returnTo(actionWorkspaceRouteFor(
       currentDescriptor.workOrderId,
       currentDescriptor.workflowNodeId,
       currentDescriptor.actionIntent,

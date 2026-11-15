@@ -23,11 +23,16 @@ export async function mountGenericNumericWorkspace(type: 'number' | 'digit') {
     workflowNodes: [{ id: nodeId, category: 'forms', displayName: '合成通用表单', lifecycle: 'active', formPurpose: 'survey', formDefinitionId: definitionId,
       visibility: { evidenceState: 'verified', viewableRoleIds: [actor.currentRole!.id] } }] }
   const writes: { kind: string; values?: unknown }[] = [], drafts = new Map<string, unknown>()
+  const navigationCalls: string[] = []
+  let draftWritesFail = false
   let completed = false
   const ok = <T>(data: T) => ({ state: 'succeeded' as const, data })
   const storage = {
     read: async (key: { key: string }) => ok(drafts.get(key.key) ?? null),
-    write: async (key: { key: string }, value: unknown) => { drafts.set(key.key, value); return ok(undefined) },
+    write: async (key: { key: string }, value: unknown) => {
+      if (draftWritesFail) return { state: 'failed_retryable', error: { category: 'network_retryable', message: 'synthetic storage failure', retryable: true } }
+      drafts.set(key.key, value); return ok(undefined)
+    },
     remove: async (key: { key: string }) => { drafts.delete(key.key); return ok(undefined) },
     listKeys: async () => ok([...drafts.keys()]),
   } as unknown as StoragePort
@@ -39,12 +44,20 @@ export async function mountGenericNumericWorkspace(type: 'number' | 'digit') {
       completeWorkflowNode: async () => { writes.push({ kind: 'complete' }); completed = true; return ok(undefined) },
     } as unknown as TechnicianApiCommandPort,
     storage, draftRepository: createActionDraftRepository(storage), getSession: () => actor,
-    navigation: { navigate: async () => undefined }, debounceMs: 60000,
+    navigation: { navigate: async url => { navigationCalls.push(url) } }, debounceMs: 60000,
   })
   const loaded = await workspace.load({ workOrderId: id, workflowNodeId: nodeId, actionIntent: 'interact_with_form' })
   if (loaded.state !== 'succeeded' || workspace.descriptor?.execution !== 'enabled') throw Error('Synthetic Generic contract not executable: '+JSON.stringify({loaded,descriptor:workspace.descriptor}))
   const host = document.createElement('div'); host.id = 'generic-numeric-workspace'; document.body.append(host)
   const app = createApp(ActualWorkspacePage); app.use(pinia); app.mount(host); await nextTick()
   return { ledger: () => structuredClone(writes), value: () => workspace.dynamicForm?.values.amount,
+    navigationCalls: () => [...navigationCalls],
+    failDraftWrites: (fail: boolean) => { draftWritesFail = fail },
+    back: () => {
+      // Invoke the actual page's registered synchronous hook; this is not a native-device claim.
+      const hooks = (app._instance as unknown as { onBackPress?: ((options: { from: string }) => unknown)[] }).onBackPress ?? []
+      return hooks.some(hook => hook({ from: 'backbutton' }) === true)
+    },
+    exit: () => (app._instance as unknown as { setupState: { exit(): Promise<void> } }).setupState.exit(),
     unmount() { app.unmount(); workspace.clear(); host.remove() } }
 }
