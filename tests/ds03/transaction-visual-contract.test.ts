@@ -23,7 +23,7 @@ describe('DS-03 transaction visual system', () => {
   it('real quotation and signing reuse shared card, section and descriptive tags', () => {
     for (const page of [quote, signing]) {
       expect(page).toContain('app-transaction-page')
-      expect(page).toContain('<AppRecordCard')
+      expect(page).toMatch(/<view[^>]*class="app-record-card /)
       expect(page).toContain('<AppSectionHeading')
       expect(page).toContain('<AppMetaTag')
       expect(page).toContain('<AppAmountValue')

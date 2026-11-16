@@ -5,9 +5,9 @@
       variant="inline" label="正在核验工单与正式订单"
       data-testid="signing-order-read-loading"
     />
-    <AppRecordCard
+    <view
       v-else-if="session.status !== 'authenticated' || review.snapshot.state !== 'ready'"
-      class="signing-read-section xl-craft__surface xl-craft__surface--flat"
+      class="app-record-card signing-read-section xl-craft__surface xl-craft__surface--flat"
       data-testid="signing-order-read-blocked"
     >
       <text :class="{ 'signing-read-error': review.snapshot.state === 'failed_retryable' }">当前订单暂无法完成签约前只读核验。请从当前账号可见工单中的正式订单重新进入。</text>
@@ -18,7 +18,7 @@
       >重新核验当前订单</AppButton>
       <AppButton variant="secondary" :disabled="returning" data-testid="signing-order-read-return"
         @tap="returnToWorkOrder">返回工单</AppButton>
-    </AppRecordCard>
+    </view>
     <template v-else>
       <view class="signing-read-stage xl-craft__surface" :class="{ 'signing-read-stage--error': signingFeedbackError }" data-testid="signing-review-progress">
         <view class="xl-craft__progress-labels">
@@ -50,7 +50,7 @@
         <text v-show="stageInfoExpanded" class="signing-read-stage-detail signing-read-body"
           data-testid="signing-read-stage-detail">{{ signingStage.detail }}</text>
       </view>
-      <AppRecordCard class="signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
+      <view class="app-record-card signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
         <view class="signing-read-hero-top">
           <text class="signing-read-hero-title">当前订单</text>
           <AppMetaTag class="xl-craft__badge" label="已核验" tone="success" />
@@ -79,8 +79,8 @@
         <text v-if="!review.snapshot.review?.order.contentSupported" class="signing-read-warning xl-craft__caption">
           部分订单明细暂不可识别，未推断缺失字段。
         </text>
-      </AppRecordCard>
-      <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-contract-status">
+      </view>
+      <view class="app-record-card signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-order-read-contract-status">
         <AppSectionHeading title="合同记录" />
         <text v-if="!scopedContractReadEnabled" data-testid="signing-contract-prod-blocked">
           合同状态核验暂未开放
@@ -128,8 +128,8 @@
             </view>
           </view>
         </view>
-      </AppRecordCard>
-      <AppRecordCard class="signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-eligibility">
+      </view>
+      <view class="app-record-card signing-read-section xl-craft__surface xl-craft__surface--flat" data-testid="signing-eligibility">
         <AppSectionHeading title="签约信息核对" />
         <text data-testid="signing-eligibility-result">{{ eligibilityFeedback.summary }}</text>
         <text v-if="review.handlerSnapshot.reason" data-testid="signing-handler-reason">{{ eligibilityFeedback.handler }}</text>
@@ -137,7 +137,7 @@
           :disabled="productionReadOnly || review.handlerSnapshot.state === 'loading'" @tap="review.loadNodeHandlerEvidence()">核对操作条件</AppButton>
         <text v-for="reason in eligibilityFeedback.notes" :key="reason" class="signing-read-help" data-testid="signing-eligibility-reason">{{ reason }}</text>
         <text class="signing-read-help">{{ eligibilityFeedback.notice }}</text>
-      </AppRecordCard>
+      </view>
       <AppButton variant="secondary" class="signing-read-return xl-craft__action-secondary" :disabled="returning"
         data-testid="signing-order-read-return" @tap="returnToWorkOrder">
         返回
@@ -155,7 +155,6 @@ import { computed, ref, watch } from 'vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
-import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'
 import AppAmountValue from '@shared/ui/AppAmountValue.vue'

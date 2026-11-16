@@ -37,3 +37,11 @@
 .quotation-hub__mode-radio--muted { color: var(--yh-color-action-disabled-text); }
 .quotation-hub__action-area { position: fixed; z-index: 50; left: 0; right: 0; bottom: 0; box-sizing: border-box; background: var(--yh-color-surface-card); border-top: var(--yh-border-width) solid var(--yh-color-border-divider); padding: var(--yh-space-12) var(--yh-layout-page-inset) calc(var(--yh-space-12) + env(safe-area-inset-bottom)); }
 .quotation-hub__new { min-height: var(--yh-size-primary); }
+
+/* Native views own the card inset; amount rows stay readable on both renderers. */
+.quotation-hub__order-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--yh-space-8); }
+.quotation-hub__order-pills { display: flex; flex-wrap: wrap; gap: var(--yh-space-4); }
+.quotation-hub__order-summary { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--yh-space-12); margin-top: var(--yh-space-12); }
+.quotation-hub__amount-block { display: flex; flex-direction: column; min-width: 0; gap: var(--yh-space-4); }
+.quotation-hub__amount-label,
+.quotation-hub__order-group-count { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }

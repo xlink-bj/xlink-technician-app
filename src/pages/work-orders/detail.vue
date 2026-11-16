@@ -36,7 +36,7 @@
 
     <view v-else-if="workOrder.loadState === 'succeeded' && detail" class="detail-content">
       <template v-if="readView === 'home'">
-      <AppRecordCard class="summary-card" data-testid="ds02b-detail-record-card">
+      <view class="app-record-card summary-card" data-testid="ds02b-detail-record-card">
         <view class="summary-card__content">
         <view class="summary-top-row">
           <view class="summary-identity">
@@ -89,7 +89,7 @@
         <text v-if="!canDial && detail.contact" class="action-hint">暂无可直接拨打的客户电话</text>
         <text v-if="contactFeedback || actionFeedback" class="action-feedback">{{ contactFeedback || actionFeedback }}</text>
         </view>
-      </AppRecordCard>
+      </view>
 
       <view v-if="workflowProjection.currentTask"
         :data-testid="normalWorkspaceEntry ? 'normal-form-workspace-entry' : aStageDynamicFormNodeKind ? 'special-form-workspace-entry' : undefined">
@@ -134,7 +134,7 @@
         :archives="[orderArchiveSummary(quotationBrowse.page)]" :order-state="quotationBrowse.state"
         :order-error="quotationBrowse.errorMessage" @retry-orders="retryQuotationRead" />
 
-      <AppRecordCard v-else class="information-card">
+      <view v-else class="app-record-card information-card">
         <view class="archive-detail-heading"><text class="tab-empty-title">{{ readView === 'follow-up' ? '全部跟进记录' : readView === 'customer' ? '客户资料' : '正式订单 · 只读' }}</text></view>
         <text class="archive-detail-context" data-testid="detail-read-context">{{ detail.customerName }}{{ detail.displayNumber ? ` · ${workOrderNumberDisplay(detail.displayNumber)}` : '' }}</text>
 
@@ -295,7 +295,7 @@
           </view>
         </view>
 
-      </AppRecordCard>
+      </view>
 
     </view>
 
@@ -338,7 +338,6 @@ import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
-import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'

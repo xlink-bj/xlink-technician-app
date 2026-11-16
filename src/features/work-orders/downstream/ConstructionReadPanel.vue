@@ -8,20 +8,20 @@
   <view v-else-if="!logs.length" class="construction-state" data-testid="construction-empty"><text class="construction-subtitle">暂无施工日志</text><text class="construction-meta">当前工单尚无可查看的日志记录。</text></view>
   <template v-else>
    <AppButton v-if="selected" variant="text" data-testid="construction-back-list" @tap="selectedId=''">返回日志列表</AppButton>
-   <AppRecordCard v-for="log in visibleLogs" :key="log.id" class="construction-card" data-testid="construction-log">
+   <view v-for="log in visibleLogs" :key="log.id" class="app-record-card construction-card" data-testid="construction-log">
     <view class="construction-record-heading"><text class="construction-subtitle">{{ log.repairParts.join('、') || '施工记录' }}</text><text class="construction-meta">{{ log.author }}</text></view>
     <text v-if="log.updatedAt" class="construction-meta">更新于 {{ log.updatedAt }}</text>
     <text v-if="log.orderId" class="construction-order">订单编号 {{ log.orderId }}</text>
     <text v-if="log.createdAt" class="construction-meta">创建于 {{ log.createdAt }}</text>
     <view class="construction-procedures"><text class="construction-label">工序记录</text><view v-for="(content,index) in (selected ? log.procedures : log.procedures.slice(0,1))" :key="index" class="construction-procedure"><text class="construction-index">{{ index+1 }}</text><text>{{ content }}</text></view></view>
     <AppButton v-if="!selected" variant="text" data-testid="construction-open-log" @tap="selectedId=log.id">查看全部 {{ log.procedures.length }} 项工序 ›</AppButton>
-   </AppRecordCard>
+   </view>
   </template>
  </view>
 </template>
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { AppButton, AppRecordCard } from '@shared/ui';
+import { AppButton } from '@shared/ui';
 import type { ConstructionLog } from '@shared/construction-read-contract';
 const props = defineProps<{
     logs: readonly ConstructionLog[];

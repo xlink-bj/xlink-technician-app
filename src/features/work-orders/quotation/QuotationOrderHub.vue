@@ -40,11 +40,11 @@
       <text class="quotation-hub__mode-safety">当前操作只新建报价草稿，不会自动创建正式订单。</text>
     </view>
     <template v-else>
-    <AppRecordCard v-if="!isVisualSample && (displayReadState === 'loading' || displayReadState === 'idle')" class="quotation-hub__empty" data-testid="quotation-hub-loading">
+    <view v-if="!isVisualSample && (displayReadState === 'loading' || displayReadState === 'idle')" class="app-record-card quotation-hub__empty" data-testid="quotation-hub-loading">
       <text class="quotation-hub__empty-title">正在核对订单记录</text>
       <text class="quotation-hub__empty-detail">正在读取当前工单的可见订单。</text>
-    </AppRecordCard>
-    <AppRecordCard v-else-if="!isVisualSample && (displayReadState === 'failed_retryable' || displayReadState === 'failed_terminal')" class="quotation-hub__empty" data-testid="quotation-hub-read-error">
+    </view>
+    <view v-else-if="!isVisualSample && (displayReadState === 'failed_retryable' || displayReadState === 'failed_terminal')" class="app-record-card quotation-hub__empty" data-testid="quotation-hub-read-error">
       <view class="quotation-hub__empty-icon" aria-hidden="true">!</view>
       <text class="quotation-hub__empty-title">暂无法读取已有订单</text>
       <text class="quotation-hub__empty-detail">{{ displayReadError || '订单读取暂不可用，请稍后重试。' }}</text>
@@ -52,23 +52,23 @@
       <text class="quotation-hub__empty-detail">仍可创建报价草稿，但无法据此判断是否已有订单。</text>
       <AppButton v-if="!readOnly && !draftLoading" block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified" :disabled="draftLoading"
         @tap="startEditor">{{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}</AppButton>
-    </AppRecordCard>
+    </view>
     <template v-else-if="records.length === 0">
-    <AppRecordCard class="quotation-hub__empty" data-testid="quotation-hub-no-records">
+    <view class="app-record-card quotation-hub__empty" data-testid="quotation-hub-no-records">
       <view class="quotation-hub__empty-icon" aria-hidden="true"><AppIcon name="order" :size="56" color="#1677f9" /><text class="quotation-hub__empty-icon-plus">＋</text></view>
       <text class="quotation-hub__empty-title">{{ isVisualSample ? '当前工单尚无订单' : mockJourneyOrder ? '暂无已确认的订单记录' : uxStateLanguage.scopedOrderReadTitle }}</text>
       <text class="quotation-hub__empty-detail">先按维修部位填写报价草稿，核对组成及金额后再进入后续流程。</text>
       <AppButton v-if="!readOnly && !draftLoading" block class="quotation-hub__empty-action" data-testid="quotation-hub-empty-create" :disabled="draftLoading"
         @tap="startEditor">{{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}</AppButton>
       <text class="quotation-hub__empty-provenance">仅展示当前可见的订单记录，不代表全部历史订单。</text>
-    </AppRecordCard>
+    </view>
     <view class="quotation-hub__multi-order-tips">
       <text class="quotation-hub__tips-heading">一个工单可对应多笔订单</text>
       <text class="quotation-hub__tips-line">不同维修部位可分开报价；新建草稿不会自动创建正式订单。</text>
     </view>
     </template>
     <view v-else class="quotation-hub__list" data-testid="quotation-hub-records">
-      <AppRecordCard v-for="order in records" :key="order.id" class="quotation-hub__order"
+      <view v-for="order in records" :key="order.id" class="app-record-card quotation-hub__order"
         :data-testid="`quotation-hub-order-${order.id}`">
         <view class="quotation-hub__order-heading">
           <text class="quotation-hub__order-number">{{ order.displayNumber || order.id }}</text>
@@ -81,8 +81,8 @@
         <text v-if="(isVisualSample || mockJourneyOrder) && order.groups[0]?.partDescription" class="quotation-hub__order-subtitle">{{ order.groups[0].partDescription }}</text>
         <view class="quotation-hub__order-summary">
           <view class="quotation-hub__amount-block">
-            <text class="quotation-hub__amount-label">订单金额</text>
-            <AppAmountValue v-if="devSyntheticUnverifiedAmount && order.totalPrice === 0" class="quotation-hub__amount-unverified" size="regular" tone="muted" value="金额待核验" data-testid="quotation-hub-amount-unverified" />
+            <text v-if="!(devSyntheticUnverifiedAmount && order.totalPrice === 0)" class="quotation-hub__amount-label">订单金额</text>
+            <AppAmountValue v-if="devSyntheticUnverifiedAmount && order.totalPrice === 0" class="quotation-hub__amount-unverified" size="regular" tone="muted" value="订单金额待核验" data-testid="quotation-hub-amount-unverified" />
             <AppAmountValue v-else class="quotation-hub__order-amount" size="prominent" tone="primary" :value="money(order.totalPrice)" />
           </view>
           <text class="quotation-hub__order-group-count">{{ order.contentSupported ? `${order.groups.length} 个维修部位组` : '明细待核验' }}</text>
@@ -124,18 +124,18 @@
             <text v-if="!group.contentSupported" class="quotation-hub__detail-warning">部分历史字段尚不能安全识别，详情仅作只读参考。</text>
           </view>
         </view>
-      </AppRecordCard>
+      </view>
     </view>
     </template>
     <view v-if="editError" class="quotation-hub__error" data-testid="quotation-hub-edit-error" role="alert">{{ editError }}</view>
-    <AppRecordCard v-if="hasLocalDraft" class="quotation-hub__draft-checkpoint"
+    <view v-if="hasLocalDraft" class="app-record-card quotation-hub__draft-checkpoint"
       data-testid="quotation-hub-local-draft">
       <view class="quotation-hub__draft-checkpoint-title">
         <text class="quotation-hub__detail-title">本地报价草稿</text>
         <AppMetaTag label="非正式订单" tone="neutral" />
       </view>
       <text class="quotation-hub__draft-checkpoint-count quotation-hub__order-group-count">{{ localDraftGroupCount }} 个维修部位组 · {{ draftSaveLabel }}</text>
-    </AppRecordCard>
+    </view>
     <AppStatus v-if="!choosingMode && records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)"
       class="quotation-hub__signing-boundary" variant="strip" tone="neutral" quiet
       message="签约结果以合同记录为准"
@@ -158,7 +158,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
-import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppWorkOrderSummary from '@shared/ui/AppWorkOrderSummary.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppSectionHeading from '@shared/ui/AppSectionHeading.vue'

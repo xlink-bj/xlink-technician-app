@@ -21,7 +21,7 @@
     :aria-disabled="disabled || loading"
     :aria-busy="loading"
     :aria-pressed="pressed === undefined ? undefined : pressed"
-    @tap="handleTap"
+    @tap.stop="handleTap"
   >
     <view class="app-button__content">
       <view
