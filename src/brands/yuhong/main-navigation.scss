@@ -1,0 +1,14 @@
+.main-navigation {
+  position: fixed; z-index: 20; bottom: 0; left: 0; right: 0;
+  display: flex; padding: 5px 4px calc(5px + env(safe-area-inset-bottom));
+  background: var(--yh-color-surface-card); border-top: 1px solid var(--yh-color-border-divider);
+}
+.main-navigation-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 48px; margin: 0; padding: 2px; border: 0; background: transparent;
+  color: var(--yh-color-text-secondary); font-size: 11px; line-height: 16px;
+  &::after { display: none; }
+}
+.main-navigation-item--active { color: var(--yh-color-action-primary); font-weight: 600; }
+.main-navigation-icon { font-size: 21px; line-height: 25px; }
+.main-navigation-label { white-space: nowrap; }

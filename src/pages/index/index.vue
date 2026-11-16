@@ -13,6 +13,7 @@
         </view>
         <text class="home-greeting">{{ homeGreeting }}</text>
         <text class="home-subtitle">从当前可见的工单开始今天的工作</text>
+        <text class="home-identity">{{ session.session?.currentRole?.name || '当前身份待确认' }}</text>
       </view>
     </view>
 
@@ -25,7 +26,7 @@
           </view>
         </view>
 
-        <navigator class="work-orders-entry" :url="workOrdersRoute">
+        <view class="work-orders-entry" role="button" @tap="enterWorkOrders">
           <view class="work-orders-entry-content">
             <view class="entry-icon" aria-hidden="true">
               <text>工</text>
@@ -36,7 +37,18 @@
             </view>
             <text class="entry-arrow" aria-hidden="true">›</text>
           </view>
-        </navigator>
+        </view>
+      </view>
+
+      <view class="home-surface home-shortcuts">
+        <view class="section-heading-row"><view class="section-heading-copy">
+          <text class="section-title">按任务查找</text>
+          <text class="section-description">进入工单后查看当前账号可执行的事项</text>
+        </view></view>
+        <view class="home-shortcut-grid">
+          <button v-for="item in workOrderCategories" :key="item.key" class="home-shortcut"
+            @tap="openCategory(item.key)">{{ item.label }}<text aria-hidden="true">›</text></button>
+        </view>
       </view>
 
     </view>
@@ -225,6 +237,7 @@
       </button>
     </view>
   </view>
+  <AppMainNavigation v-if="showHome" active="home" />
 </template>
 
 <script setup lang="ts">
@@ -233,7 +246,11 @@ import { homeBrand } from '@brand-ui/home-brand'
 import { setActionWorkspacePageTitle as setHomePageTitle } from '@app/action-page-title'
 import { onLoad } from '@dcloudio/uni-app'
 
-import { hasAuthenticatedSession, workOrdersRoute } from '@features/home/access'
+import { hasAuthenticatedSession } from '@features/home/access'
+import { workOrderCategories } from '@features/work-orders/list-categories'
+import { useWorkOrderListStore } from '@features/work-orders/list'
+import type { WorkOrderCategory } from '@shared/ports'
+import AppMainNavigation from '@app/components/AppMainNavigation.vue'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
 import {
   legalLoginPolicies, manualLoginConsentIssue, manualLoginConsentMessage,
@@ -254,6 +271,7 @@ import { redirectToIsolatedQaConsole } from '@app/dev-qa-navigation'
 import { confirmLogout } from '@app/logout-confirmation'
 
 const session = useSessionStore()
+const workOrders = useWorkOrderListStore()
 const phoneNumber = ref('')
 const verificationCode = ref('')
 const manualConsent = ref(false)
@@ -278,6 +296,23 @@ const quickLoginSubtitle = computed(() => {
 })
 const quickLoginBadge = computed(() => '快捷')
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
+let enteringWorkOrders = false
+
+async function navigateWorkOrders(category?: WorkOrderCategory): Promise<void> {
+  if (!showHome.value || enteringWorkOrders) return
+  enteringWorkOrders = true
+  try {
+    if (category) await workOrders.selectCategory(category)
+    await workOrders.navigateTo('/pages/work-orders/work-orders')
+  }
+  finally { enteringWorkOrders = false }
+}
+
+function enterWorkOrders(): Promise<void> { return navigateWorkOrders() }
+
+async function openCategory(category: WorkOrderCategory): Promise<void> {
+  await navigateWorkOrders(category)
+}
 
 // Legacy QA deep links are redirected to a distinct DEV surface. The Home DOM
 // remains identical for the same business session, with or without query flags.

@@ -236,3 +236,10 @@
 .login-page .worker-shoe-right {
   right: 6rpx;
 }
+
+.home-page { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.home-page .home-identity { display: inline-block; margin-top: var(--yh-space-12); padding: 5px 10px; color: var(--yh-color-action-primary); background: var(--yh-color-action-subtle); border-radius: 100px; font-size: var(--yh-type-meta-size); }
+.home-page .home-shortcuts { margin-top: var(--yh-space-12); }
+.home-page .home-shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--yh-space-8); margin-top: var(--yh-space-16); }
+.home-page .home-shortcut { display: flex; justify-content: space-between; align-items: center; min-height: var(--yh-size-touch); margin: 0; padding: var(--yh-space-8) var(--yh-space-12); border: 1px solid var(--yh-color-border-divider); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); color: var(--yh-color-text-primary); font-size: var(--yh-type-meta-size); text-align: left; }
+.home-page .home-shortcut::after { display: none; }

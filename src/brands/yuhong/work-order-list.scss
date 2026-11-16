@@ -63,3 +63,5 @@
 .back-link { display: flex; align-items: center; min-height: var(--yh-size-touch); color: var(--yh-link); }
 @keyframes yh-list-slide { from { transform: translateX(-110%); } to { transform: translateX(330%); } }
 @media (prefers-reduced-motion: reduce) { .inline-refresh-indicator { animation: none; width: 100%; } }
+
+.work-orders-page { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }

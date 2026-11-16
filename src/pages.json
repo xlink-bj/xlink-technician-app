@@ -13,6 +13,18 @@
       }
     },
     {
+      "path": "pages/notices/notices",
+      "style": { "navigationBarTitleText": "通知" }
+    },
+    {
+      "path": "pages/notices/detail",
+      "style": { "navigationBarTitleText": "通知详情" }
+    },
+    {
+      "path": "pages/me/me",
+      "style": { "navigationBarTitleText": "我的" }
+    },
+    {
       "path": "pages/work-orders/detail",
       "style": {
         "navigationBarTitleText": "工单详情"

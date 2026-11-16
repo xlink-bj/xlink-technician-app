@@ -35,7 +35,7 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   await expect(page.locator('.home-greeting')).toContainText('王师傅')
   if (brand === 'yuhong') {
     await expect(page.locator('.home-greeting')).toHaveCSS('font-size', '20px')
-    await expect(page.locator('.section-title')).toHaveCSS('font-size', '18px')
+    await expect(page.locator('.section-title').first()).toHaveCSS('font-size', '18px')
     await expect(page.locator('.section-link')).toHaveCount(0)
     await touch('.work-orders-entry-content')
     await touch('.home-footer .secondary')

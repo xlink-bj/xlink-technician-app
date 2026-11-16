@@ -173,6 +173,7 @@
 
     </view>
   </view>
+  <AppMainNavigation v-if="canAccess" active="workOrders" />
 </template>
 
 <script setup lang="ts">
@@ -201,6 +202,7 @@ import type { WorkOrderCategory } from '@shared/ports'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
 import AppWorkOrderEmptyState from '@shared/ui/AppWorkOrderEmptyState.vue'
+import AppMainNavigation from '@app/components/AppMainNavigation.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
 const session = useSessionStore()
