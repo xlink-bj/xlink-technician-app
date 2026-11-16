@@ -17,7 +17,7 @@
       @change="onFieldsChange" @draft-status="$emit('draft-status', $event)" />
     <AppStatus v-if="engine?.state === 'blocked' && engine.issues.length" tone="warning" quiet
       :message="engine.issues[0].message" data-testid="a-stage-order-price-blocked" />
-    <AppStatus v-else-if="!canSubmit && status !== 'succeeded'" tone="neutral" quiet
+    <AppStatus v-else-if="!canSubmit && status !== 'succeeded' && status !== 'uncertain'" tone="neutral" quiet
       :message="!fieldReady ? '请补齐当前资料，并处理未完成的附件。' : '请补齐维修部位、商品、数量及价格后继续。未核实的价格不会按零计算。'" />
     <AppStatus v-if="status === 'quote_created'" tone="success" quiet
       message="报价单已按报价编号回读。转为订单前仍可返回检查明细。"
@@ -171,6 +171,7 @@ async function verifyPending(): Promise<void> {
     verification.value = result.state
     verificationMessage.value = result.message
     status.value = nextStatus
+    if (nextStatus === 'quote_created' || nextStatus === 'succeeded') fieldStage.value = 'submitOrder'
     feedback.value = result.message
   } finally { checking.value = false }
 }

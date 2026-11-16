@@ -307,6 +307,29 @@ describe('G4-F Phase 1H quotation engine', () => {
     } })
   })
 
+  it('18a. keeps the ranked mini list price when package detail omits commercial fields', async () => {
+    const detail = packageDetail()
+    const port = catalogPort({ getPackageDetail: vi.fn(async () => succeeded({
+      ...detail, package: { ...detail.package, price: undefined, minimumPrice: undefined },
+    })) })
+    expect(await pricingFor(packageDraft({ quantity: 2 }), port)).toMatchObject({
+      state: 'succeeded', data: { calcTotalPrice: { totalPrice: 215 } },
+    })
+  })
+
+  it('18b. never repairs a missing ranked price with a package detail base price', async () => {
+    const result = await evaluateQuotationDraft({
+      draft: packageDraft(), catalogContext: context,
+      catalogRead: catalogPort({ listPackages: vi.fn(async () => succeeded({
+        items: [{ ...packageItem, price: undefined }],
+      })) }),
+    })
+    expect(result).toMatchObject({ state: 'blocked', issues: expect.arrayContaining([
+      expect.objectContaining({ code: 'pricing.package_price_missing' }),
+    ]) })
+    expect(result.payload).toBeUndefined()
+  })
+
   it('19. applies the observed Package minimum-price floor at and below the boundary', async () => {
     const belowPort = catalogPort({ listPackages: vi.fn(async () => succeeded({ items: [{ ...packageItem, minimumPrice: 120 }] })) })
     const boundaryPort = catalogPort({ listPackages: vi.fn(async () => succeeded({ items: [{ ...packageItem, minimumPrice: 107.5 }] })) })

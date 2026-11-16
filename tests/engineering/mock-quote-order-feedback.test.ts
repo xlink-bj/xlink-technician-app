@@ -16,6 +16,8 @@ const renderer = Vue.createRenderer<Host, Host>({
 })
 const Primitive = Vue.defineComponent({ inheritAttrs: false, props: ['disabled', 'message'], emits: ['tap'],
   setup: (p, c) => () => Vue.h('primitive', { ...c.attrs, disabled: p.disabled, onTap: () => c.emit('tap') }, [p.message, ...(c.slots.default?.() ?? [])]) })
+const FieldEditor = Vue.defineComponent({ props: ['stage', 'locked'],
+  setup: p => () => Vue.h('fields', { 'data-testid': 'order-fields', stage: p.stage, locked: p.locked }) })
 function find(n: Host, id: string): Host | undefined { return n.props['data-testid'] === id ? n : n.children.map(c => find(c, id)).find(Boolean) }
 const content = (n: Host): string => n.text + n.children.map(content).join('')
 async function settle() { for (let i = 0; i < 12; i++) { await Promise.resolve(); await Vue.nextTick() } }
@@ -28,14 +30,14 @@ async function mount(result: { state: string; message: string }, nextStatus: str
   const oldMessage = '订单保存结果尚未确认；请只读核对，不能重复提交。'
   const controller = { readStatus: vi.fn().mockResolvedValueOnce(options.initialStatus ?? 'quote_created').mockResolvedValue(nextStatus),
     convertQuoteToOrder: vi.fn(async () => ({ state: 'uncertain', message: oldMessage })),
-    createQuote: vi.fn(), verifyPending: vi.fn(async () => result) }
+    createQuote: vi.fn(), verifyPending: vi.fn(async () => result), fields: {} }
   const source = compileScript(parse(fs.readFileSync('src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue', 'utf8')).descriptor,
     { id: 'mock-order-feedback', inlineTemplate: true }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
   const modules: Record<string, any> = { vue: Vue, '../action-workspace': { useActionWorkspaceStore: () => workspace },
     './composition-store': { useQuotationCompositionStore: () => composition }, '@shared/state': { useSessionStore: () => session } }
   const module = { exports: {} as any }
-  new Function('require', 'exports', 'module', js)((name: string) => name.endsWith('.vue') ? { __esModule: true, default: Primitive } : modules[name], module.exports, module)
+  new Function('require', 'exports', 'module', js)((name: string) => name.endsWith('.vue') ? { __esModule: true, default: name === './OrderExtFieldEditor.vue' ? FieldEditor : Primitive } : modules[name], module.exports, module)
   const root = node('root'), app = renderer.createApp({ render: () => Vue.h(module.exports.default, { createController: () => controller }) })
   app.mount(root); await settle()
   const tap = async (id: string) => { const button = find(root, id)!; expect(button).toBeDefined(); expect(button.props.disabled).toBeFalsy(); button.props.onTap(); await settle() }
@@ -47,6 +49,18 @@ async function mount(result: { state: string; message: string }, nextStatus: str
 }
 
 describe('actual Mock quote Order result feedback', () => {
+  it.each(['quote_created', 'succeeded'])('restores submit-stage fields only after cold uncertain recovery confirms %s', async nextStatus => {
+    const f = await mount({ state: 'confirmed', message: '已按返回编号核对' }, nextStatus,
+      { dispatch: false, initialStatus: 'uncertain' })
+    try {
+      expect(find(f.root, 'order-fields')!.props).toMatchObject({ stage: 'placeOrder', locked: true })
+      expect(content(f.root)).not.toContain('请补齐维修部位、商品、数量及价格后继续')
+      await f.tap('a-stage-order-verify')
+      expect(find(f.root, 'order-fields')!.props).toMatchObject({ stage: 'submitOrder', locked: nextStatus === 'succeeded' })
+      expect(f.controller.convertQuoteToOrder).not.toHaveBeenCalled()
+      expect(f.controller.createQuote).not.toHaveBeenCalled()
+    } finally { f.app.unmount() }
+  })
   it.each([['ready', 'a-stage-order-create', 'a-stage-order-confirm'], ['quote_created', 'a-stage-order-convert', 'a-stage-order-convert-confirm']])('refuses invalid visible quantities at %s even when the last valid engine result remains ready', async (initialStatus, entry, confirm) => {
     const f = await mount({ state: 'confirmed', message: '已核对' }, 'succeeded', { dispatch: false, initialStatus })
     try {

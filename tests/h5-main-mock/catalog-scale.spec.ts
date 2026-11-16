@@ -1,3 +1,4 @@
+import { mkdir } from 'node:fs/promises'
 import { expect, test, type Page } from '@playwright/test'
 
 // Only an explicit DEV Mock server may run this fixture. Counts follow retained
@@ -29,7 +30,7 @@ async function open019Quotation(page: Page) {
   }
 
 
-test('430: large catalogs paginate through the real App and preserve a composed quotation', async ({ page }) => {
+for (const lostAck of [false, true]) test(`430: priced package quote to official Order ${lostAck ? 'uncertain recovery' : 'normal'}`, async ({ page }) => {
   test.setTimeout(180_000)
   page.setDefaultTimeout(15_000)
   await page.setViewportSize({ width: 430, height: 932 })
@@ -37,6 +38,25 @@ test('430: large catalogs paginate through the real App and preserve a composed 
   await page.context().route('**/*', async route => {
     if (new URL(route.request().url()).origin === 'http://localhost:5174') return route.continue()
     external.push(route.request().url()); await route.abort()
+  })
+  const review = process.env.XLINK_PACKAGE_ORDER_REVIEW_DIR
+  const shot = async (name: string, target?: string) => {
+    if (!review) return
+    await mkdir(`${review}/${lostAck ? 'uncertain' : 'normal'}`, { recursive: true })
+    if (target) await page.getByTestId(target).evaluate(el => el.scrollIntoView({ block: 'center' }))
+    await expect(page.locator('.app-button--pressed,.app-button__loading-slot--active')).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
+    await page.screenshot({ path: `${review}/${lostAck ? 'uncertain' : 'normal'}/${name}.png`, animations: 'disabled', caret: 'hide' })
+  }
+  // Count actual local Order persistence across reload without injecting a result.
+  await page.addInitScript(() => {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = function(key, value) {
+      if (this === localStorage && key === 'xlink.dev.mock.journey.019.official-order.v1') {
+        original.call(sessionStorage, 'package-order-write-count', String(Number(sessionStorage.getItem('package-order-write-count') ?? 0) + 1))
+      }
+      return original.call(this, key, value)
+    }
   })
   await open019Quotation(page)
   await page.getByTestId('quotation-add-group').click()
@@ -93,6 +113,7 @@ test('430: large catalogs paginate through the real App and preserve a composed 
   await expect(page.getByTestId('quotation-footer-summary')).toContainText('473.00')
   await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
   await expect(page.locator('[data-testid^="quotation-configured-package-"]')).toHaveCount(1)
+  await shot('01-套餐组合-金额已核验', 'quotation-group-section-quotation-group-1-package')
   await page.getByTestId('a-stage-order-create').click()
   await page.getByTestId('a-stage-order-confirm').click()
   await expect(page.getByTestId('a-stage-quote-readback')).toBeVisible()
@@ -106,6 +127,51 @@ test('430: large catalogs paginate through the real App and preserve a composed 
   for (const id of ['package-027', 'procedure-066', 'material-089', 'measure-004']) {
     expect(saved.bjProducts).toContain(`mock-scale-standard-${id}`)
   }
-  await page.screenshot({ path: 'test-results/main-h5-mock/evidence/m08-scale-composed-quote-430.png', fullPage: true })
+  const quote = saved
+  const packageLine = JSON.parse(quote.bjProducts).orderList[0].projPackages.data[0]
+  expect(packageLine).toMatchObject({ _id: 'mock-scale-standard-package-027', price: 126,
+    amount: 141, minimumPrice: 150, number: 2, totalAmount: 282 })
+  await shot('02-报价已保存-独立报价编号', 'a-stage-quote-readback')
+  await page.getByTestId('order-field-mock-order-person').getByText('客户', { exact: true }).click()
+  await page.getByTestId('order-field-mock-order-submit-note').locator('textarea').fill('套餐组合及维修范围已与客户核对')
+  await page.reload()
+  await page.getByTestId('quotation-hub-create-unverified').click()
+  await expect(page.getByTestId('order-field-mock-order-submit-note').locator('textarea')).toHaveValue('套餐组合及维修范围已与客户核对')
+  await page.getByTestId('a-stage-order-convert').click()
+  await shot('03-正式订单-提交前确认', 'a-stage-order-convert-confirm')
+  if (lostAck) await page.evaluate(() => {
+    const runtime = (window as any).uni, original = runtime.setStorageSync.bind(runtime)
+    runtime.setStorageSync = (key: string, value: unknown) => {
+      original(key, value)
+      if (key === 'xlink.dev.mock.journey.019.official-order.v1') throw new Error('Synthetic persisted Order acknowledgement loss')
+    }
+  })
+  await page.getByTestId('a-stage-order-convert-confirm').click()
+  if (lostAck) {
+    await expect(page.getByTestId('a-stage-order-uncertain')).toBeVisible()
+    await expect(page.getByTestId('a-stage-order-convert')).toHaveCount(0)
+    await shot('04-结果不明-禁止重放', 'a-stage-order-verify')
+    await page.reload()
+    await page.getByTestId('quotation-hub-start-new').click()
+    await expect(page.getByTestId('a-stage-order-uncertain')).toBeVisible()
+    expect(await page.evaluate(() => sessionStorage.getItem('package-order-write-count'))).toBe('1')
+    await page.getByTestId('a-stage-order-verify').click()
+  }
+  await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
+  const order = await page.evaluate(() => JSON.parse((window as any).uni.getStorageSync('xlink.dev.mock.journey.019.official-order.v1')))
+  expect(order._id).not.toBe(quote._id)
+  expect(order).toMatchObject({ type: 1, serviceAppointmentId: quote.serviceAppointmentId,
+    originPrice: 473, totalPrice: 473, bjProducts: quote.bjProducts,
+    exts: { personType: '0', mockSubmitNote: '套餐组合及维修范围已与客户核对' } })
+  expect(quote.type).toBe(0)
+  expect(await page.evaluate(() => sessionStorage.getItem('package-order-write-count'))).toBe('1')
+  await expect(page.getByTestId('order-field-mock-order-submit-note').locator('textarea')).toBeDisabled()
+  await shot('05-正式订单-精确回读只读', 'a-stage-order-open-records')
+  await page.reload()
+  await page.getByTestId('quotation-hub-start-new').click()
+  await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
+  expect(await page.evaluate(() => JSON.parse((window as any).uni.getStorageSync('xlink.dev.mock.journey.019.official-order.v1')))).toEqual(order)
+  expect(await page.evaluate(() => sessionStorage.getItem('package-order-write-count'))).toBe('1')
+  await shot('06-刷新恢复-订单未重复创建', 'a-stage-order-readback')
   expect(external).toEqual([])
 })
