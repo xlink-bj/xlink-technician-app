@@ -1,10 +1,10 @@
 # ADR — 设备作业作为 Action Content
 
-Status: ACTIVE — Owner 已决定的目标设计；未实施、未真机通过（本次仅文档）
+Status: ACTIVE — H5 DEV Mock 首条内容切片已实现；真实设备、后台保存与真机闭环未实施
 Decision authority: Owner IoT 架构决策；[AGENTS.md](../../AGENTS.md) 的授权与 main-only 规则不变
 Reviewed at: 2026-11-16
 Code baseline: `main@d6f5badf2ff100463f61c81613db7bac29702cb2`（本次新 App 源码核对，不是设备验收）
-Scope: 试压、全景采集的职责、可靠性及平台边界；不实施产品/测试/构建改动，不授予生产访问、业务写入、上传、设备控制、签署或发布权限。
+Scope: 试压、全景采集的职责、可靠性及平台边界；H5 DEV Mock 内容实现不授予生产访问、业务写入、上传、真实设备控制、签署或发布权限。
 Related: [Target Architecture](TARGET_ARCHITECTURE.md)、[Action Workspace](ACTION_WORKSPACE_ARCHITECTURE.md)、[Local Draft](LOCAL_DRAFT_AND_WEAK_NETWORK_ARCHITECTURE.md)。本 ADR 补充设备特有决策，不替代这三份权威规范，也不改写历史实现快照。
 
 ## 1. 决定及理由
@@ -20,7 +20,7 @@ Related: [Target Architecture](TARGET_ARCHITECTURE.md)、[Action Workspace](ACTI
 
 ## 2. 源码现状与目标差额
 
-以下为上述 exact SHA 的静态核对；复用入口存在不等于新设备能力已经可用。
+以下表格保留 ADR 制定时上述 exact SHA 的静态核对；本轮新增切片见第 7 节，复用入口存在不等于真实设备能力已经可用。
 
 | 职责 | 现有源码依据 | 设备接入的目标/缺口 |
 | --- | --- | --- |
@@ -86,4 +86,12 @@ Related: [Target Architecture](TARGET_ARCHITECTURE.md)、[Action Workspace](ACTI
 
 收益是复用既有业务执行骨架，同时把协议、传输、SDK 和品牌变化限制在其责任范围。代价是首条纵向闭环必须补齐设备结果契约、持久化和逐平台适配证据，不能仅靠一页演示宣称集成完成。
 
-本次无运行时迁移；只做文档决策。后续每个能力切片须独立可审查/回滚，未验证时保持现有入口阻断与显式不支持。撤回某型号/SDK 集成不能清除未确认的证据或回放业务/设备命令。若目标设计需要改变，应修订本 ADR 与总架构，而非另立并行规范。
+H5 DEV Mock 只实现本地操作与结果恢复，不迁移真实设备或业务保存。后续每个能力切片须独立可审查/回滚，未验证时保持现有入口阻断与显式不支持。撤回某型号/SDK 集成不能清除未确认的证据或回放业务/设备命令。若目标设计需要改变，应修订本 ADR 与总架构，而非另立并行规范。
+
+## 7. H5 DEV Mock 首批实施与使用
+
+本批源码为 [设备 Action Content](../../src/features/work-orders/device-action/device-action.ts)、[语义 port](../../src/shared/ports/device-action.ts)、[DEV 模拟 adapter](../../src/adapters/device/dev-mock-device.ts) 和 [独立页面](../../src/pages/work-orders/device-action-mock.vue)。它以固定 DEV Mock 工单 `mock-work-order-002`、独立模拟任务 `mock-device-action-node-002`、登录用户与角色生成 Action Draft 身份。该工单既有当前工作流节点是 `placeOrder`；模拟任务不冒充正式施工节点，`construction` 的 `policy_unverified` 维持原样。页面和 adapter 均受 `VITE_XLINK_H5_MOCK_E2E` 与 Mock data 模式限定，正式业务入口不展示该模拟操作。
+
+在已登录 DEV Mock H5 的 QA 控制台开启“完整数据”，经设备作业入口进入。选择试压或全景、连接、开始，观察过程与结果；作业中可取消或模拟断连。断连后只可重新连接，必须再次手动开始。保存本机结果后重新打开相同任务可恢复；账号、角色或任务身份不匹配时不恢复。试压显示合成 MPa 采样，合格判定保持待核实；全景只展示模拟拼接预览，没有真实原图或可上传文件。页面分别呈现结束、数据完整、本机保存、上传和业务确认，不把模拟完成当成工单完成。
+
+首批不使用 BLE、厂商 SDK、浏览器相机、支付、签署或生产网络，也没有真实结果上传、业务 ACK、阈值和工作流推进。App/MP 的设备操作仍显式不支持；本地编译与 H5 Mock 操作不能替代真机、文件持久性或后端契约验收。

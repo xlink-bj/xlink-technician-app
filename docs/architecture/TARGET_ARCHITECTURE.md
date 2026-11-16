@@ -4,7 +4,7 @@
 
 Status: ACTIVE — living target architecture
 Reviewed at: 2026-11-16 (device Action Content decision; older implementation snapshots retain their dates)
-Decision authority: Owner architecture decisions; device integration is an accepted target, not implemented or device-verified.
+Decision authority: Owner architecture decisions; H5 DEV Mock is a partial Action Content implementation, not device-verified integration.
 Historical review metadata follows:
 Program: New Technician / Field Service App
 Original architecture decision: G2
@@ -81,7 +81,7 @@ This is an architectural refinement, not a reversal of G2.
 - Workflow Runtime as workflow identity/eligibility authority: **FIXED**;
 - Action Runtime / Action Workspace as shared business-action execution boundary: **FIXED AS TARGET**;
 - Dynamic Form Runtime as a bounded Action Content runtime, not the whole action architecture: **FIXED**;
-- device operations as focused Action Content alongside dedicated Appointment and dynamic forms, with no global device layer/platform: **FIXED AS TARGET, NOT IMPLEMENTED**;
+- device operations as focused Action Content alongside dedicated Appointment and dynamic forms, with no global device layer/platform: **FIXED AS TARGET; H5 DEV MOCK PARTIAL**;
 - Work Order Detail as business context + current action + read-oriented information: **FIXED**;
 - Mock / Real semantic-path equivalence: **FIXED**;
 - local draft persistence separated from business submission: **FIXED**;
@@ -348,11 +348,13 @@ It is an **Action Content Runtime**, not the top-level business-action architect
 
 Appointment was the first Action Workspace consumer. Data strategy and experience are independent: dynamic Map plus dedicated time selection, preset Survey DTO plus extensible fields and dedicated experiences, and separate Order domain handling are all valid combinations. Shared field interpretation does not grant storage or mutation authority. A new preset DTO needs its own full-original preservation/codec proof; it is not automatically an arbitrary Map. The current normal Reader/Provider/Host path, v6 synthetic active-repeat edit limits, root/EXTS and date compatibility rules, and extension costs are specified in the [current source snapshot](M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md). This remains a bounded field mechanism, not a new low-code engine.
 
-### 5.7 Device Action Content — accepted target, not implemented
+### 5.7 Device Action Content — accepted target, H5 DEV Mock partial
 
 Pressure testing and panorama capture are small, dedicated Action Content experiences, parallel to Appointment and dynamic forms. They reuse Workflow eligibility, action/task identity, Workspace draft/recovery and media upload responsibilities. They do not create a global device-operation layer, a device platform, a plugin marketplace or a generic IoT engine.
 
 Pressure protocol encoding/parsing is separate from BLE transport and Vue pages. Android/iOS camera vendor SDKs enter through thin capability-specific adapters. SDK connection/permission success never grants business authorization. Brand presentation (`src/brands/`) remains independent of device protocol/model selection. Begin with one pressure device and one camera end to end, then extend only where validated differences require it. See the [device ADR](ADR_DEVICE_ACTION_CONTENT_20261116.md) for source boundaries and acceptance gaps.
+
+The first H5 DEV Mock slice provides scoped local pressure and panorama interactions through a semantic port and a replaceable simulated adapter. It does not establish a real pressure protocol, camera file, backend result contract, Workflow eligibility, App/MP device support or business save.
 
 ---
 
