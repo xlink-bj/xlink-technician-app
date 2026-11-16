@@ -50,10 +50,23 @@ for (const width of [430, 375]) {
     await page.getByRole('dialog', { name: '选择维修部位' }).locator('.app-cascade-selector__parents').getByText('屋面', { exact: true }).click()
     await page.getByTestId('quotation-repair-part-picker-done').click()
     await capture('04-repair-fields')
-    const lastCopy = page.locator('.q01-screen__disclosure-line').last()
-    await lastCopy.scrollIntoViewIfNeeded()
-    const lastBox = (await lastCopy.boundingBox())!, footerBox = (await page.getByTestId('quotation-first-step-footer').boundingBox())!
-    expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(footerBox.y + 1)
+    // P05 keeps one workspace draft boundary. Verify the real final input and
+    // remaining fee explanation can both clear the fixed action bar.
+    const lastField = page.getByTestId('quotation-first-step-quantity').locator('input')
+    const lastCopy = page.getByTestId('quotation-cost-adjustments').locator('.q01-screen__cost-hint')
+    await expect(lastField).toBeEditable()
+    await expect(lastCopy).toHaveText('折扣、优惠及增减项应以已验证的业务规则和服务端金额为准。')
+    for (const [name, target] of [['04a-last-field', lastField], ['04b-last-copy', lastCopy]] as const) {
+      await target.scrollIntoViewIfNeeded()
+      await expect(target).toBeVisible()
+      await expect(target).toBeInViewport({ ratio: 1 })
+      const lastBox = (await target.boundingBox())!, footerBox = (await page.getByTestId('app-action-bar').boundingBox())!
+      expect(lastBox.y).toBeGreaterThanOrEqual(44)
+      expect(lastBox.x).toBeGreaterThanOrEqual(0)
+      expect(lastBox.x + lastBox.width).toBeLessThanOrEqual(width + 1)
+      expect(lastBox.y + lastBox.height).toBeLessThanOrEqual(footerBox.y + 1)
+      await capture(name)
+    }
     await page.getByTestId('quotation-first-step-select-products').click()
     await expect(page.getByTestId('quotation-catalog-page')).toBeVisible()
     await capture('05-catalog')

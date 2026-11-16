@@ -512,7 +512,8 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   await expect(page.getByTestId('quotation-first-step-quantity').locator('input')).toHaveValue('')
 
   await expect(page.getByTestId('quotation-first-repair-part-step')).toBeVisible()
-  await expect(page.locator('.q01-screen__disclosure')).toContainText('草稿不会自动提交')
+  await expect(page.getByTestId('quotation-workspace-draft-boundary')).toBeVisible()
+  await expect(page.getByTestId('quotation-workspace-draft-boundary')).toContainText('通过校验并确认提交后才会形成正式订单。')
   await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
   await info.attach('019-quotation', { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' })
 
@@ -530,7 +531,8 @@ test('one MOCK-019 WorkOrder progresses Appointment → Survey → Quotation wit
   // After reload, R1 Mock may render the original workbench or the Q01 first-step.
   // Both must independently disclose their local-only nature; neither may submit.
   if (await page.getByTestId('quotation-first-repair-part-step').count()) {
-    await expect(page.locator('.q01-screen__disclosure')).toContainText('草稿不会自动提交')
+    await expect(page.getByTestId('quotation-workspace-draft-boundary')).toBeVisible()
+    await expect(page.getByTestId('quotation-workspace-draft-boundary')).toContainText('通过校验并确认提交后才会形成正式订单。')
   } else {
     await expect(page.getByTestId('quotation-product-demo-read-only')).toContainText('项 ·')
     // uni-app renders <uni-button>; Playwright's native :disabled predicate
