@@ -1,5 +1,7 @@
 # type0 Map 已有记录 checkbox 协议贯通
 
+> 历史验收记录（2026-11-13）；文中的 Stage 命名、失败诊断和后续工作安排保留为当时证据，不作为当前执行规范。当前 Mock 能力见[能力矩阵](../engineering/R1_OFFLINE_DYNAMIC_FORM_CAPABILITY_MATRIX.md)。
+
 2026-11-13。接续 [已有编辑过度限制纠偏](R1_CONFIGURED_EDIT_BOUNDED_DYNAMIC_CORRECTION_20261113.md)。本批范围是正常工单入口的已有记录编辑，不是新建流程、类型化 DTO 数组或全域动态表单验收。
 
 ## 依据及实际行为
