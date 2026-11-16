@@ -243,6 +243,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
 import { homeBrand } from '@brand-ui/home-brand'
+import { openMainRoute } from '@app/main-navigation'
 import { setActionWorkspacePageTitle as setHomePageTitle } from '@app/action-page-title'
 import { onLoad } from '@dcloudio/uni-app'
 
@@ -301,9 +302,11 @@ let enteringWorkOrders = false
 async function navigateWorkOrders(category?: WorkOrderCategory): Promise<void> {
   if (!showHome.value || enteringWorkOrders) return
   enteringWorkOrders = true
+  message.value = ''
   try {
     if (category) await workOrders.selectCategory(category)
-    await workOrders.navigateTo('/pages/work-orders/work-orders')
+    const opened = await openMainRoute('workOrders')
+    if (!opened) message.value = '暂时无法进入工单，请重试'
   }
   finally { enteringWorkOrders = false }
 }

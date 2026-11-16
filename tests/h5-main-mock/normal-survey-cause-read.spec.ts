@@ -75,7 +75,7 @@ for (const mode of ['current', 'duplicate-provider', 'foreign-record', 'raw-conf
      }
      if(mode==='logout-role'){
       await expect(page.getByTestId('r1-normal-value-width')).toHaveText('0');await leaveNormalFormForList(page)
-      await page.goBack();await expect(page.locator('.home-page')).toBeVisible()
+      await page.getByTestId('main-tab-home').click();await expect(page.locator('.home-page')).toBeVisible()
       await page.locator('.home-footer .secondary').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click();await expect(page.locator('.login-page')).toBeVisible()
       loginRole='other-role';await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible()
       await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click()

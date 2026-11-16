@@ -52,7 +52,7 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   await screenshot('01b-home-long-name')
   await page.locator('.work-orders-entry').click()
   await expect(page).toHaveURL(/#\/pages\/work-orders\/work-orders/)
-  await page.goBack()
+  await page.getByTestId('main-tab-home').click()
   await expect(page.locator('.home-page')).toBeVisible()
   await page.locator('.home-footer .secondary').click()
   await expect(page.locator('.uni-modal')).toBeVisible()

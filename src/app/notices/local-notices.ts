@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode } from '@app/business-mock'
 import { mockJourneyWorkOrderId } from '@shared/mock-journey-identity'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import type { SessionSnapshot } from '@shared/ports'
+import { useSessionStore } from '@shared/state'
 
 export interface LocalNotice {
   readonly id: string
@@ -32,8 +33,18 @@ export function localNoticesAvailable(): boolean {
 }
 
 export const useLocalNoticeStore = defineStore('localNotices', () => {
+  const activeSession = useSessionStore()
   const readIds = ref<string[]>([])
   const scope = ref<string | null>(null)
+  // Invalidate even while the notification page is not mounted. The same
+  // account may log in again with an identical read-scope key.
+  watch([() => activeSession.status, () => workOrderReadScopeKey(activeSession.session)],
+    ([status, next]) => {
+      if (status !== 'authenticated' || !next || scope.value !== next) {
+        readIds.value = []
+        scope.value = status === 'authenticated' ? next : null
+      }
+    }, { immediate: true, flush: 'sync' })
   function ensureScope(session: SessionSnapshot | null): boolean {
     const next = workOrderReadScopeKey(session)
     if (scope.value !== next) { scope.value = next; readIds.value = [] }

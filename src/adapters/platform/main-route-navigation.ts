@@ -9,7 +9,10 @@ export function redirectPlatformRoot(url: string): Promise<boolean> {
     uni.redirectTo({
       url,
       success: () => resolve(true),
-      fail: () => resolve(false),
+      fail: () => {
+        uni.showToast({ title: '页面暂时无法打开，请重试', icon: 'none' })
+        resolve(false)
+      },
     })
   })
 }

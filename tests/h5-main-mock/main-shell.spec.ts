@@ -70,3 +70,39 @@ test('unknown notice and unavailable service state stay explicit', async ({ page
   await expect(page.getByText('通知暂未接入')).toBeVisible()
   await expect(page.locator('.main-list-row')).toHaveCount(0)
 })
+
+test('root entry and tab return do not grow the UniApp page stack', async ({ page }) => {
+  await page.setViewportSize({ width: 430, height: 932 })
+  await page.goto('/#/pages/index/index')
+  await expect(page.locator('.home-page')).toBeVisible()
+  const initialDepth = await page.evaluate(() => getCurrentPages().length)
+  for (let index = 0; index < 7; index += 1) {
+    await page.locator('.work-orders-entry').click()
+    await expect(page.locator('.work-orders-page')).toBeVisible()
+    expect(await page.evaluate(() => getCurrentPages().length)).toBe(initialDepth)
+    await page.getByTestId('main-tab-home').click()
+    await expect(page.locator('.home-page')).toBeVisible()
+    expect(await page.evaluate(() => getCurrentPages().length)).toBe(initialDepth)
+  }
+})
+
+test('reading is forgotten after logout and the same mock account returns', async ({ page }) => {
+  await page.goto('/#/pages/index/index')
+  await page.getByTestId('main-tab-notices').click()
+  await page.locator('.main-list-row').filter({ hasText: '有工单等待查看' }).click()
+  await expect(page.locator('.notice-detail-page')).toBeVisible()
+  await page.goBack()
+  await expect(page.locator('.notice-indicator--read')).toHaveCount(1)
+  await page.getByTestId('main-tab-me').click()
+  await page.locator('.main-logout').click()
+  await page.locator('.uni-modal__btn').filter({ hasText: '退出登录' }).click()
+  await expect(page.locator('.login-page')).toBeVisible()
+  await page.evaluate(async () => {
+    const path = '/src/shared/state/index.ts'
+    const { useSessionStore } = await import(path)
+    await useSessionStore().bootstrap()
+  })
+  await expect(page.locator('.home-page')).toBeVisible()
+  await page.getByTestId('main-tab-notices').click()
+  await expect(page.locator('.notice-indicator--read')).toHaveCount(0)
+})

@@ -1,6 +1,8 @@
 <template>
   <AppLoadingState v-if="session.status === 'unknown'" label="正在准备身份信息" />
-  <view v-else-if="!canAccess" class="main-guard"><text>登录后查看我的</text>
+  <view v-else-if="!canAccess" class="main-guard">
+    <text v-if="feedback" role="alert">{{ feedback }}</text>
+    <text v-else>{{ session.status === 'error' ? '登录状态无法确认，请重新登录' : '登录后查看我的' }}</text>
     <button @tap="openMainRoute('home')">返回登录</button></view>
   <view v-else class="main-page me-page">
     <view class="main-page-intro"><text class="main-eyebrow">当前身份</text>
@@ -12,7 +14,7 @@
       <navigator v-if="policies.privacyUrl" class="main-list-row" url="/pages/legal/legal?kind=privacy">
         <text class="main-row-title">隐私政策</text><text class="main-row-arrow">›</text></navigator>
       <view class="main-list-row"><text class="main-row-title">版本</text>
-        <text class="main-row-summary">0.1.0</text></view>
+        <text class="main-row-summary">{{ manifest.versionName }}</text></view>
     </view>
     <button class="main-logout" :disabled="loggingOut" @tap="logout">
       {{ loggingOut ? '退出中…' : '退出登录' }}</button>
@@ -28,6 +30,7 @@ import { confirmLogout } from '@app/logout-confirmation'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { legalLoginPolicies } from '@features/session/login-consent'
 import { useSessionStore } from '@shared/state'
+import manifest from '../../manifest.json'
 import AppMainNavigation from '@app/components/AppMainNavigation.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 const session = useSessionStore()

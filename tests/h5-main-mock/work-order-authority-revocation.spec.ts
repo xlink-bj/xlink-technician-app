@@ -164,7 +164,7 @@ test('logout and a new normal login isolate a late old pagination response', asy
   const s = await fixture(page, baseURL!); await open(page)
   const held = gate(); s.pageGate = held
   await page.locator('.load-more').click(); await held.entered
-  await page.goBack(); await expect(page.locator('.home-page')).toBeVisible()
+  await page.getByTestId('main-tab-home').click(); await expect(page.locator('.home-page')).toBeVisible()
   await page.locator('.home-footer .secondary').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
   await login(page); await page.locator('.work-orders-entry').click()
   await expect(names(page)).toHaveText(['新会话结果'])

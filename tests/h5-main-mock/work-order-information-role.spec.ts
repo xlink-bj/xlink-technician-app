@@ -63,7 +63,7 @@ for (const [showType, role, visible] of [['4', 'r', true], ['4', 'other', false]
 test('real detail rejects malformed/legacy role rules, stale A and logout/missing current role', async ({ page, baseURL }, info) => {
   const h = await fixture(page, baseURL!)
   const relogin = async (role: string | null) => {
-    await h.back(); await page.goBack(); await expect(page.locator('.home-page')).toBeVisible()
+    await h.back(); await page.getByTestId('main-tab-home').click(); await expect(page.locator('.home-page')).toBeVisible()
     await page.locator('.home-footer .secondary').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
     await expect(h.rows).toHaveCount(0); h.role(role); await h.login()
   }
