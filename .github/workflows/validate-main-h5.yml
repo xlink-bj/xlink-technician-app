@@ -104,24 +104,24 @@ jobs:
           tests/h5-main-mock/detail-archives.spec.ts
           tests/h5-main-mock/deferred-appointment-r1.spec.ts
           --grep 'R1 forms Save→EXTS→Process|Stage 2A|020 forms|021 repeat|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)'
-      - name: Verify Stage 2B optional typed primitives on source-shaped Mock FormDef
+      - name: Verify source-shaped typed primitive fields on the real H5 App
         env:
-          VITE_XLINK_R1_STAGE2B_FIELDS: 'true'
-        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage2b-r1-primitive-fields.spec.ts
-      - name: Verify Stage 2C R1 checkbox/cascade arrays on the real App
+          VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/r1-typed-primitive-fields.spec.ts
+      - name: Verify R1 checkbox and cascade array roundtrip on the real H5 App
         env:
-          VITE_XLINK_R1_STAGE2C_ARRAYS: 'true'
-        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage2c-r1-array-fields.spec.ts
+          VITE_XLINK_R1_ARRAY_CASCADE_FIELDS: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/r1-array-cascade-fields.spec.ts
       - name: Verify real GenericDynamicFormActionContent scalar preview and write fence at 430
         env:
           VITE_XLINK_DYNAMIC_SCALAR_QA: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/dynamic-form-scalar-closure.spec.ts
       - name: Verify offline drafts, persistent media recovery and temporal records at 430
         env:
-          VITE_XLINK_R1_STAGE2D_FIELDS: 'true'
+          VITE_XLINK_R1_TEMPORAL_RATING_FIELDS: 'true'
         run: >-
           pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2
-          tests/h5-main-mock/stage2d-r1-temporal-fields.spec.ts
+          tests/h5-main-mock/r1-temporal-rating-fields.spec.ts
           tests/h5-main-mock/weak-network-recovery.spec.ts
           tests/h5-main-mock/m3-survey-media-430.spec.ts
           tests/h5-main-mock/media-interrupted-receipt.spec.ts
@@ -160,7 +160,7 @@ jobs:
       - name: Verify R1 Mock repeat query readback and record lifecycle at 430
         env:
           VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
-          VITE_XLINK_R1_STAGE2B_FIELDS: 'true'
+          VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true'
         run: pnpm exec playwright test --config config/playwright/mock-repeat-query.config.ts
       - name: Verify normal App Survey 59 conditions and read-only media at 430
         env:

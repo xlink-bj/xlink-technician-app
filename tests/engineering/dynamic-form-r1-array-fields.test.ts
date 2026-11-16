@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { formDefinition } from '@adapters/api/read-models/form'
-import { mockSyntheticDynamicFormDefinitionId, mockSyntheticStage2BFormDefinitionResponse,
-  mockSyntheticStage2CFormDefinitionResponse } from '@adapters/api/mock/fixtures'
+import { mockSyntheticDynamicFormDefinitionId, mockSyntheticTypedPrimitiveFormDefinitionResponse,
+  mockSyntheticArrayCascadeFormDefinitionResponse } from '@adapters/api/mock/fixtures'
 import { asOpaqueId } from '@shared/types'
 import { projectR1LocalFields, normalizeR1LocalFieldPatch } from '@features/work-orders/r1-local-form-fields'
 import { validateR1SpecialMockFields } from '@features/work-orders/r1-special-mock-form-fields'
 import { r1SpecialFormUpsert } from '@adapters/api/r1-special-workflow-wires'
 
 const definitionId = asOpaqueId<'FormDefinitionId'>(mockSyntheticDynamicFormDefinitionId)
-const full = formDefinition(mockSyntheticStage2CFormDefinitionResponse, definitionId)
-const primitive = formDefinition(mockSyntheticStage2BFormDefinitionResponse, definitionId)
+const full = formDefinition(mockSyntheticArrayCascadeFormDefinitionResponse, definitionId)
+const primitive = formDefinition(mockSyntheticTypedPrimitiveFormDefinitionResponse, definitionId)
 const base = { inspectionSummary: '平屋顶排水复查', inspectionResult: 'safe' }
 const arrays = { inspectionChecks: ['drain', 'parapet'], inspectionLocation: ['roof', 'drain'] }
 

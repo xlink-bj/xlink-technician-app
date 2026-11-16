@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { formDefinition } from '@adapters/api/read-models/form'
 import { mockSyntheticDynamicFormDefinitionId,
-  mockSyntheticStage2BFormDefinitionResponse } from '@adapters/api/mock/fixtures'
+  mockSyntheticTypedPrimitiveFormDefinitionResponse } from '@adapters/api/mock/fixtures'
 import { asOpaqueId } from '@shared/types'
 import { validateR1SpecialMockFields, type R1SpecialMockFields } from '@features/work-orders/r1-special-mock-form-fields'
 
-const definition = formDefinition(mockSyntheticStage2BFormDefinitionResponse,
+const definition = formDefinition(mockSyntheticTypedPrimitiveFormDefinitionResponse,
   asOpaqueId<'FormDefinitionId'>(mockSyntheticDynamicFormDefinitionId))
 const valid: R1SpecialMockFields = {
   inspectionSummary: '屋面复核完成', inspectionResult: 'safe',
@@ -15,7 +15,7 @@ const valid: R1SpecialMockFields = {
   inspectionConfirmed: '0', inspectionCategory: 'roof',
 }
 
-describe('Stage 2B R1 source-shaped primitive FormDef write contract', () => {
+describe('R1 source-shaped typed primitive FormDef write contract', () => {
   it('normalizes only the verified scalar types, preserving leading zeros and R1 switch wire strings', () => {
     expect(definition.fields).toHaveLength(10)
     expect(validateR1SpecialMockFields(definition, valid)).toEqual({ ok: true, fields: {

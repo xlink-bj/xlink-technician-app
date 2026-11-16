@@ -20,7 +20,7 @@ const fields = (summary: string, result = 'follow_up', note?: string) => ({
   inspectionSummary: summary, inspectionResult: result,
   ...(note ? { inspectionNote: note } : {}),
 })
-const stage2bFields = (summary: string) => ({ ...fields(summary, 'safe'),
+const typedPrimitiveFields = (summary: string) => ({ ...fields(summary, 'safe'),
   inspectionContactPhone: '0013800100200',
   inspectionIdentityNumber: '000100200300400500',
   inspectionPointCount: '12', inspectionMeasuredArea: '12.50',
@@ -74,6 +74,23 @@ function controller(kind: 'forms' | 'repeat', getActor = () => actor,
 }
 
 describe('A main-App source-only multi-form/repeat controller', () => {
+  it.each([
+    ['default', false, false, false, 4, 'inspectionNote'],
+    ['typed primitives', true, false, false, 10, 'inspectionCategory'],
+    ['array/cascade', false, true, false, 12, 'inspectionLocation'],
+    ['array/cascade over typed primitives', true, true, false, 12, 'inspectionLocation'],
+    ['temporal/rating', false, false, true, 16, 'inspectionRating'],
+    ['temporal/rating over both earlier variants', true, true, true, 16, 'inspectionRating'],
+  ] as const)('%s selects only the scoped synthetic FormDef', async (_name, typed, arrays, temporal, count, lastField) => {
+    vi.stubEnv('VITE_XLINK_R1_MP_UX_FIXTURES', 'true')
+    vi.stubEnv('VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS', String(typed))
+    vi.stubEnv('VITE_XLINK_R1_ARRAY_CASCADE_FIELDS', String(arrays))
+    vi.stubEnv('VITE_XLINK_R1_TEMPORAL_RATING_FIELDS', String(temporal))
+    const fieldNames = (await controller('forms').load()).definition.fields?.map(field => field.valueKey)
+    expect(fieldNames).toHaveLength(count)
+    expect(fieldNames?.at(-1)).toBe(lastField)
+  })
+
   it.each(['forms', 'repeat'] as const)('%s handles uni absent-key empty-string storage on first save', async kind => {
     // Browser uni storage returns an empty string for a missing key. This is
     // not a stale snapshot and must not block the first atomic FormData write.
@@ -102,7 +119,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
   })
 
   it('persists incomplete drafts per role/node/FormDef/record and never auto-submits on reconnect', async () => {
-    vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
+    vi.stubEnv('VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS', 'true')
     let online = false
     const network = { current: async () => online ? 'online' as const : 'offline' as const,
       subscribe: () => () => undefined }
@@ -131,7 +148,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
   })
 
   it.each(['forms', 'repeat'] as const)('%s saves, reloads and clears temporal/rating fields through the real Mock protocol', async kind => {
-    vi.stubEnv('VITE_XLINK_R1_STAGE2D_FIELDS', 'true')
+    vi.stubEnv('VITE_XLINK_R1_TEMPORAL_RATING_FIELDS', 'true')
     const ui = controller(kind)
     const input = { ...fields('时间与评分'), inspectionDate: '2026-11-03',
       inspectionTime: '09:30', inspectionDateTime: '2026-11-03 09:30:15', inspectionRating: 4 }
@@ -202,11 +219,11 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       fields: fields('不得绕过不同 FormDef 的回执锁') })).toMatchObject({ state: 'blocked' })
   })
 
-  it('Stage 2B 020/021 source-field variant saves, edits and independently reads numeric/string/switch/select values', async () => {
-    vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
+  it('Typed primitive 020/021 source-field variant saves, edits and independently reads numeric/string/switch/select values', async () => {
+    vi.stubEnv('VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS', 'true')
     const forms = controller('forms')
     expect((await forms.load()).definition.fields).toHaveLength(10)
-    const saved = await forms.execute({ kind: 'save', fields: stage2bFields('020 完整表单') })
+    const saved = await forms.execute({ kind: 'save', fields: typedPrimitiveFields('020 完整表单') })
     expect(saved.state).toBe('succeeded')
     if (saved.state !== 'succeeded') return
     const created = saved.view.entries.find(row => row.editable)!
@@ -215,7 +232,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       inspectionPointCount: 12, inspectionMeasuredArea: 12.5,
       inspectionConfirmed: '0', inspectionCategory: 'roof' })
     expect(await forms.execute({ kind: 'edit', id: created.id, fields: {
-      ...stage2bFields('020 二次复核'), inspectionPointCount: '14',
+      ...typedPrimitiveFields('020 二次复核'), inspectionPointCount: '14',
       inspectionMeasuredArea: '14.25', inspectionConfirmed: '1', inspectionCategory: 'wall',
     } })).toMatchObject({ state: 'succeeded' })
     expect((await forms.load()).entries.find(row => row.id === created.id)?.values)
@@ -223,7 +240,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
         inspectionConfirmed: '1', inspectionCategory: 'wall' })
 
     const repeat = controller('repeat')
-    expect(await repeat.execute({ kind: 'save', fields: stage2bFields('021 完整表单') }))
+    expect(await repeat.execute({ kind: 'save', fields: typedPrimitiveFields('021 完整表单') }))
       .toMatchObject({ state: 'succeeded' })
     expect((await repeat.load()).entries.find(row => row.editable)?.values)
       .toMatchObject({ inspectionContactPhone: '0013800100200',
@@ -232,15 +249,15 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       .toMatchObject({ state: 'succeeded', view: { nodeActive: false, receiptPending: false } })
   })
 
-  it('Stage 2B completed receipt recovery requires the original full typed payload', async () => {
-    vi.stubEnv('VITE_XLINK_R1_STAGE2B_FIELDS', 'true')
+  it('Typed primitive completed receipt recovery requires the original full typed payload', async () => {
+    vi.stubEnv('VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS', 'true')
     const underlying = storage()
     let failRemoval = true
     const port: StoragePort = { ...underlying,
       remove: async (key: StorageKey) => failRemoval
         ? { state: 'failed_terminal' } : underlying.remove(key),
     } as StoragePort
-    const original = stage2bFields('现场回执原文')
+    const original = typedPrimitiveFields('现场回执原文')
     expect((await controller('forms', () => actor, port).execute({ kind: 'save', fields: original })).state)
       .toBe('uncertain')
     resetMockCommandState()

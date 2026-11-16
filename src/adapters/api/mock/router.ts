@@ -19,9 +19,9 @@ import {
   mockQuotationWorkflowNodeId,
   mockSyntheticDynamicFormDefinitionId,
   mockSyntheticInspectionFormDefinitionResponse,
-  mockSyntheticStage2BFormDefinitionResponse,
-  mockSyntheticStage2CFormDefinitionResponse,
-  mockSyntheticStage2DFormDefinitionResponse,
+  mockSyntheticTypedPrimitiveFormDefinitionResponse,
+  mockSyntheticArrayCascadeFormDefinitionResponse,
+  mockSyntheticTemporalRatingFormDefinitionResponse,
   mockSyntheticBusinessFormDefinitionResponse,
   mockSyntheticDeepCascadeDefinitionResponse,
   mockSyntheticSpecialMediaDefinitionResponse,
@@ -953,14 +953,14 @@ function matchedResponse(
     if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_DEEP_CASCADE === 'true') {
       return mockSyntheticDeepCascadeDefinitionResponse
     }
-    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2D_FIELDS === 'true') {
-      return mockSyntheticStage2DFormDefinitionResponse
+    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_TEMPORAL_RATING_FIELDS === 'true') {
+      return mockSyntheticTemporalRatingFormDefinitionResponse
     }
-    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2C_ARRAYS === 'true') {
-      return mockSyntheticStage2CFormDefinitionResponse
+    if (isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_ARRAY_CASCADE_FIELDS === 'true') {
+      return mockSyntheticArrayCascadeFormDefinitionResponse
     }
-    return isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_STAGE2B_FIELDS === 'true'
-      ? mockSyntheticStage2BFormDefinitionResponse : mockSyntheticInspectionFormDefinitionResponse
+    return isDevMockJourneyEnabled() && import.meta.env.VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS === 'true'
+      ? mockSyntheticTypedPrimitiveFormDefinitionResponse : mockSyntheticInspectionFormDefinitionResponse
   }
   if (route === 'biz/extField/query' && requestData.extId === mockR1NoteFormDefinitionId) {
     return mockR1NoteFormDefinitionResponse

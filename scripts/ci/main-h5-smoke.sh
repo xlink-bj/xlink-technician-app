@@ -6,8 +6,8 @@ set -euo pipefail
 # Clear inherited fixture/browser selectors before enabling each scoped case.
 unset VITE_XLINK_R1_MP_UX_FIXTURES VITE_XLINK_R1_SPECIAL_MEDIA \
   VITE_XLINK_R1_BUSINESS_FIELDS VITE_XLINK_R1_DEEP_CASCADE \
-  VITE_XLINK_R1_STAGE2D_FIELDS VITE_XLINK_R1_STAGE2C_ARRAYS \
-  VITE_XLINK_R1_STAGE2B_FIELDS VITE_XLINK_DYNAMIC_SCALAR_QA \
+  VITE_XLINK_R1_TEMPORAL_RATING_FIELDS VITE_XLINK_R1_ARRAY_CASCADE_FIELDS \
+  VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS VITE_XLINK_DYNAMIC_SCALAR_QA \
   VITE_XLINK_R1_CATALOG_SCALE VITE_XLINK_R1_CATEGORY_FIXTURES \
   VITE_XLINK_BRAND VITE_XLINK_ENVIRONMENT XLINK_M08_BROWSER_CHANNEL PW_CHANNEL
 export VITE_XLINK_ENABLE_REAL_WRITES=false
@@ -29,7 +29,7 @@ cp test-results/main-h5-mock/results.json test-results/main-h5-smoke/business-re
 "$playwright" test --config config/playwright/search-delivery.config.ts \
   --grep 'rapid search button|IME preedit Enter keeps focus'
 
-VITE_XLINK_R1_STAGE2D_FIELDS=true "$playwright" test \
+VITE_XLINK_R1_TEMPORAL_RATING_FIELDS=true "$playwright" test \
   --config config/playwright/main-h5-mock.config.ts \
   tests/h5-main-mock/media-interrupted-receipt.spec.ts
 cp test-results/main-h5-mock/results.json test-results/main-h5-smoke/media-results.json
