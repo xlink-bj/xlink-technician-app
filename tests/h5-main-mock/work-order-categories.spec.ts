@@ -20,7 +20,7 @@ const category = (page: Page, key: string) => page.getByTestId(`work-order-categ
 for (const width of [375, 430]) {
 test(`${width}: five R2 categories constrain the normal App list and keep unknown statuses only in all`, async ({page}, info) => {
   const evidence = await openList(page, width)
-  await expect(page.getByRole('tab')).toHaveText(['待接单', '待联系', '待上门', '待跟进', '全部'])
+  await expect(page.locator('.work-order-categories-row').getByRole('tab')).toHaveText(['待接单', '待联系', '待上门', '待跟进', '全部'])
   await expect(category(page, 'all')).toHaveAttribute('aria-selected', 'true')
   await expect(page.locator('.card-customer')).toHaveCount(hasCategoryFixtures ? 15 : 12)
   const initial = await page.locator('.card-customer').allTextContents()
