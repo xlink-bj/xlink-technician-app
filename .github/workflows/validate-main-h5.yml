@@ -123,7 +123,7 @@ jobs:
         env:
           VITE_XLINK_R1_STAGE2D_FIELDS: 'true'
         run: >-
-          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts
+          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2
           tests/h5-main-mock/stage2d-r1-temporal-fields.spec.ts
           tests/h5-main-mock/weak-network-recovery.spec.ts
           tests/h5-main-mock/m3-survey-media-430.spec.ts

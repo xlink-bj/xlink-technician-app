@@ -36,6 +36,8 @@
 
 检查命令以当前提交的 package.json 为准。局部测试之后按影响选择真实 H5 Mock、三端构建或视觉检查；主干 push 的完整门禁由 [Validate](../../.github/workflows/validate.yml) 与 [Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 执行。`verify` 本身不构建三端，也不启动浏览器。
 
+Stage1B 的 20 用例完整步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。该次 H5 workflow 随后因新 main push 被取消，故只能证明这一步的收益，不能作为整条 H5 验收通过或总耗时收益。离线草稿/媒体 10 用例步骤的两个 worker 目前只有本地同集合实测，仍以推送后完整 CI 为准。
+
 发布构建脚本会拒绝继承 `XLINK_DEV_QA` 编译标记；H5/MP 还检查当前 `scripts/check-c1-release-qa-pages.mjs` 所列 DEV-only 路由不进入发布产物。QA 路由清单以该脚本和 `src/pages.json` 为准，不以旧阶段的页面数为准。全量本机测试使用 `VITE_XLINK_ENVIRONMENT=test`；现行 Validate 的完整 checkout 用于仍依赖历史提交的检查。局部行为测试不要求每次拉取全历史；若完整验证因浅历史失败，应先核明缺失的 Git 证据，不把它解释为业务回归。
 
 ## 3. CI 层次与真实含义
