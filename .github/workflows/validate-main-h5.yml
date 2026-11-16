@@ -93,17 +93,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/check-playwright-runtime.mjs
       - name: Verify forms Save/Process, source fields and appointment readback at 375/390/430
-        # Preserve the selected browser cases; the anchored file-title branch adds all deferred cases.
-        run: >-
-          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2
-          tests/h5-main-mock/forms-save-process-readback.spec.ts
-          tests/h5-main-mock/r1-source-formdef-multifield.spec.ts
-          tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
-          tests/h5-main-mock/normal-survey-mock-reader.spec.ts
-          tests/h5-main-mock/dynamic-field-registry.spec.ts
-          tests/h5-main-mock/detail-archives.spec.ts
-          tests/h5-main-mock/deferred-appointment-r1.spec.ts
-          --grep 'R1 forms Save→EXTS→Process|R1 source FormDef multi-field save/edit/readback|020 forms|021 repeat|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)'
+        # The P1 job runs 020/021 on schedule/manual; keep those cases here for FORM-BATCH PRs.
+        # The anchored file-title branch still selects all deferred cases.
+        run: |
+          p1_cases=()
+          p1_pattern=''
+          if [[ "${GITHUB_EVENT_NAME:-}" == 'pull_request' ]]; then
+            p1_cases=(tests/h5-main-mock/a-stage-p1-acceptance.spec.ts)
+            p1_pattern='|020 forms|021 repeat'
+          fi
+          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2 \
+            tests/h5-main-mock/forms-save-process-readback.spec.ts \
+            tests/h5-main-mock/r1-source-formdef-multifield.spec.ts \
+            "${p1_cases[@]}" \
+            tests/h5-main-mock/normal-survey-mock-reader.spec.ts \
+            tests/h5-main-mock/dynamic-field-registry.spec.ts \
+            tests/h5-main-mock/detail-archives.spec.ts \
+            tests/h5-main-mock/deferred-appointment-r1.spec.ts \
+            --grep "R1 forms Save→EXTS→Process|R1 source FormDef multi-field save/edit/readback${p1_pattern}|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)"
       - name: Verify source-shaped typed primitive fields on the real H5 App
         env:
           VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true'
