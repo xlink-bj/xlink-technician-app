@@ -273,7 +273,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       .toMatchObject({ state: 'succeeded', view: { receiptPending: false } })
   })
 
-  it('Stage 2A reads FormDef, requires a valid conclusion, ignores reference image and round-trips optional notes', async () => {
+  it('Source FormDef requires a valid conclusion, keeps the reference image read-only and round-trips optional notes', async () => {
     const ui = controller('forms')
     const initial = await ui.load()
     expect(initial.definition.fields?.map(field => [field.valueKey, field.type, field.presentationOnly]))
@@ -350,7 +350,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
       .toEqual(fields('修改并清空现场备注', 'safe'))
   })
 
-  it('Stage 2A retains the receipt when a non-summary FormData field disagrees on readback', async () => {
+  it('Source FormDef retains the receipt when a non-summary FormData field disagrees on readback', async () => {
     const transport = await import('@adapters/api/mock/router')
     const actual = transport.tryMockRead
     vi.spyOn(transport, 'tryMockRead').mockImplementation(async (...args) => {

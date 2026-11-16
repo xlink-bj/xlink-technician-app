@@ -97,13 +97,13 @@ jobs:
         run: >-
           pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2
           tests/h5-main-mock/forms-save-process-readback.spec.ts
-          tests/h5-main-mock/stage2a-r1-multifield.spec.ts
+          tests/h5-main-mock/r1-source-formdef-multifield.spec.ts
           tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
           tests/h5-main-mock/normal-survey-mock-reader.spec.ts
           tests/h5-main-mock/dynamic-field-registry.spec.ts
           tests/h5-main-mock/detail-archives.spec.ts
           tests/h5-main-mock/deferred-appointment-r1.spec.ts
-          --grep 'R1 forms Save→EXTS→Process|Stage 2A|020 forms|021 repeat|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)'
+          --grep 'R1 forms Save→EXTS→Process|R1 source FormDef multi-field save/edit/readback|020 forms|021 repeat|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)'
       - name: Verify source-shaped typed primitive fields on the real H5 App
         env:
           VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true'

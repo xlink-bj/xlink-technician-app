@@ -3,7 +3,7 @@ import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
 /** Full H5 app composition on synthetic 020, no real backend requests. */
-test.describe('Stage 2A source-driven FormDef multi-field round-trip', () => {
+test.describe('R1 source FormDef multi-field save/edit/readback', () => {
   test.skip(process.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true', 'Synthetic 020 fixture required')
 
   test('430×932: required radio, optional note, read-only image, save/edit/reload', async ({ page }) => {
