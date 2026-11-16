@@ -30,7 +30,7 @@ for(const mode of ['verified','node-mismatch','late-logout'] as const)test('norm
   if(mode==='late-logout')hold=true
   await page.getByTestId('signing-handler-check').click()
   if(mode==='late-logout'){
-   await held;await page.goBack();await page.goBack();await page.goBack();await page.goBack();await expect(page.locator('.home-page')).toBeVisible();await page.getByText('退出登录',{exact:true}).click();await expect(page.locator('.login-page')).toBeVisible();release();await expect(page.getByTestId('signing-eligibility')).toHaveCount(0)
+   await held;await page.goBack();await page.goBack();await page.goBack();await page.goBack();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.home-footer .secondary').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click();await expect(page.locator('.login-page')).toBeVisible();release();await expect(page.getByTestId('signing-eligibility')).toHaveCount(0)
    await page.locator('.launch-cta').click();await page.locator('.method-card').filter({hasText:'快捷登录'}).click();await expect(page.locator('.home-page')).toBeVisible()
    await page.locator('.work-orders-entry').click();await page.locator('.work-order-card').click();await page.locator('.primary-task-action').click()
    await expect(page.getByText('操作内容暂不可用',{exact:true})).toBeVisible();await expect(page.getByTestId('signing-eligibility')).toHaveCount(0)
