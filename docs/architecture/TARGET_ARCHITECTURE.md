@@ -3,8 +3,8 @@
 > **Mainline context update (2026-11-13):** The G2/G4-D architecture invariants below remain the long-term decision authority. The original `Working branch`, `Implementation baseline reviewed`, and older descriptions of Quotation/Contract as `future` are **historical stage metadata**, not the implementation status of today's main. Read the [current source snapshot](M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md) (reviewed at `main@bd22b42d8e970c885bc6237b89c1c8ddd1e1ff6d`), the historical [2026-10-30 implementation snapshot](IMPLEMENTATION_BASELINE_20261030.md), [documentation index](../README.md), and [mainline policy](../../AGENTS.md) before using those passages for work planning. This notice changes no approved business or API semantics.
 
 Status: ACTIVE — living target architecture
-Reviewed at: 2026-11-13
-Decision authority: Owner architecture decisions; this update clarifies implementation boundaries only.
+Reviewed at: 2026-11-16 (device Action Content decision; older implementation snapshots retain their dates)
+Decision authority: Owner architecture decisions; device integration is an accepted target, not implemented or device-verified.
 Historical review metadata follows:
 Program: New Technician / Field Service App
 Original architecture decision: G2
@@ -22,6 +22,7 @@ Related focused architecture:
 
 - `docs/architecture/ACTION_WORKSPACE_ARCHITECTURE.md` — detailed Action Driven / Action Workspace frontend execution architecture.
 - `docs/architecture/AI_ENGINEERING_LOOP.md` — engineering/AI collaboration loop.
+- [Device Action Content decision](ADR_DEVICE_ACTION_CONTENT_20261116.md) — pressure testing and panorama capture boundaries, source evidence and verification gaps.
 
 ---
 
@@ -55,15 +56,18 @@ Dynamic Form Runtime
 into the more explicit execution model:
 
 ```text
-Workflow Runtime
+Business Truth
+  -> Workflow Runtime
   -> Current Action Projection
-  -> Action Runtime / Action Workspace
-  -> Action Content Runtime
+  -> Action Workspace (Load / Draft / Recover / Submit / Navigate)
+  -> Action Content
        -> Shared bounded fields / dedicated experiences
        -> Quotation / Order domain content
        -> Signing review        (read-only)
-       -> Media / Signature     (future)
-       -> Composite Content     (future)
+       -> Device operations     (accepted target, not implemented)
+       -> Media / Signature / Composite Content (future)
+  -> Semantic Ports & Adapters
+  -> Multi-Platform Delivery
 ```
 
 This is an architectural refinement, not a reversal of G2.
@@ -77,6 +81,7 @@ This is an architectural refinement, not a reversal of G2.
 - Workflow Runtime as workflow identity/eligibility authority: **FIXED**;
 - Action Runtime / Action Workspace as shared business-action execution boundary: **FIXED AS TARGET**;
 - Dynamic Form Runtime as a bounded Action Content runtime, not the whole action architecture: **FIXED**;
+- device operations as focused Action Content alongside dedicated Appointment and dynamic forms, with no global device layer/platform: **FIXED AS TARGET, NOT IMPLEMENTED**;
 - Work Order Detail as business context + current action + read-oriented information: **FIXED**;
 - Mock / Real semantic-path equivalence: **FIXED**;
 - local draft persistence separated from business submission: **FIXED**;
@@ -131,44 +136,33 @@ The App preserves required outcomes and wire compatibility where necessary while
 
 ## 3. Current Logical Architecture
 
+The following is the responsibility/assembly map, not a claim that every branch is implemented or a direct import graph. Device branches are accepted targets; source anchors and gaps are in the [device ADR](ADR_DEVICE_ACTION_CONTENT_20261116.md).
+
 ```mermaid
 flowchart TD
-    UI[Vue 3 Pages / Components] --> APP[Application Use Cases]
-
-    APP --> DOMAIN[Domain / Feature Semantics]
-    APP --> WF[Workflow Runtime]
-
-    WF --> ACTIONPROJ[Current Action Projection]
-    ACTIONPROJ --> ACTION[Action Runtime / Workspace]
-
-    ACTION --> CONTENT[Action Content Boundary]
-    CONTENT --> FORM[Shared bounded fields / dedicated experiences]
-    CONTENT --> QUOTE[Quotation / Order domain content]
-    CONTENT --> CONTRACT[Signing review - read-only]
-    CONTENT --> OTHER[Other verified content runtimes - future]
-
-    ACTION --> DRAFT[Action Draft / Recovery]
-
-    DOMAIN --> PORTS[Typed Ports / Normalized Contracts]
-    WF --> PORTS
-    ACTION --> PORTS
-    FORM --> PORTS
+    TRUTH["Business Truth: verified backend contracts and permissions"] --> WF["Workflow Runtime: src/runtimes/workflow"]
+    WF --> PROJ["Current Action Projection: features/work-orders/detail-workflow.ts"]
+    PROJ --> WORKSPACE["Action Workspace: Load / Draft / Recover / Submit / Navigate"]
+    WORKSPACE --> CONTENT["Action Content"]
+    CONTENT --> FORM["Bounded dynamic forms: R1FormActionContentHost"]
+    CONTENT --> APPOINTMENT["Dedicated Appointment experience"]
+    CONTENT --> ORDER["Quotation / Order and read-only signing review"]
+    CONTENT --> DEVICE["Device operations: target, not implemented"]
+    DEVICE --> PRESSURE["Focused pressure test content"]
+    DEVICE --> PANORAMA["Focused panorama capture content"]
+    FORM --> PORTS["Semantic Ports: src/shared/ports"]
+    APPOINTMENT --> PORTS
+    ORDER --> PORTS
+    PRESSURE --> PORTS
+    PANORAMA --> PORTS
+    WORKSPACE --> DRAFT["Shared action drafts and media queue"]
     DRAFT --> PORTS
-
-    PORTS --> API[Technician API Adapter]
-    PORTS --> AUTH[Auth / Session Adapter]
-    PORTS --> STORAGE[Storage Adapter]
-    PORTS --> UPLOAD[Upload Adapter]
-    PORTS --> PLATFORM[Platform Adapters]
-
-    API --> BACKEND[(Existing Backend APIs)]
-    AUTH --> BACKEND
-    UPLOAD --> BACKEND
-
-    STORAGE --> MPSTORE[MP Storage]
-    STORAGE --> APPSTORE[Android / iOS Storage]
-    PLATFORM --> MP[MP-WEIXIN]
-    PLATFORM --> APPPLUS[Android / iOS]
+    PORTS --> ADAPTERS["Adapters: API / Auth / Storage / Upload / Platform"]
+    ADAPTERS --> BACKEND["Business backend: authoritative ACK and readback"]
+    ADAPTERS --> DELIVERY["Multi-Platform Delivery"]
+    DELIVERY --> APP["App: full device flow first; first OS undecided"]
+    DELIVERY --> MP["MP-WEIXIN: BLE needs model / firmware / OS verification"]
+    DELIVERY --> H5["H5: development Mock, history and results"]
 ```
 
 No inner layer imports:
@@ -353,6 +347,12 @@ It owns:
 It is an **Action Content Runtime**, not the top-level business-action architecture.
 
 Appointment was the first Action Workspace consumer. Data strategy and experience are independent: dynamic Map plus dedicated time selection, preset Survey DTO plus extensible fields and dedicated experiences, and separate Order domain handling are all valid combinations. Shared field interpretation does not grant storage or mutation authority. A new preset DTO needs its own full-original preservation/codec proof; it is not automatically an arbitrary Map. The current normal Reader/Provider/Host path, v6 synthetic active-repeat edit limits, root/EXTS and date compatibility rules, and extension costs are specified in the [current source snapshot](M1_I8_FRONTEND_ARCHITECTURE_BASELINE.md). This remains a bounded field mechanism, not a new low-code engine.
+
+### 5.7 Device Action Content — accepted target, not implemented
+
+Pressure testing and panorama capture are small, dedicated Action Content experiences, parallel to Appointment and dynamic forms. They reuse Workflow eligibility, action/task identity, Workspace draft/recovery and media upload responsibilities. They do not create a global device-operation layer, a device platform, a plugin marketplace or a generic IoT engine.
+
+Pressure protocol encoding/parsing is separate from BLE transport and Vue pages. Android/iOS camera vendor SDKs enter through thin capability-specific adapters. SDK connection/permission success never grants business authorization. Brand presentation (`src/brands/`) remains independent of device protocol/model selection. Begin with one pressure device and one camera end to end, then extend only where validated differences require it. See the [device ADR](ADR_DEVICE_ACTION_CONTENT_20261116.md) for source boundaries and acceptance gaps.
 
 ---
 
@@ -681,6 +681,8 @@ No generic plugin/native framework is introduced pre-emptively.
 
 MP-WEIXIN, Android, and iOS must either share semantic parity or return an explicit unsupported result.
 
+For the accepted device target, complete workflows are App-first; the first operating system is still undecided. Mini Program BLE support requires model/firmware/OS validation. H5 serves development Mock, history and result viewing, with no direct hardware-control commitment. A `build:app` script or compile result does not prove native packaging or device behavior. Native durable file adapters must be explicitly assembled per platform; current environment-based selection is not that verification.
+
 ---
 
 ## 13. Media / Upload Boundary
@@ -708,6 +710,8 @@ The Upload Adapter owns:
 Dynamic Form or other Action Content runtimes own whether media is required and semantically complete.
 
 A local path is never treated as an already persisted backend media reference.
+
+For device evidence, operation finished, measurement passed, data complete, locally persisted, uploaded and business-server acknowledged are separate facts. Upload success is not business save success. Retain recoverable evidence until authoritative business ACK under the verified result contract; check account/task ownership before recovery or submission. Result uncertainty must not trigger business-command replay. The [device ADR](ADR_DEVICE_ACTION_CONTENT_20261116.md) specifies the target gap; existing media queue helpers do not by themselves prove business ACK.
 
 ---
 

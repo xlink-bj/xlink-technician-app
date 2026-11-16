@@ -30,6 +30,7 @@
 
 ## 专题权威文件（保留，按需阅读）
 
+- [Device Action Content decision](architecture/ADR_DEVICE_ACTION_CONTENT_20261116.md)：试压/全景作为 Action Content 的已定目标、源码复用边界、旧系统研究覆盖和 App/小程序/H5 验证缺口；**未实施、未真机通过**。
 - [Action Workspace Architecture](architecture/ACTION_WORKSPACE_ARCHITECTURE.md)：动作身份、Shell、草稿/提交职责的长期设计依据；其中最早的 G4-D 阶段叙述是历史上下文。
 - [Local Draft and Weak Network](architecture/LOCAL_DRAFT_AND_WEAK_NETWORK_ARCHITECTURE.md)：草稿作用域、最新修订保护、弱网语义和不可自动重放。
 - [UI Delivery Workflow](design-system/UI_DELIVERY_WORKFLOW.md)：商业 UI 的真实 App、同视口截图、Owner 验收与跨端证据。

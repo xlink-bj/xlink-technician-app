@@ -1,8 +1,8 @@
 # Action Workspace Architecture
 
 Status: ACTIVE — shared execution principles, with historical G4-D examples
-Reviewed at: 2026-11-13
-Code baseline: `main@bd22b42d8e970c885bc6237b89c1c8ddd1e1ff6d`
+Reviewed at: 2026-11-16 (device-content target addition)
+Prior implementation snapshot: `main@bd22b42d8e970c885bc6237b89c1c8ddd1e1ff6d`; device-boundary source review: [2026-11-16 ADR](ADR_DEVICE_ACTION_CONTENT_20261116.md)
 Decision authority: Owner / [Target Architecture](TARGET_ARCHITECTURE.md)
 Scope: frontend responsibilities; no backend, business-write or release authorization changes.
 Program: New Technician / Field Service App
@@ -36,6 +36,8 @@ Workflow Runtime
 This architecture provides shared execution principles for Appointment, Survey and Quotation/Order, and for later verified actions such as Construction and Acceptance. Existing signing review is read-only; it does not establish executable signing.
 
 Historically, the first consumer was Appointment. Appointment is not the architecture itself; it is one Action Content implementation.
+
+**2026-11-16 accepted target, not implemented:** device operations are another Action Content branch, alongside dedicated Appointment and dynamic forms. The Workspace retains **Load / Draft / Recover / Submit / Navigate**; focused pressure-test and panorama-capture content owns its operation state and result completeness. Protocol parsing and native camera SDK calls remain behind semantic ports/adapters, never in the page or shared Shell. This adds no global device layer or universal executor. The [device ADR](ADR_DEVICE_ACTION_CONTENT_20261116.md) records concrete source reuse and gaps; `construction` remains guarded until real task, permission and result contracts are verified.
 
 ### Action Workspace invariants
 
@@ -492,6 +494,8 @@ Business success is terminal once the command-specific success contract is satis
 authoritative refresh failure is represented as a separate pending state; it
 must not convert the mutation into a submit failure or invite resubmission.
 The frontend must not guess the next business status or workflow node.
+
+For future device content, device-operation completion, measurement qualification, data completeness, durable local persistence, upload success and authoritative business ACK are independent facts. An uploaded reference is not permission to finalize the evidence. The business caller must verify its result contract before invoking shared media finalization; unknown ACK preserves evidence and blocks blind replay. Recovery must recheck current account/role and task identity. Reconnection must never automatically replay pressurize, reset or start commands. These are target requirements, not claims that device recovery is currently implemented.
 
 A toast alone is insufficient as the architectural success model. The workspace must support a visible success state, while the Detail page must reflect the reread business state.
 
