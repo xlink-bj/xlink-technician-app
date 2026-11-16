@@ -14,6 +14,18 @@ async function capture(page: import('@playwright/test').Page, scene: string) {
   await page.screenshot({ path: `${directory}/${scene}.png` })
 }
 
+async function waitForSavedLocalDraft(page: import('@playwright/test').Page) {
+  await expect(page.getByTestId('mock-journey-progress')).toHaveCount(0)
+  // The commercial status strip retains its last stable label while dirty.
+  // Wait for the actual save acknowledgement before a destructive full reload.
+  await expect.poll(() => page.evaluate(async () => {
+    const modulePath = '/src/features/work-orders/action-workspace.ts'
+    const { useActionWorkspaceStore } = await import(modulePath)
+    return useActionWorkspaceStore().draftStatus
+  })).toMatch(/^(saved_local|restore_available)$/)
+  await expect(page.locator('.action-workspace-draft-status')).toContainText(/已自动保存|已恢复草稿/)
+}
+
 test('430×932 Survey: browser image selection → mock upload → preview → restored draft', async ({ page }) => {
   await page.setViewportSize({ width: 430, height: 932 })
 
@@ -104,7 +116,7 @@ test('430×932 Survey: browser image selection → mock upload → preview → r
 
   // The real action page should rehydrate a LOCAL synthetic draft, with the
   // two independent media fields still isolated after a full app reload.
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
+  await waitForSavedLocalDraft(page)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('1')
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
@@ -123,7 +135,7 @@ test('430×932 Survey: browser image selection → mock upload → preview → r
   await page.getByTestId('dynamic-media-remove-accept-images1').click()
   await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('0')
   await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview')).toHaveCount(0)
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
+  await waitForSavedLocalDraft(page)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dynamic-media-count-images1')).toContainText('0')
   await expect(page.getByTestId('dynamic-media-add-images1')).toBeVisible()
@@ -202,7 +214,7 @@ test('430×932 Survey: retryable upload fails once, then resumes the same queued
   await page.getByTestId('dynamic-media-preview-images1').scrollIntoViewIfNeeded()
   await capture(page, 'generic-media-retry-succeeded')
 
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
+  await waitForSavedLocalDraft(page)
   await page.reload({ waitUntil: 'domcontentloaded' })
   await expect(page.getByTestId('dynamic-media-preview-images1').locator('.dynamic-action-media-tile--preview')).toHaveCount(1)
   await expect(page.getByTestId('dynamic-media-count-images2')).toContainText('0')
