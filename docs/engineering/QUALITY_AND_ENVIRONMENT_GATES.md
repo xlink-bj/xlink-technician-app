@@ -46,7 +46,7 @@
 
 - **L1 / 开发回路**：受影响单测、类型、静态边界，必要时本机/云 H5 UI；工具不应承诺从 GitHub PR 获得即时 HMR。
 - **每次 main push**：Validate 运行 `verify` 与三端构建；Validate Main H5 Smoke 运行现有 16 条真实 App Mock 用例，覆盖 Save/Process 与报价回读、输入/搜索 DOM、媒体恢复及双品牌。两个 workflow 的实际结果分别记录；快检通过不代表完整 H5 矩阵通过。
-- **完整 H5**：[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 每日 19:15 UTC 定时运行，也可在 GitHub Actions 手动运行（`gh workflow run validate-main-h5.yml --ref main`）；既有标记 PR 入口继续可用。它保留 Stage1B、草稿、角色媒体、创建与 L3 专项的全部既定用例和失败汇总，普通 main push 不会取消完整验收。
+- **完整 H5**：[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 每日 19:15 UTC 定时运行，也可在 GitHub Actions 手动运行（`gh workflow run validate-main-h5.yml --ref main`）；既有标记 PR 入口继续可用。它保留表单保存/流程、草稿、角色媒体、创建与其他专项的既定用例和失败汇总。需显式本地合成写入授权的问卷、业务选择器用例分别在专项配置中运行；不带该授权的泛用 Mock 不冒充其通过。普通 main push 不会取消完整验收。
 - **何时补跑完整 H5**：权限/角色及租户数据隔离、报价/订单金额或签署、草稿异步与弱网、媒体、共享平台或跨端关键流程，以及 workflow、Playwright 配置、测试设施、共享 fixture、构建/运行环境发生变化时，改动负责人在对应 main SHA 上手动运行并核对 run 的 `head_sha`。完整失败未修复时，相关范围不得报告验收完成；快检绿不替代完整结果，也不借用旧 SHA 的 PASS。
 - **每日失败归责**：日常项目协调 owner 检查定时完整 H5 run 的终态，指派最近相关改动负责人排查、修复并重跑；未修复前相关范围保持 FAIL/NOT_ACCEPTED。普通 main push 不因此暂停。
 - **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。旧 Draft 分支专项 workflow 与历史阶段报告不构成当前 main push 门禁。

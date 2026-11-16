@@ -32,6 +32,9 @@ const enabledOptInFixtureEnv = Object.fromEntries(
  */
 export default defineConfig({
   testDir: rootPath('tests/h5-main-mock'),
+  // These write-path suites require explicit scoped grants supplied by their
+  // dedicated configs; the inert general Mock cannot exercise their contract.
+  testIgnore: ['**/brand-survey-host.spec.ts', '**/map-bizselect-scalar-edit.spec.ts'],
   workers: 1,
   fullyParallel: false,
   retries: 0,
