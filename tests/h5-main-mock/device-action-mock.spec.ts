@@ -35,14 +35,24 @@ test('scoped device mock operates and restores in the actual App', async ({ page
   await page.getByTestId('device-start').click()
   await expect(page.getByTestId('device-result')).toContainText('合格判定待真实规则核实')
   await expect(page.getByTestId('device-result')).toContainText(/业务确认\s*未确认/)
+  const factColumns = await page.locator('.device-fact').first().evaluate(row => {
+    const [label, value] = [...row.children]
+    return { labelRight: label.getBoundingClientRect().right, valueLeft: value.getBoundingClientRect().left }
+  })
+  expect(factColumns.valueLeft - factColumns.labelRight).toBeGreaterThan(8)
   await page.getByTestId('device-save').click()
   await expect(page.getByTestId('device-result')).toContainText(/本机保存\s*已核对/)
   await shot('03-pressure-result')
 
-  await page.goto('/#/pages/index/index?devReview=1')
+  await page.goto('/#/pages/dev/qa-console')
+  await expect(page.getByTestId('qa-console')).toBeVisible()
   await page.getByTestId('device-action-mock-entry').click()
   await expect(page.getByTestId('device-result')).toContainText(/本机保存\s*已核对/)
   await expect(page.getByTestId('device-connect')).toHaveCount(0)
+  await page.getByTestId('device-new').click()
+  await expect(page.getByTestId('device-history')).toContainText('试压合成采样')
+  await page.getByTestId('device-history-0').click()
+  await expect(page.getByTestId('device-result')).toContainText(/本机保存\s*已核对/)
   await page.getByTestId('device-new').click()
   await page.getByTestId('device-panorama-tab').click()
   await page.getByTestId('device-connect').click()
@@ -52,12 +62,38 @@ test('scoped device mock operates and restores in the actual App', async ({ page
   await page.getByTestId('device-connect').click()
   await page.getByTestId('device-start').click()
   await expect(page.getByTestId('device-result')).toContainText('无真实原图或可上传文件')
+  await page.getByTestId('device-save').click()
+  await expect(page.getByTestId('device-history')).toContainText('全景占位预览')
   await shot('04-panorama-result')
   await page.locator('.action-workspace-scroll').evaluate(el => { el.scrollTop = 0 })
   await shot('05-panorama-top')
 
-  const accent = await page.getByTestId('device-panorama-tab').evaluate(el => getComputedStyle(el).color)
+  await page.goto('/#/pages/dev/qa-console')
+  await expect(page.getByTestId('qa-console')).toBeVisible()
+  await page.getByTestId('device-action-mock-entry').click()
+  await expect(page.getByTestId('device-result')).toContainText('合格判定待真实规则核实')
+  await page.getByTestId('device-panorama-tab').click()
+  await expect(page.getByTestId('device-result')).toContainText('全景占位预览')
+  await page.getByTestId('device-pressure-tab').click()
+  await expect(page.getByTestId('device-result')).toContainText('合格判定待真实规则核实')
+  await page.locator('.action-workspace-scroll').evaluate(el => {
+    const scrollable = [...el.querySelectorAll('.uni-scroll-view')].find(node => getComputedStyle(node).overflowY === 'auto')
+    if (!scrollable) throw Error('Workspace scroll container missing')
+    scrollable.scrollTop = scrollable.scrollHeight
+  })
+  const footerClearance = await page.evaluate(() => {
+    const last = document.querySelector('.device-footnote')!, bar = document.querySelector('.action-workspace-footer')!
+    const footer = bar.getBoundingClientRect()
+    if (footer.top >= innerHeight || footer.bottom > innerHeight + 1) return -1
+    return footer.top - last.getBoundingClientRect().bottom
+  })
+  expect(footerClearance).toBeGreaterThanOrEqual(0)
+  await shot('06-scroll-bottom')
+
+  const accent = await page.getByTestId('device-pressure-tab').evaluate(el => getComputedStyle(el).color)
   expect(accent).toBe(brand === 'yuhong' ? 'rgb(200, 32, 43)' : 'rgb(40, 120, 242)')
+  const newActionColor = await page.getByTestId('device-new').evaluate(el => getComputedStyle(el).color)
+  expect(newActionColor).toBe(brand === 'yuhong' ? 'rgb(200, 32, 43)' : 'rgb(40, 120, 242)')
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)
   await page.setViewportSize({ width: 375, height: 667 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true)

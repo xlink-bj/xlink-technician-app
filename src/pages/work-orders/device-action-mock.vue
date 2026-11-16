@@ -30,7 +30,7 @@
       <view class="device-actions">
         <AppButton v-if="state.phase === 'running'" variant="secondary" data-testid="device-cancel" @tap="action.interrupt()">取消本次作业</AppButton>
         <AppButton v-if="state.phase === 'running'" variant="text" data-testid="device-disconnect" @tap="mockPort?.disconnect()">模拟断连</AppButton>
-        <AppButton v-if="state.phase === 'finished'" variant="secondary" data-testid="device-new" @tap="action.select(state.kind)">新建一次作业</AppButton>
+        <button v-if="state.phase === 'finished'" class="device-quiet-action" data-testid="device-new" @tap="action.select(state.kind, true)">新建一次作业</button>
       </view>
     </view>
     <view v-if="state.result" class="device-result" data-testid="device-result">
@@ -41,23 +41,30 @@
         <view class="device-samples"><text v-for="sample in state.result.samples" :key="sample.minute">{{ sample.minute }} 分钟　{{ sample.pressure.toFixed(2) }} MPa</text></view>
       </template>
       <template v-else>
-        <view class="device-panorama-preview"><text>360°</text><text>模拟拼接预览</text></view>
+        <view class="device-panorama-preview"><text>360°</text><text>全景占位预览</text></view>
         <text class="device-help">拍摄流程已结束；无真实原图或可上传文件。</text>
       </template>
       <view class="device-facts">
-        <text>作业结束 <b>是</b></text>
-        <text>数据完整 <b>{{ state.result.dataComplete ? '模拟采样完整' : '缺真实文件' }}</b></text>
-        <text>本机保存 <b>{{ state.localSaved ? '已核对' : '未保存' }}</b></text>
-        <text>上传 <b>未上传</b></text>
-        <text>业务确认 <b>未确认</b></text>
+        <view class="device-fact"><text>作业结束</text><text class="device-fact-value">是</text></view>
+        <view class="device-fact"><text>数据完整</text><text class="device-fact-value">{{ state.result.dataComplete ? '合成采样完整' : '缺真实文件' }}</text></view>
+        <view class="device-fact"><text>本机保存</text><text class="device-fact-value">{{ state.localSaved ? '已核对' : '未保存' }}</text></view>
+        <view class="device-fact"><text>上传</text><text class="device-fact-value">未上传</text></view>
+        <view class="device-fact"><text>业务确认</text><text class="device-fact-value">未确认</text></view>
       </view>
+    </view>
+    <view v-if="state.history.length" class="device-history" data-testid="device-history">
+      <view class="device-history-head"><text>本机保存记录</text><text>{{ state.history.length }} 次</text></view>
+      <button v-for="(saved, index) in state.history" :key="saved.completedAt + index"
+        class="device-history-row" :data-testid="'device-history-' + index" @tap="action.showSaved(index)">
+        <text>{{ saved.kind === 'pressure' ? '试压合成采样' : '全景占位预览' }} · {{ saved.completedAt.slice(0, 16).replace('T', ' ') }}</text><text>查看</text>
+      </button>
     </view>
     <text class="device-footnote">仅本机模拟，不控制真实设备；结果不会提交工单或推进流程。</text>
   </view>
   <template #actions>
     <AppButton v-if="!state.connected && state.phase !== 'finished'" block data-testid="device-connect" :disabled="state.phase === 'connecting'" @tap="action.connect">{{ state.phase === 'connecting' ? '连接中…' : '连接设备' }}</AppButton>
     <AppButton v-else-if="state.phase === 'ready'" block data-testid="device-start" @tap="action.start">{{ state.kind === 'pressure' ? '开始试压' : '开始拍摄' }}</AppButton>
-    <AppButton v-else-if="state.phase === 'finished' && !state.localSaved" block data-testid="device-save" @tap="action.saveLocal">保存本机结果</AppButton>
+    <AppButton v-else-if="state.phase === 'finished' && !state.localSaved" block data-testid="device-save" :disabled="state.saving" @tap="action.saveLocal">{{ state.saving ? '正在保存…' : '保存本机结果' }}</AppButton>
     <AppButton v-else block disabled>{{ state.localSaved ? '已保存本机' : '作业进行中' }}</AppButton>
   </template>
   </ActionWorkspaceShell>
@@ -90,7 +97,7 @@ const authorized = computed(() => !!entryFingerprint.value && currentFingerprint
 const action = shallowRef<ReturnType<typeof createDeviceAction> | null>(null)
 const mockPort = shallowRef<ReturnType<typeof createDevMockDevicePort> | null>(null)
 const state = computed(() => action.value?.state.value ?? { kind: 'pressure' as const, phase: 'select' as const,
-  progress: 0, connected: false, result: null, localSaved: false, message: '' })
+  progress: 0, connected: false, result: null, history: [], localSaved: false, saving: false, message: '' })
 const phaseLabel = computed(() => ({ select: '待连接', connecting: '连接中', ready: '已连接',
   running: '作业中', interrupted: '已中断', finished: '已结束' })[state.value.phase])
 
@@ -138,14 +145,24 @@ onUnload(() => { action.value?.dispose(); action.value = null })
 .device-card-title,.device-result-head text:first-child { font-size:var(--app-font-section-title); font-weight:700; }
 .device-state,.device-result-head text:last-child { color:var(--app-color-primary); font-size:var(--app-font-meta); font-weight:700; }
 .device-actions { display:flex; flex-wrap:wrap; gap:12rpx; margin-top:26rpx; }
+.device-quiet-action { min-height:88rpx; margin:0; padding:0 24rpx; border:1px solid var(--app-color-primary); border-radius:var(--app-radius-control); background:var(--app-color-surface); color:var(--app-color-primary); font-size:var(--app-font-body); font-weight:600; }
+.device-quiet-action::after { border:0; }
 .device-progress { margin-top:24rpx; color:var(--app-color-text-secondary); font-size:var(--app-font-meta); }
 .device-progress-track { height:10rpx; margin-bottom:10rpx; background:var(--app-color-primary-soft); border-radius:10rpx; overflow:hidden; }
 .device-progress-track view { height:100%; background:var(--app-color-primary); transition:width .25s; }
 .device-result-value { display:block; font-size:72rpx; font-weight:750; font-variant-numeric:tabular-nums; line-height:1.1; margin:16rpx 0; }
 .device-result-value text { font-size:var(--app-font-body); font-weight:500; }
 .device-samples,.device-facts { display:flex; flex-direction:column; margin-top:22rpx; border-top:1px solid var(--app-color-border); }
-.device-samples text,.device-facts text { display:flex; justify-content:space-between; padding:15rpx 0; border-bottom:1px solid var(--app-color-border); font-size:var(--app-font-body); }
-.device-facts b { font-weight:600; }
+.device-samples text,.device-fact { padding:15rpx 0; border-bottom:1px solid var(--app-color-border); font-size:var(--app-font-body); }
+.device-fact { display:flex; align-items:baseline; justify-content:space-between; gap:20rpx; }
+.device-fact-value { flex-shrink:0; color:var(--app-color-text-primary); font-weight:600; text-align:right; }
+.device-history { padding:24rpx 28rpx; margin-bottom:18rpx; border-radius:var(--app-radius-card); background:var(--app-color-surface); }
+.device-history-head { display:flex; justify-content:space-between; gap:12rpx; font-size:var(--app-font-section-title); font-weight:700; }
+.device-history-head text:last-child { color:var(--app-color-text-secondary); font-size:var(--app-font-meta); font-weight:500; }
+.device-history-row { display:flex; align-items:center; justify-content:space-between; gap:12rpx; min-height:88rpx; margin:14rpx 0 0; padding:8rpx 0; border:0; border-top:1px solid var(--app-color-border); border-radius:0; background:transparent; color:var(--app-color-text-primary); font-size:var(--app-font-body); text-align:left; }
+.device-history-row text:first-child { flex:1; min-width:0; overflow-wrap:anywhere; }
+.device-history-row text:last-child { flex-shrink:0; color:var(--app-color-primary); font-weight:600; }
+.device-history-row::after { border:0; }
 .device-panorama-preview { height:220rpx; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10rpx; background:var(--app-color-primary-soft); color:var(--app-color-primary); border-radius:var(--app-radius-control); margin-bottom:16rpx; }
 .device-panorama-preview text:first-child { font-size:52rpx; font-weight:700; }
 .device-footnote { display:block; margin:24rpx 4rpx; }

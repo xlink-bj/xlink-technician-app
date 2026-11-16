@@ -92,8 +92,10 @@ H5 DEV Mock 只实现本地操作与结果恢复，不迁移真实设备或业�
 
 本批源码为 [设备 Action Content](../../src/features/work-orders/device-action/device-action.ts)、[语义 port](../../src/shared/ports/device-action.ts)、[DEV 模拟 adapter](../../src/adapters/device/dev-mock-device.ts) 和 [独立页面](../../src/pages/work-orders/device-action-mock.vue)。它以固定 DEV Mock 工单 `mock-work-order-002`、独立模拟任务 `mock-device-action-node-002`、登录用户与角色生成 Action Draft 身份。该工单既有当前工作流节点是 `placeOrder`；模拟任务不冒充正式施工节点，`construction` 的 `policy_unverified` 维持原样。页面访问受 `VITE_XLINK_H5_MOCK_E2E` 与 Mock data 模式限定，正式业务入口不展示该模拟操作。页面路由仅在 `XLINK_DEV_QA` 编译条件下注册，并通过现有发布路由检查排除。
 
-运行 `pnpm run dev:h5:mock`，从 `/#/pages/index/index?devReview=1` 进入已登录 DEV Mock H5 的 QA 控制台，开启“完整数据”，点击“设备作业 · 固定 Mock 任务”。选择试压或全景、连接、开始，观察过程与结果；作业中可取消或模拟断连。断连后只可重新连接，必须再次手动开始。保存本机结果后重新打开相同任务可恢复；账号、角色或任务身份不匹配时不恢复。试压显示合成 MPa 采样，合格判定保持待核实；全景只展示模拟拼接预览，没有真实原图或可上传文件。页面分别呈现结束、数据完整、本机保存、上传和业务确认，不把模拟完成当成工单完成。
+运行 `pnpm run dev:h5:mock`，从 `/#/pages/index/index?devReview=1` 进入已登录 DEV Mock H5 的 QA 控制台，开启“完整数据”，点击“设备作业 · 固定 Mock 任务”。选择试压或全景、连接、开始，观察过程与结果；作业中可取消或模拟断连。断连后只可重新连接，必须再次手动开始。试压显示合成 MPa 采样，合格判定保持待核实；全景只展示占位预览，没有真实原图或可上传文件。页面分别呈现结束、数据完整、本机保存、上传和业务确认，不把模拟完成当成工单完成。这是架构样例切片，不是旧管业设备产品的完整体验。
 
-本批验证区分构建与体验：发布 H5 编译通过且 DEV 路由被排除；XLink 与雨虹两个主题的真实 DEV Mock H5 均在 430×932 完成入口、断连/取消、结果保存恢复与身份撤销测试，375×667 无横向溢出。截图保存在 `.review/device-action/{xlink,yuhong}/430x932/`，不作为真机或商业视觉验收。
+草稿沿用 Action Draft Repository，以用户、角色、工单、模拟任务和内容身份绑定，并将试压与全景的内容身份分开。每种内容保留该任务下多次已本地保存的合成结果；“新建一次作业”只重置当前操作，不删除旧结果，可从本机保存记录打开。重开页面默认恢复最近一次试压，切换全景可恢复其最近结果，反向切换同理。账号、角色或任务身份不匹配时不恢复；损坏、缺字段或版本不兼容的内容显示读取失败，不覆盖旧记录。这里的本机保存仅证明合成结果元数据可回读，不证明全景文件持久化。
+
+本批验证区分构建与体验：发布 H5 编译通过且 DEV 路由被排除；XLink 与雨虹两个主题的真实 DEV Mock H5 均在 430×932 完成入口、断连/取消、试压与全景各自保存恢复、身份撤销和滚动到底栏的测试，375×667 无横向溢出。截图保存在 `.review/device-action/{xlink,yuhong}/430x932/`，不作为真机或商业视觉验收。
 
 首批不使用 BLE、厂商 SDK、浏览器相机、支付、签署或生产网络，也没有真实结果上传、业务 ACK、阈值和工作流推进。App/MP 的设备操作仍显式不支持；本地编译与 H5 Mock 操作不能替代真机、文件持久性或后端契约验收。

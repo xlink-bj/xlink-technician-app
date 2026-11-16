@@ -25,7 +25,7 @@ export function createDevMockDevicePort(): DeviceActionPort & { disconnect(): vo
               { minute: 2, pressure: 0.79, unit: 'MPa' },
             ] }
           : { kind, source: 'dev_mock', completedAt: new Date().toISOString(), dataComplete: false,
-            measurement: 'not_applicable', panorama: { scene: '现场空间', asset: '模拟拼接预览', stitched: true } }
+            measurement: 'not_applicable', panorama: { scene: '现场空间', asset: '全景占位预览', stitched: true } }
         current?.({ type: 'finished', result })
         cancel()
       }, 1800))

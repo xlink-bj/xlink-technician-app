@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
+import { actionDraftStorageKey, createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
 import { createDevMockDevicePort } from '@adapters/device/dev-mock-device'
 import { createDeviceAction } from '@features/work-orders/device-action/device-action'
 import type { DeviceActionPort, DeviceEvent } from '@shared/ports/device-action'
@@ -51,7 +51,7 @@ describe('DEV device Action Content', () => {
     vi.useFakeTimers()
     const action = createDeviceAction({ identity: identity(), repository: createActionDraftRepository(storage()),
       port: createDevMockDevicePort(), isCurrentScope: () => true })
-    action.select('panorama')
+    await action.select('panorama')
     await action.connect()
     action.start()
     await vi.advanceTimersByTimeAsync(1800)
@@ -100,5 +100,56 @@ describe('DEV device Action Content', () => {
     emit!({ type: 'progress', progress: 75, label: 'late' })
     expect(action.state.value.progress).toBe(0)
     expect(await action.saveLocal()).toBe(false)
+  })
+
+  it('keeps pressure and panorama drafts separate and retains older attempts', async () => {
+    vi.useFakeTimers()
+    const repository = createActionDraftRepository(storage())
+    const action = createDeviceAction({ identity: identity(), repository,
+      port: createDevMockDevicePort(), isCurrentScope: () => true })
+    await action.connect(); action.start(); await vi.advanceTimersByTimeAsync(1800)
+    expect(await action.saveLocal()).toBe(true)
+    await action.select('pressure', true)
+    expect(action.state.value.history).toHaveLength(1)
+    action.showSaved(0)
+    expect(action.state.value.localSaved).toBe(true)
+    await action.select('pressure', true)
+    await action.connect(); action.start(); await vi.advanceTimersByTimeAsync(1800)
+    expect(await action.saveLocal()).toBe(true)
+    expect(action.state.value.history).toHaveLength(2)
+    await action.select('panorama')
+    await action.connect(); action.start(); await vi.advanceTimersByTimeAsync(1800)
+    expect(await action.saveLocal()).toBe(true)
+    const reopened = createDeviceAction({ identity: identity(), repository,
+      port: createDevMockDevicePort(), isCurrentScope: () => true })
+    expect(await reopened.restore()).toBe(true)
+    expect(reopened.state.value.history).toHaveLength(2)
+    expect(reopened.state.value.result?.kind).toBe('pressure')
+    await reopened.select('panorama')
+    expect(reopened.state.value.result?.kind).toBe('panorama')
+    expect(reopened.state.value.history).toHaveLength(1)
+    await reopened.select('pressure')
+    expect(reopened.state.value.history).toHaveLength(2)
+  })
+
+  it('rejects corrupt samples and shows read failure without overwriting them', async () => {
+    vi.useFakeTimers()
+    const store = storage(), repository = createActionDraftRepository(store)
+    const draftIdentity = { ...identity(), contentIdentity: 'device-action-content-v1:pressure' }
+    await store.write({ namespace: 'draft', key: actionDraftStorageKey(draftIdentity) }, {
+      version: 1, identity: draftIdentity, status: 'unfinished', updatedAt: '2026-11-16T00:00:00.000Z',
+      values: { deviceActionV2: { kind: 'pressure', results: [{ kind: 'pressure', source: 'dev_mock',
+        completedAt: '2026-11-16T00:00:00.000Z', dataComplete: true, measurement: 'unverified',
+        samples: [{ minute: 0, pressure: 'broken', unit: 'MPa' }] }] } },
+    })
+    const action = createDeviceAction({ identity: identity(), repository,
+      port: createDevMockDevicePort(), isCurrentScope: () => true })
+    expect(await action.restore()).toBe(false)
+    expect(action.state.value.result).toBeNull()
+    expect(action.state.value.message).toContain('读取失败')
+    await action.connect(); action.start()
+    await vi.advanceTimersByTimeAsync(1800)
+    expect(await action.saveLocal()).toBe(false)
+    expect(action.state.value.message).toContain('未覆盖旧结果')
   })
 })
