@@ -36,6 +36,10 @@
       "style": { "navigationBarTitleText": "施工日志" }
     },
     {
+      "path": "pages/work-orders/device-action-mock",
+      "style": { "navigationBarTitleText": "设备采集" }
+    },
+    {
       "path": "pages/work-orders/signing-mock-review",
       "style": {
         "navigationBarTitleText": "签约工作台 · Mock"

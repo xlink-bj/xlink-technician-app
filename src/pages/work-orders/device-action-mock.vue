@@ -113,7 +113,13 @@ watch(authorized, valid => {
 onLoad(options => {
   routeId.value = typeof options?.id === 'string' ? options.id : ''
   entryFingerprint.value = currentFingerprint.value
-  if (entryFingerprint.value && devDeviceActionAvailable(routeId.value)) void detail.loadFromRoute(routeId.value)
+  if (entryFingerprint.value && devDeviceActionAvailable(routeId.value)) {
+    void (async () => {
+      if (!list.items.some(item => String(item.id) === routeId.value)) await list.load()
+      if (entryFingerprint.value !== currentFingerprint.value || !devDeviceActionAvailable(routeId.value)) return
+      await detail.loadFromRoute(routeId.value)
+    })()
+  }
 })
 onUnload(() => { action.value?.dispose(); action.value = null })
 </script>

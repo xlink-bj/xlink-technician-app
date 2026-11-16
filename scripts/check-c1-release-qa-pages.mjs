@@ -9,6 +9,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 // must be absent from release output, including the offline construction reader.
 const qaRoutes = [
   'pages/work-orders/construction-read',
+  'pages/work-orders/device-action-mock',
   'pages/work-orders/signing-mock-review',
   'pages/work-orders/material-sku-mock-review',
   'pages/work-orders/child-subflow-mock-review',

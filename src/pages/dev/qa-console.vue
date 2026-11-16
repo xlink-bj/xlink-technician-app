@@ -28,6 +28,7 @@
       <view v-if="mockMode === 'data'" class="qa-console__scenarios">
         <text class="qa-console__label">验收场景（以下入口只在 QA 控制台）</text>
         <navigator v-if="isMockJourneyAvailable()" :url="mockJourneyRoute()" class="qa-console__link mock-action-scenario" data-testid="mock-continuous-journey-entry">连续业务旅程 · MOCK-019 ↗</navigator>
+        <navigator v-if="session.status === 'authenticated' && devDeviceActionAvailable(devDeviceTask.workOrderId)" :url="devDeviceActionUrl()" class="qa-console__link mock-action-scenario" data-testid="device-action-mock-entry">设备作业 · 固定 Mock 任务 ↗</navigator>
         <navigator v-if="isMaterialSkuMockAvailable()" :url="materialSkuReviewUrl()" class="qa-console__link mock-action-scenario" data-testid="sku-mock-entry">材料 SPU/SKU · Mock ↗</navigator>
         <navigator v-if="isSigningMockReviewAvailable()" :url="signingMockReviewUrl()" class="qa-console__link mock-action-scenario" data-testid="signing-mock-entry">签约状态 · Mock ↗</navigator>
         <navigator v-if="isChildSubflowMockPreviewAvailable()" :url="childSubflowMockReviewUrl()" class="qa-console__link" data-testid="child-subflow-mock-preview-entry">子流程只读 · Mock ↗</navigator>
@@ -61,6 +62,7 @@ import { onShow } from '@dcloudio/uni-app'
 import { isBusinessMockDeveloperModeAvailable, isBusinessMockMode,
   isProductionAuthBusinessMockIsolation, setBusinessMockMode, type BusinessMockMode } from '@app/business-mock'
 import { mockActionWorkspaceScenarios } from '@app/action-workspace-harness'
+import { devDeviceActionAvailable, devDeviceActionUrl, devDeviceTask } from '@app/dev-device-action'
 import { isSigningMockReviewAvailable, signingMockReviewUrl } from '@app/signing-mock-review'
 import { isMaterialSkuMockAvailable, materialSkuReviewUrl } from '@app/material-sku-mock-review'
 import { isChildSubflowMockPreviewAvailable, childSubflowMockReviewUrl } from '@app/child-subflow-mock-review'
