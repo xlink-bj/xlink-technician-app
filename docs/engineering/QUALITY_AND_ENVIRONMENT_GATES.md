@@ -28,7 +28,7 @@
 | 关键业务负例 | pnpm run check:critical / pnpm run verify:critical | 检查 manifest 和执行对应 suites |
 | 共享 UI 与商业 CSS | pnpm run check:ui-governance | 包含可静态约束的样式所有权 |
 | 主 App H5 Mock | pnpm run test:main-h5-mock | 网络隔离的真实主 App 操作 |
-| 主 App H5 局部冒烟 | `pnpm run test:main-h5-smoke` | 现有 430 视口 Forms/Repeat/报价、输入/搜索、媒体恢复及双品牌用例；用于开发反馈，完整 H5 验收仍看现行 CI 或手动运行 |
+| 主 App H5 局部冒烟 | `pnpm run test:main-h5-smoke` | 现有 430 视口业务/媒体/双品牌场景、430 搜索和 430/默认 390 输入用例；用于开发反馈，完整 H5 验收仍看现行 CI 或手动运行 |
 | H5 基础启动 | pnpm run test:main-h5-boot | 检查生产级入口启动，不代表登录成功 |
 | H5 正式构建 | pnpm run build:h5 | C1-FIX 后包含 QA 路由与 JS 产物缺席校验 |
 | 微信构建 | pnpm run build:mp-weixin | 包含 WXSS 检查；不代表真机 |
