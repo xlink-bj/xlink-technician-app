@@ -23,7 +23,8 @@ const feedbackSource = presentationSource('shared/ui/AppFeedbackState.vue')
 describe('G4-UX Phase B2 Home', () => {
   it('keeps an authenticated, task-first work entry without fabricating task data', () => {
     expect(homeTemplate).toContain('class="home-page"')
-    expect(homeTemplate).toContain(':url="workOrdersRoute"')
+    expect(homeTemplate).toContain('@tap="enterWorkOrders"')
+    expect(homePage).toContain("openMainRoute('workOrders')")
     expect(homeTemplate).toContain('今日任务')
     expect(homeTemplate).not.toContain('全部任务')
     expect(homeTemplate).toContain('进入工单')

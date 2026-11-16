@@ -19,7 +19,8 @@ describe('baseline page-local presentation safeguards (source contracts)', () =>
   })
   it('keeps navigation and uses an explicit cross-platform inner view for the entry row', () => {
     const template = home.template!.content
-    expect(template).toMatch(/<navigator class="work-orders-entry" :url="workOrdersRoute">\s*<view class="work-orders-entry-content">/)
+    expect(template).toMatch(/<view class="work-orders-entry" role="button" @tap="enterWorkOrders">\s*<view class="work-orders-entry-content">/)
+    expect(home.scriptSetup!.content).toContain("openMainRoute('workOrders')")
     expect(template).not.toMatch(/render-link|navigator-wrap|v-html/)
     expect(css(home)).toMatch(/\.work-orders-entry-content\s*\{[^}]*display: flex;[^}]*width: 100%;/)
     expect(css(home)).toMatch(/\.entry-icon\s*\{[^}]*flex: 0 0 84rpx;[^}]*height: 84rpx;/)
