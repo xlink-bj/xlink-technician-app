@@ -257,7 +257,7 @@ jobs:
   scoped-existing-media-h5:
     # Independent runner/workspace; suites remain serial within this job.
     # Same complete acceptance conditions, assertions and synthetic network fences.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (startsWith(github.event.pull_request.title, '[FORM-BATCH]') || startsWith(github.event.pull_request.title, '[L3-H5]')))
     runs-on: ubuntu-latest
     # Official image: browsers and OS libraries match the locked Playwright version.
     container:
