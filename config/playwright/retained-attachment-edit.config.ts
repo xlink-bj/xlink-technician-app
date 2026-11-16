@@ -2,7 +2,7 @@ import {defineConfig} from '@playwright/test'
 import base from './configured-record-edit.config'
 import {rootPath} from '../paths'
 const server=(base.webServer as {env:Record<string,string>}[])[0]
-export default defineConfig({...base,testMatch:'retained-attachment-edit.spec.ts',metadata:{mapChoiceDatetimeEdit:true},
+export default defineConfig({...base,testMatch:'retained-attachment-edit.spec.ts',testIgnore:[],metadata:{mapChoiceDatetimeEdit:true},
  outputDir:rootPath('test-results/retained-attachment-edit/attachments'),
  reporter:[['list'],['json',{outputFile:rootPath('test-results/retained-attachment-edit/results.json')}]],
  webServer:[{...server,env:{...server.env,VITE_XLINK_MEDIA_DOWNLOAD_BASE_URL:'https://files.example.invalid',UNI_OUTPUT_DIR:rootPath('unpackage/retained-attachment-edit-h5'),

@@ -23,6 +23,8 @@ const enabledOptInFixtureEnv = Object.fromEntries(
     .filter((name) => process.env[name] === 'true')
     .map((name) => [name, 'true']),
 )
+const hasSyntheticSpecialMedia = process.env.VITE_XLINK_R1_MP_UX_FIXTURES === 'true'
+  && process.env.VITE_XLINK_R1_SPECIAL_MEDIA === 'true'
 
 /**
  * REAL uni-app main pages + normal application composition, but a DEV-only,
@@ -32,9 +34,14 @@ const enabledOptInFixtureEnv = Object.fromEntries(
  */
 export default defineConfig({
   testDir: rootPath('tests/h5-main-mock'),
-  // These write-path suites require explicit scoped grants supplied by their
-  // dedicated configs; the inert general Mock cannot exercise their contract.
-  testIgnore: ['**/brand-survey-host.spec.ts', '**/map-bizselect-scalar-edit.spec.ts', '**/existing-image-upload.spec.ts'],
+  // Scoped edit suites need their own grants. P07/P08 additionally need both
+  // opt-in 020/021 rows and synthetic writable media.
+  testIgnore: [
+    '**/brand-survey-host.spec.ts', '**/map-bizselect-scalar-edit.spec.ts', '**/existing-image-upload.spec.ts',
+    '**/normal-form-draft-recovery.spec.ts', '**/normal-signing-eligibility.spec.ts', '**/retained-attachment-edit.spec.ts',
+    '**/s01-normal-form.spec.ts', '**/work-order-information.spec.ts', '**/yuhong-review-a.spec.ts',
+    ...(hasSyntheticSpecialMedia ? [] : ['**/p07-node-actions.spec.ts', '**/p08-attachment-targets.spec.ts']),
+  ],
   workers: 1,
   fullyParallel: false,
   retries: 0,

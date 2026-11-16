@@ -67,6 +67,20 @@ jobs:
           path: test-results/main-h5-mock/
           if-no-files-found: warn
           retention-days: 7
+      - name: Verify Yuhong quotation and signing read states in the actual brand
+        env:
+          VITE_XLINK_BRAND: yuhong
+        run: pnpm exec playwright test --config config/playwright/yuhong-review-a.config.ts tests/h5-main-mock/yuhong-review-a.spec.ts
+      - name: Preserve Yuhong quotation and signing read evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: yuhong-quotation-signing-read-${{ github.run_id }}
+          path: |
+            test-results/review-a/yuhong-after/
+            .review/雨虹UIUX优化-20261116/A订单与签约/yuhong-after/
+          if-no-files-found: warn
+          retention-days: 7
 
   main-app-flows-h5:
     # Complete browser acceptance runs nightly, manually, or for a marked PR.
@@ -197,8 +211,8 @@ jobs:
 
   draft-lifecycle-h5:
     # Group the lifecycle and normal-form presentation cases on one runner, preserving
-    # all commands and the original scoped job's 15-minute budget.
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    # all commands within this job's 10-minute budget.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && (startsWith(github.event.pull_request.title, '[FORM-BATCH]') || startsWith(github.event.pull_request.title, '[L3-H5]')))
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
@@ -308,6 +322,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/work-order-information-role.config.ts
+      - name: Verify bounded Work Order information and isolated object switching
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/work-order-information.config.ts
       - name: Verify reader-proven generic Map scalar edit in the normal App
         env:
           XLINK_H5_GENERIC_MAP_EDIT: 'true'
@@ -353,6 +372,10 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/existing-image-upload.config.ts
+      - name: Verify DEV Mock node actions and exact attachment targets (18 cases)
+        env:
+          VITE_XLINK_R1_SPECIAL_MEDIA: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/p07-node-actions.spec.ts tests/h5-main-mock/p08-attachment-targets.spec.ts
       - name: Verify normal App image picker multipart save and readback
         env:
           XLINK_H5_NORMAL_R1_FILE_UPLOAD: 'true'
@@ -385,9 +408,11 @@ jobs:
             test-results/retained-attachment-edit/
             test-results/map-bizselect-scalar-edit/
             test-results/normal-signing-eligibility/
+            test-results/work-order-information/
             test-results/normal-r1-file-upload/
             test-results/normal-r1-image-recovery/
             test-results/existing-image-upload/
+            test-results/main-h5-mock/
           if-no-files-found: warn
           retention-days: 7
 

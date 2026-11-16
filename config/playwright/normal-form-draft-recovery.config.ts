@@ -12,6 +12,7 @@ const existingTitle = /old first-create discard/
 export default defineConfig({
   ...base,
   testMatch: 'normal-form-draft-recovery.spec.ts',
+  testIgnore: [],
   metadata: { ...base.metadata, normalFormDraftRecovery: true },
   ...(existing ? { grep: existingTitle, grepInvert: undefined } : { grep: undefined, grepInvert: existingTitle }),
   outputDir: rootPath(`${results}/attachments`),

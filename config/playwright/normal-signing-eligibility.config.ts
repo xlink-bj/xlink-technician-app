@@ -2,7 +2,7 @@ import {defineConfig} from '@playwright/test'
 import base from './repeat-appointment-edit.config'
 import {rootPath} from '../paths'
 const server=(base.webServer as {env:Record<string,string>}[])[0]
-export default defineConfig({...base,testMatch:'normal-signing-eligibility.spec.ts',
+export default defineConfig({...base,testMatch:'normal-signing-eligibility.spec.ts',testIgnore:[],
  outputDir:rootPath('test-results/normal-signing-eligibility/attachments'),
  reporter:[['list'],['json',{outputFile:rootPath('test-results/normal-signing-eligibility/results.json')}]],
  webServer:[{...server,env:{...server.env,UNI_OUTPUT_DIR:rootPath('unpackage/normal-signing-eligibility-h5'),

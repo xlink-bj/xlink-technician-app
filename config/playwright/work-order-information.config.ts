@@ -5,7 +5,7 @@ const server = Array.isArray(base.webServer) ? base.webServer[0] : base.webServe
 if (!server) throw Error('Information verification requires the normal App server')
 const baseURL = 'http://127.0.0.1:5347'
 export default defineConfig({
-  ...base, testMatch: 'work-order-information.spec.ts',
+  ...base, testMatch: 'work-order-information.spec.ts', testIgnore: [],
   outputDir: rootPath('test-results/work-order-information/attachments'),
   reporter: [['list'], ['json', { outputFile: rootPath('test-results/work-order-information/results.json') }]],
   use: { ...base.use, baseURL, viewport: { width: 430, height: 932 }, trace: 'on', screenshot: 'on' },
