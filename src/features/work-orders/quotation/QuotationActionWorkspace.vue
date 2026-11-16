@@ -4,7 +4,7 @@
     :h5-navigation-fit="true"
     :compact-quote-entry="firstStepActive"
     class="quotation-workspace-shell"
-    :class="{ 'quotation-workspace-shell--review': productReviewOnly }"
+    :class="{ 'quotation-workspace-shell--review': productReviewOnly, 'quotation-workspace-shell--draft-boundary': contentState === 'ready' && composition.draft }"
     :scroll-into-view="scrollIntoView"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
@@ -19,6 +19,11 @@
     @submit="openQuotationConfirmation"
   >
     <slot name="journey-context" />
+    <view v-if="contentState === 'ready' && composition.draft"
+      class="quotation-workspace-draft-boundary" data-testid="quotation-workspace-draft-boundary">
+      <text class="quotation-workspace-draft-boundary__title">报价草稿</text>
+      <text>通过校验并确认提交后才会形成正式订单。</text>
+    </view>
     <QuotationActionContent
       ref="quotationContentRef"
       :state="contentState"
@@ -41,7 +46,6 @@
     <template #actions>
       <view v-if="firstStepActive" class="q01-footer" data-testid="quotation-first-step-footer">
         <view class="q01-footer-status" data-testid="quotation-footer-summary">
-          <text>报价草稿</text>
           <AppAmountValue
             class="q01-footer-status__amount"
             size="compact"
@@ -49,6 +53,8 @@
             :value="`${amountPresentation.label} · ${amountPresentation.value}`"
             data-testid="ds07c4b-q01-amount-display"
           />
+          <text v-if="productReviewOnly || syntheticReviewEnabled || productionReadOnly"
+            class="q01-footer-caution">{{ productionReadOnly ? '仅可查看' : '正式提交暂未开放' }}</text>
         </view>
         <view class="q01-footer-actions">
           <AppButton variant="secondary" class="q01-footer-save xl-craft__action-secondary"
@@ -57,10 +63,8 @@
           <AppButton class="q01-footer-next xl-craft__action-primary"
             data-testid="quotation-first-step-next"
             :disabled="!firstStepCanEdit"
-            @tap="advanceFirstRepairStep">下一步 · 添加报价项目 →</AppButton>
+            @tap="advanceFirstRepairStep">添加报价项目</AppButton>
         </view>
-        <text v-if="productReviewOnly || syntheticReviewEnabled || productionReadOnly"
-          class="q01-footer-caution">当前仅可编辑草稿，正式提交暂未开放</text>
       </view>
       <view v-else class="quotation-workspace-footer-main">
       <view class="quotation-workspace-footer-summary" data-testid="quotation-footer-summary">
@@ -70,7 +74,6 @@
             tone="primary" :value="amountPresentation.value" />
         </view>
         <view class="quotation-workspace-footer-summary__copy">
-          <text class="quotation-workspace-footer-summary__title">报价草稿</text>
           <text class="quotation-workspace-footer-summary__meta" :data-testid="productReviewOnly ? 'quotation-product-demo-read-only' : undefined">{{ composition.selectionCount }} 项 · {{ composition.groups.length }} 个部位组</text>
         </view>
       </view>
@@ -90,13 +93,13 @@
       </view>
       <view v-if="!firstStepActive && contentState === 'ready'" class="quotation-workspace-handoff"
         data-testid="quotation-readonly-handoff">
-        <AppButton variant="secondary" block class="quotation-workspace-handoff-button"
+        <AppButton variant="text" block class="quotation-workspace-handoff-button"
           data-testid="quotation-review-orders"
           :disabled="orderHandoffPending || !canReviewOrders"
           @tap="reviewOrders">
           {{ orderHandoffPending ? '正在保存草稿…' : '查看订单与签约进度' }}
         </AppButton>
-        <text class="quotation-workspace-handoff__hint">离开前保存本地修改；草稿不等于正式订单，此操作不会提交报价或发起签约。</text>
+        <text class="quotation-workspace-handoff__hint">离开前将保存草稿，不提交订单或发起签约。</text>
         <AppStatus v-if="orderHandoffError" tone="warning" quiet
           :message="orderHandoffError" data-testid="quotation-review-orders-error" />
       </view>

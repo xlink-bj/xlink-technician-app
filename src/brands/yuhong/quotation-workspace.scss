@@ -11,12 +11,26 @@
 .quotation-workspace-footer-summary__copy { display: flex; flex-direction: column; min-width: 0; }
 .quotation-workspace-footer-summary__amount-label,
 .quotation-workspace-footer-summary__meta { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
-.quotation-workspace-footer-main { display: flex; flex-wrap: wrap; gap: var(--yh-layout-footer-gap); min-width: 0; max-width: 100%; }
+.quotation-workspace-footer-main { display: flex; align-items: center; gap: var(--yh-layout-footer-gap); min-width: 0; width: 100%; }
+.quotation-workspace-footer-main .quotation-workspace-footer-summary { flex-direction: column; align-items: flex-start; gap: var(--yh-space-4); }
+.quotation-workspace-footer-main .action-workspace-submit,
+.quotation-workspace-footer-main .quotation-workspace-disabled-submit { flex: 0 0 38%; width: 38%; min-width: 0; }
 .quotation-workspace-disabled-submit { min-height: var(--yh-size-primary); }
 .q01-footer { width: 100%; min-width: 0; padding: 0; }
 .q01-footer-status { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: var(--yh-space-8); margin-bottom: var(--yh-space-8); color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
-.q01-footer-status__amount { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.q01-footer-status__amount { min-width: 0; text-align: left; overflow-wrap: anywhere; }
 .q01-footer-actions { display: flex; align-items: stretch; gap: var(--yh-layout-footer-gap); width: 100%; }
 .q01-footer-actions .q01-footer-save { flex: 0 1 auto; min-width: var(--yh-size-touch); }
 .q01-footer-actions .q01-footer-next { flex: 1; min-width: 0; }
-.q01-footer-caution { display: block; margin-top: var(--yh-space-8); text-align: center; color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.q01-footer-caution { display: block; text-align: right; color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-workspace-handoff { width: 100%; }
+.quotation-workspace-handoff-button { min-height: var(--yh-size-touch); }
+.quotation-workspace-handoff__hint { display: block; color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-workspace-draft-boundary { display: flex; flex-direction: column; gap: var(--yh-space-4); margin: var(--yh-space-16) 0; color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-workspace-draft-boundary__title { color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); }
+/* One persistent page-owned draft explanation replaces static duplicates only.
+   Save failures, edit restrictions and engine/submit feedback stay visible. */
+.quotation-workspace-shell--draft-boundary :deep(.quotation-content__initial-draft-notice),
+.quotation-workspace-shell--draft-boundary :deep(.q01-screen__provenance),
+.quotation-workspace-shell--draft-boundary :deep(.q01-screen__disclosure),
+.quotation-workspace-shell--draft-boundary :deep(.quotation-content__order-explainer) { display: none; }
