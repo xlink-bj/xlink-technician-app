@@ -1,6 +1,8 @@
 <template>
+  <!-- Keep card border and inset on the same native node: MP custom-component
+       hosts do not forward the caller’s scoped classes to their inner view. -->
   <view class="archive-stack" data-testid="work-order-archives">
-    <AppRecordCard class="archive-card information-card" data-testid="follow-up-summary">
+    <view class="app-record-card archive-card information-card" data-testid="follow-up-summary">
       <view class="archive-heading">
         <text class="archive-title">跟进记录</text>
         <navigator v-if="activities.length || hasHistory" :url="route('follow-up')" class="archive-link" data-testid="follow-up-all">
@@ -22,26 +24,26 @@
           </view>
         </view>
       </view>
-    </AppRecordCard>
+    </view>
 
     <navigator :url="route('customer')" class="archive-navigator" data-testid="customer-summary">
-      <AppRecordCard class="archive-card">
+      <view class="app-record-card archive-card">
         <view class="archive-heading"><text class="archive-title">客户资料</text><text class="archive-link">查看详情 ›</text></view>
         <text class="archive-copy">{{ customerSummary }}</text>
-      </AppRecordCard>
+      </view>
     </navigator>
 
     <view v-for="archive in archives" :key="archive.kind">
       <navigator v-if="orderState === 'succeeded' && archive.complete && archive.items.length === 1"
         :url="route('quotation', archive.items[0]!.id)" class="archive-navigator" data-testid="order-archive-single">
-        <AppRecordCard class="archive-card" data-testid="order-archive-summary">
+        <view class="app-record-card archive-card" data-testid="order-archive-summary">
         <view class="archive-heading"><text class="archive-title">{{ archive.title }}</text><text class="archive-link">1 笔 ›</text></view>
         <text class="archive-entry-title">{{ orderTitle(archive.items[0]!) }}</text>
         <text class="archive-copy">{{ orderAmount(archive.items[0]!) }}</text>
         <text v-if="archive.items[0]!.updateTime" class="archive-hint">订单更新：{{ archive.items[0]!.updateTime }}</text>
-        </AppRecordCard>
+        </view>
       </navigator>
-      <AppRecordCard v-else class="archive-card" data-testid="order-archive-summary">
+      <view v-else class="app-record-card archive-card" data-testid="order-archive-summary">
         <view class="archive-heading">
           <text class="archive-title">{{ archive.title }}</text>
           <text v-if="orderState === 'succeeded' && archive.complete && !archive.items.length" class="archive-hint" data-testid="order-archive-empty">尚未产生正式订单</text>
@@ -68,25 +70,24 @@
           </navigator>
           <text v-if="archive.items.length && !archive.complete" class="archive-hint" data-testid="order-archive-partial">已读取 {{ archive.items.length }} 笔，完整数量待确认</text>
         </template>
-      </AppRecordCard>
+      </view>
     </view>
 
     <!-- Neither category has a verified detail-page read port. A separate
          signing read route does not prove document access or applicability. -->
-    <AppRecordCard class="archive-card" data-testid="contract-archive-unverified">
+    <view class="app-record-card archive-card" data-testid="contract-archive-unverified">
       <view class="archive-heading"><text class="archive-title">合同</text></view>
       <text class="archive-hint">合同状态待确认</text>
-    </AppRecordCard>
-    <AppRecordCard class="archive-card" data-testid="warranty-archive-unverified">
+    </view>
+    <view class="app-record-card archive-card" data-testid="warranty-archive-unverified">
       <view class="archive-heading"><text class="archive-title">质保</text></view>
       <text class="archive-hint">质保状态待确认</text>
-    </AppRecordCard>
+    </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import type { QuotationOrderBrowseItem, WorkOrderActivity } from '@shared/ports'
-import AppRecordCard from '@shared/ui/AppRecordCard.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import { detailReadRoute, type DetailReadView, type OrderArchiveSummary } from './detail-archive'
 const props = defineProps<{

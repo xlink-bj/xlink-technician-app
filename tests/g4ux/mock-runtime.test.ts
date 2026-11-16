@@ -934,6 +934,23 @@ describe('G4-UX business mock runtime', () => {
     expect(request).not.toHaveBeenCalled()
   })
 
+  it('reads the continuous journey follow-up as empty without network fallback', async () => {
+    setBusinessMockMode('data')
+    const request = vi.fn<UniApiRequestExecutor>()
+    const transport = createUniApiReadTransport({
+      apiBaseUrl: 'https://example.invalid',
+      getSessionRef: () => asOpaqueId<'SessionRef'>('synthetic-session-ref'),
+      request,
+    })
+    const result = await createTechnicianApiReadAdapter(transport, mockAdapterOptions).getWorkOrderDetail(
+      asOpaqueId<'WorkOrderId'>(mockCommandScenarioIds.continuousJourney),
+    )
+    expect(result.state).toBe('succeeded')
+    expect(result.data?.activityReadState).toBe('succeeded')
+    expect(result.data?.activities).toEqual([])
+    expect(request).not.toHaveBeenCalled()
+  })
+
   it('keeps fixtures raw and free of UI-only aliases', () => {
     const rawNode = mockSanodeListResponse.data[0]
     expect(rawNode).toHaveProperty('_id', 'mock-workflow-node-001')

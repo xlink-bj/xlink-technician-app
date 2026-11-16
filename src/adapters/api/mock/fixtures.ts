@@ -1065,6 +1065,9 @@ export const mockWorkOrderDetailResponses = {
  * the title, icon, tone, badge, and newest-first presentation mapping.
  */
 export const mockWorkOrderActivityResponses = {
+  // This fresh synthetic journey has no follow-up actions yet. Return the
+  // protocol empty state rather than a missing fixture/read failure.
+  [mockCommandScenarioIds.continuousJourney]: { status: 1, data: [] },
   [mockWorkOrderIds[0]]: {
     status: 1,
     data: [
