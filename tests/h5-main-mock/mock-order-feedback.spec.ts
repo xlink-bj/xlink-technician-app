@@ -182,6 +182,7 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
     }
     else await expect(page.locator('#order-extfield-editor .app-status--danger')).toBeVisible()
   }
+  await mkdir('test-results/quotation-footer-read-error', { recursive: true })
   await writeFile(`test-results/quotation-footer-read-error/${brand}-${width}-${fault?'fault':'normal'}-geometry.json`,JSON.stringify(geometry,null,2))
   expect(remote).toEqual([]); expect(errors).toEqual([])
 })
