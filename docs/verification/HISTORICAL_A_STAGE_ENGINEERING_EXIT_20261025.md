@@ -1,5 +1,10 @@
 # 阶段 A｜Mock 功能与协议基础工程收口
 
+> **历史验收证据（2026-10-25，固定于下述代码基准）。** 当时的验收状态、
+> PR 与命令不定义当前 main 的运行或发布规则。当前开发验证看
+> [质量入口](../engineering/QUALITY_AND_ENVIRONMENT_GATES.md)，Mock 能力与边界看
+> [能力矩阵](../engineering/R1_OFFLINE_DYNAMIC_FORM_CAPABILITY_MATRIX.md)。
+
 **决定：`A_OFFLINE_FUNCTIONAL_ACCEPTED`（有界工程验收）**  
 **审查日期：2026-10-25** · **Owner：Ye** · **工程审查：ChatGPT Lead**  
 **代码基准：** Draft [PR #217](https://github.com/xlink-bj/xlink-technician-app/pull/217)
@@ -37,7 +42,7 @@ ExtField/流程类型、当前租户有效 SKU 价格和签署行为都已知。
 | **P0-2** 合成报价/订单 | 已知价普通材料/工序、真实报价编码器、合成 child Workflow + Order、重复提交保护与精确 ID 查询 | `tests/g4f/mock-journey-order-protocol.test.ts`; `tests/engineering/a-stage-main-app-quote-order.test.ts` |
 | **P1-R** 失败恢复 | 双击防重、超时/ACK 丢失 durable fence、actor 变更拒绝、读回只读恢复、不确定结果不自动解锁 | 上述 controller + protocol suites；`tests/engineering/r1-stage1-no-beta-shadow.test.ts` |
 | **P1-U** 可操作界面 | Main App 019/020/021 点击、完成、刷新/重启；375×667 原生裁切修复、组件 WXSS 告警消除 | `tests/h5-main-mock/a-stage-p1-acceptance.spec.ts`; 原生证据下方链接 |
-| **P1-E** 状态/协议证据链 | 页面点击 → 源码形态命令 → scoped durable Mock → 独立读回 → named test | [P1 trace matrix](./A_STAGE_P1_ACCEPTANCE_EVIDENCE.md)；[R1 three-pillar source matrix](./R1_THREE_PILLAR_CONTRACT_MATRIX.md) |
+| **P1-E** 状态/协议证据链 | 页面点击 → 源码形态命令 → scoped durable Mock → 独立读回 → named test | [P1 trace matrix](./HISTORICAL_A_STAGE_P1_ACCEPTANCE_EVIDENCE_20261025.md)；[R1 three-pillar source matrix](../engineering/R1_THREE_PILLAR_CONTRACT_MATRIX.md) |
 
 源代码语义来源固定为
 `xlink-bj/xlink-app@6c0a97b26bcbcaee81ac4e1dfd627c6e8e70e29d`。

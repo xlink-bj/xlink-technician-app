@@ -67,7 +67,7 @@ Page / Vue Presentation
 | 合同与签约 | Order/Contract 受限只读、签约命令意图审查 | 签署、PDF、短信、合同状态变化、handler 授权和异步回执 |
 | Android/iOS/微信 | 多端编译与 H5 行为自动测试 | 真机安装、摄像头、网络、安全区与原生一致性 |
 
-历史 A-stage Mock 工程退出证明的是**特定合成路径**，不等价于全量 Live R1 行为。参见 [No-Beta Path](../engineering/NO_BETA_ENGINEERING_PARITY_PATH.md)。
+历史 A-stage Mock 工程退出证明的是**特定合成路径**，不等价于全量 Live R1 行为。参见 [当时的 No-Beta 决策快照](../verification/HISTORICAL_NO_BETA_ENGINEERING_PARITY_PATH_20261024.md)。
 
 ## 4. 环境、身份与命令边界
 

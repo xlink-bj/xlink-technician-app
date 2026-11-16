@@ -24,6 +24,17 @@ array/cascade, which takes precedence over typed primitives. The current
 [H5 workflow](../../.github/workflows/validate-main-h5.yml) sets each switch
 for its corresponding test step; the default path does not inherit one.
 
+In the current synthetic work-order journeys, 019 covers appointment → Survey
+→ quotation; a priced ordinary Material + Procedure may produce a local
+`type=1` Order only after confirmation and exact-ID readback. An unverified SKU
+price blocks that path. 020 `forms` and 021 `repeat` keep FormData, EXTS and
+workflow-run identity scoped through save/edit/delete/finalize and fresh
+readback; uncertain ACKs retain a receipt and never replay automatically.
+Contract/signing/PDF/SMS effects remain blocked. These are DEV Mock behaviors,
+not live R1 write permission. The [historical acceptance ledger](../verification/HISTORICAL_A_STAGE_ENGINEERING_EXIT_20261025.md)
+records its pinned CI and device evidence; current verification follows the
+[quality entry](QUALITY_AND_ENVIRONMENT_GATES.md).
+
 | Capability | Status / scope | Code and behavioral evidence |
 | --- | --- | --- |
 | text / textarea / phone / IDNumber | Implemented: scalar draft + forms/repeat save/readback; leading zeros preserved | dynamic-form/values, r1-local-form-fields, r1-special-mock-form-fields; r1-typed-primitive-fields unit and H5 |

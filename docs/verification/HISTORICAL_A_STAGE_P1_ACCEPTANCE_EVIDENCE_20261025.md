@@ -1,5 +1,10 @@
 # Stage A — P1 functional recovery, mobile UX and evidence matrix
 
+> **Historical acceptance evidence (2026-10-24/25).** The Draft PR, CI results,
+> device handoff and commands below belong to that exact code baseline, not
+> today's mainline procedure. Use the [current quality entry](../engineering/QUALITY_AND_ENVIRONMENT_GATES.md)
+> and [Mock capability inventory](../engineering/R1_OFFLINE_DYNAMIC_FORM_CAPABILITY_MATRIX.md).
+
 Date: 2026-10-24. Branch/PR: Draft #217. Owner: ChatGPT Lead.
 
 ## Final exact-source acceptance update (2026-10-25)
@@ -27,7 +32,7 @@ functional closure **before** the dedicated UX/UI phase.
   never an assertion that arbitrary Production workflows, effective SKU prices,
   actual signing/PDF/SMS or R1 business writes were exercised. Owner commercial
   UX/UI review is the subsequent product phase, not a retroactive Stage A
-  code/contract blocker. See `A_STAGE_ENGINEERING_EXIT.md` for the complete
+  code/contract blocker. See [the historical exit ledger](HISTORICAL_A_STAGE_ENGINEERING_EXIT_20261025.md) for the complete
   scenario and evidence ledger.
 
 ## The three A-P1 gates

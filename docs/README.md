@@ -36,7 +36,7 @@
 - [UI Delivery Workflow](design-system/UI_DELIVERY_WORKFLOW.md)：商业 UI 的真实 App、同视口截图、Owner 验收与跨端证据。
 - [Action Workspace UX Standard](design-system/ACTION_WORKSPACE_UX_STANDARD.md)：Workspace 的交互与布局边界。
 - [API Contract Baseline](discovery/API_CONTRACT_BASELINE.md)：R1 既有 API 契约发现；必须与后续 source/live 证据核对。
-- [No Writable Beta Path](engineering/NO_BETA_ENGINEERING_PARITY_PATH.md)：A/Mock、B/Production 只读、C/授权 Beta 写入的证据分层。
+- [Offline Mock capability inventory](engineering/R1_OFFLINE_DYNAMIC_FORM_CAPABILITY_MATRIX.md)：当前合成表单、流程与报价能力及明确的真实权限边界；环境与验证操作仍看上方 Quality 入口。
 - [Codex Local Fast Loop](engineering/CODEX_LOCAL_FAST_LOOP.md)：仅在本地 Mac、微信开发者工具、内网等特有能力下的协作。
 - [AI Engineering Loop](architecture/AI_ENGINEERING_LOOP.md)：拟议协作模式；不表示已开启无人值守自动执行。
 - [C3/C4/G3 Architecture Closure](engineering/C3_C4_G3_ARCHITECTURE_CLOSURE_20261030.md)：Action Workspace 最终有界回读、R1 Adapter 纯映射拆分和 CI 分层运行的职责/验证矩阵；以实施 PR 的精确提交门禁为验收依据。
