@@ -41,7 +41,7 @@
 ## 3. CI 层次与真实含义
 
 - **L1 / 开发回路**：受影响单测、类型、静态边界，必要时本机/云 H5 UI；工具不应承诺从 GitHub PR 获得即时 HMR。
-- **主干 CI / main push、手动**：Validate/verify 运行 pnpm verify + MP/App build；Validate Main H5 UX/h5-ux 运行 H5 build、入口、主 App Mock 与历史回归。
+- **主干 CI / main push、手动**：Validate 运行 `verify` 与三端构建；Validate Main H5 UX 的 Stage1B、草稿/角色媒体/创建组运行完整的既定 H5 用例。`h5-ux` 专项只在定时或手动运行；本地局部冒烟不代表这些完整 job 通过。
 - **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。旧 Draft 分支专项 workflow 与历史阶段报告不构成当前 main push 门禁。
 - **Release/Owner**：同视口商业 UI 接受、微信开发者工具/物理设备、Android/iOS、Beta 真实写入分别记录。不能用 CI green 替代这些 Gate。
 
