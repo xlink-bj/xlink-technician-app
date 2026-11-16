@@ -35,14 +35,18 @@ describe('current App Mock wire parity: category / list / exact detail', () => {
     const api = createRoleScopedTechnicianApiReadAdapter({ execute }, () => asOpaqueId<'RoleId'>('synthetic-role'))
     const result = await api.listWorkOrders({ page: 1, pageSize: 20, category })
     expect(result.state).toBe('succeeded')
-    expect(result.data?.items.map(item => item.id)).toEqual(statuses.map(syntheticId))
+    expect(result.data?.items.map(item => item.id)).toEqual([...statuses.map(syntheticId), ...(category === 'onsite' ? ['mock-work-order-017-survey-success'] : [])])
     for (const item of result.data!.items) {
       const detail = await api.getWorkOrderDetail(item.id)
       expect(detail.state).toBe('succeeded')
       expect(detail.data?.id).toBe(item.id)
       expect(detail.data?.workflowNodes?.map(node => node.id)).toEqual(item.workflowNodes?.map(node => node.id))
       // Unknown node type/state/handler are NOT fabricated to unlock commands.
-      expect(detail.data?.workflowNodes?.[0]).toMatchObject({ category: 'unsupported', lifecycle: 'unknown' })
+      if (String(item.id).startsWith('mock-work-order-category-')) {
+        expect(detail.data?.workflowNodes?.[0]).toMatchObject({ category: 'unsupported', lifecycle: 'unknown' })
+      } else {
+        expect(detail.data?.workflowNodes?.[0]).toMatchObject({ category: 'forms', lifecycle: 'active', formPurpose: 'survey' })
+      }
     }
   })
 
@@ -50,10 +54,12 @@ describe('current App Mock wire parity: category / list / exact detail', () => {
     const request = { 'in:status|array#and': '105,202', page: 1, rows: 1 }
     const first = await read(path, request) as { data: Array<{ _id: string; data?: { _id: string } }>; total: number }
     const second = await read(path, { ...request, page: 2 }) as typeof first
-    expect(first.total).toBe(2); expect(second.total).toBe(2)
+    expect(first.total).toBe(3); expect(second.total).toBe(3)
     expect(first.data[0]?.data?._id ?? first.data[0]?._id).toBe(syntheticId('105'))
     expect(second.data[0]?.data?._id ?? second.data[0]?._id).toBe(syntheticId('202'))
-    expect(await read(path, { ...request, page: 3 })).toMatchObject({ data: [], total: 2 })
+    const third = await read(path, { ...request, page: 3 }) as typeof first
+    expect(third.data[0]?.data?._id ?? third.data[0]?._id).toBe('mock-work-order-017-survey-success')
+    expect(await read(path, { ...request, page: 4 })).toMatchObject({ data: [], total: 3 })
     expect(await read(path, { ...request, 'regex:address|string#or': '三号院' })).toMatchObject({ total: 1 })
     expect(await read(path, { ...request, 'regex:address|string#or': '不存在' })).toMatchObject({ data: [], total: 0 })
   })
@@ -62,10 +68,10 @@ describe('current App Mock wire parity: category / list / exact detail', () => {
     const ids: string[] = []
     for (let page = 1; page <= 5; page++) {
       const result = await read(listPath, { page, rows: 4 }) as { data: Array<{ data: { _id: string } }>; total: number }
-      expect(result.total).toBe(15)
+      expect(result.total).toBe(16)
       ids.push(...result.data.map(row => row.data._id))
     }
-    expect(ids).toHaveLength(15); expect(new Set(ids).size).toBe(15)
+    expect(ids).toHaveLength(16); expect(new Set(ids).size).toBe(16)
     expect(await read(listPath, { page: 1, rows: 20, 'in:status|array#and': 'UNKNOWN-UNPROVEN' }))
       .toMatchObject({ data: [], total: 0 })
   })
@@ -118,9 +124,9 @@ describe('current App Mock wire parity: category / list / exact detail', () => {
     expect(await read(detailPath + syntheticId('unobserved'))).toBeNull()
   })
 
-  it('keeps default visual fixtures unchanged and synthetic IDs locally owned with opt-in disabled', async () => {
+  it('keeps the C1 survey discoverable and optional category IDs locally owned with category opt-in disabled', async () => {
     vi.stubEnv('VITE_XLINK_R1_CATEGORY_FIXTURES', 'false')
-    expect(await read(listPath, { page: 1, rows: 20 })).toMatchObject({ total: 12 })
+    expect(await read(listPath, { page: 1, rows: 20 })).toMatchObject({ total: 13 })
     expect(await read(detailPath + syntheticId('104'))).toBeNull()
     expect(isMockOwnedRead(detailPath + syntheticId('104'))).toBe(true)
   })
@@ -160,5 +166,28 @@ describe('F19 raw Order snapshot wire through actual quotation adapter', () => {
       { 'is:type|integer#and': 0 }, { page: 2 }, { rows: 100 }, { _all: '1' }]) {
       expect(await read('basic/order/query', { ...body, ...change })).toBeNull()
     }
+  })
+})
+
+describe('C1 demo uses current, reachable task nodes', () => {
+  it('keeps both planned nodes identical between ordinary list and detail', async () => {
+    const api = createRoleScopedTechnicianApiReadAdapter({ execute }, () => asOpaqueId<'RoleId'>('synthetic-role'))
+    const result = await api.listWorkOrders({ page: 1, pageSize: 20, category: 'all' })
+    for (const id of ['mock-work-order-017-survey-success', 'mock-work-order-002']) {
+      const row = result.data!.items.find(item => item.id === id)!
+      const detail = await api.getWorkOrderDetail(row.id)
+      expect(row.workflowNodes?.map(node => node.id)).toEqual(detail.data?.workflowNodes?.map(node => node.id))
+      expect(row.workflowNodes?.[0].lifecycle).toBe('active')
+    }
+  })
+  it('removes the completed survey node from pending onsite without changing other samples', async () => {
+    const { mockCommandState } = await import('@adapters/api/mock/command-state')
+    const fixture = mockCommandState().detailResponses.get('mock-work-order-017-survey-success') as {data:{workflowNode:Array<{state:number}>}}
+    fixture.data.workflowNode[0].state = 10
+    const api = createRoleScopedTechnicianApiReadAdapter({ execute }, () => asOpaqueId<'RoleId'>('synthetic-role'))
+    const onsite = await api.listWorkOrders({ page: 1, pageSize: 20, category: 'onsite' })
+    expect(onsite.data?.items.map(item => item.id)).toEqual([syntheticId('105'), syntheticId('202')])
+    const all = await api.listWorkOrders({ page: 1, pageSize: 20, category: 'all' })
+    expect(all.data?.items.find(item => item.id === 'mock-work-order-017-survey-success')?.workflowNodes?.[0].lifecycle).toBe('closed')
   })
 })

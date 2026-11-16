@@ -6,10 +6,8 @@ import { workOrderCardIconFor, workOrderCardToneFor } from '@features/work-order
 import { presentationSource } from '../support/presentation-source'
 
 const homePage = readFileSync(new URL('../../src/pages/index/index.vue', import.meta.url), 'utf8')
-const homeTemplate = homePage.slice(
-  homePage.indexOf('<view v-else-if="showHome"'),
-  homePage.indexOf('<view v-else class="login-page">'),
-)
+const workbench = readFileSync('src/app/components/WorkbenchHome.vue', 'utf8')
+const homeTemplate = workbench.split('<script setup')[0]
 const listPage = presentationSource('pages/work-orders/work-orders.vue')
 const listTemplate = listPage.split('<script setup')[0]
 const pagesConfig = readFileSync(new URL('../../src/pages.json', import.meta.url), 'utf8')
@@ -22,25 +20,20 @@ const feedbackSource = presentationSource('shared/ui/AppFeedbackState.vue')
 
 describe('G4-UX Phase B2 Home', () => {
   it('keeps an authenticated, task-first work entry without fabricating task data', () => {
-    expect(homeTemplate).toContain('class="home-page"')
-    expect(homeTemplate).toContain('@tap="enterWorkOrders"')
-    expect(homePage).toContain("openMainRoute('workOrders')")
-    expect(homeTemplate).toContain('今日任务')
-    expect(homeTemplate).not.toContain('全部任务')
-    expect(homeTemplate).toContain('进入工单')
-    expect(homeTemplate).toContain('查看当前可见工单')
-    expect(homeTemplate).toContain('从当前可见的工单开始今天的工作')
+    expect(homePage).toContain('<WorkbenchHome v-else-if="showHome" />')
+    expect(workbench).toContain("openMainRoute('workOrders')")
+    expect(homeTemplate).toContain('下一项任务')
+    expect(homeTemplate).toContain('今日安排')
+    expect(homeTemplate).toContain('board.demoDate')
+    expect(homeTemplate).toContain('待办统计未接入')
+    expect(homeTemplate).toContain('演示数据')
     expect(homeTemplate).not.toContain('Technician Home')
-    expect(homeTemplate).not.toContain('XLink Technician')
-    expect(homeTemplate).not.toContain('Role-visible Work Orders')
-    expect(homeTemplate).not.toMatch(/\b(count|counts|metric|metrics|SLA|trend|overdue)\b/i)
     expect(homePage).not.toContain('result.error?.message')
   })
 
-  it('keeps account exit secondary to the work entry', () => {
-    expect(homeTemplate).toContain('退出登录')
-    expect(homeTemplate).toContain('class="home-footer"')
-    expect(homeTemplate).toContain('class="work-orders-entry"')
+  it('keeps account exit in My, without a duplicate Home logout', () => {
+    expect(homeTemplate).not.toContain('退出登录')
+    expect(readFileSync('src/pages/me/me.vue', 'utf8')).toContain('confirmLogout')
   })
 
   it('exposes local draft diagnostics only through the non-production developer surface', () => {

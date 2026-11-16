@@ -1,3 +1,4 @@
+import { matchesWorkKind, type WorkKind } from './work-kind'
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw, watch, type WatchStopHandle } from 'vue'
 import { workOrderReadScopeKey } from './read-identity-scope'
@@ -52,6 +53,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   const pageSize = ref(20)
   const searchText = ref('')
   const category = ref<WorkOrderCategory>('all')
+  const workKind = ref<WorkKind>('all')
   const totalCount = ref<number | undefined>(undefined)
   const hasMore = ref<boolean | undefined>(undefined)
   const error = ref<OperationError | null>(null)
@@ -198,6 +200,7 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
 
   function clear(): void {
     category.value = 'all'
+    workKind.value = 'all'
     searchText.value = ''
     clearList()
     lastLoadWasAppend = false
@@ -316,11 +319,21 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
     if (!workOrderCategories.some(item => item.key === value)) {
       return Promise.resolve(failure('validation', 'Unsupported Work Order category'))
     }
+    workKind.value = 'all'
     if (value === category.value) return Promise.resolve({ state: 'succeeded' })
     clearList()
     category.value = value
     loadState.value = 'idle'
     acceptError.value = null
+    return load({ refresh: true })
+  }
+
+  function prepareEntry(value: WorkOrderCategory = 'all', kind: WorkKind = 'all'): void {
+    clear(); category.value = value; workKind.value = kind
+  }
+
+  async function selectWorkKind(value: WorkKind) {
+    prepareEntry('all', value)
     return load({ refresh: true })
   }
 
@@ -336,6 +349,8 @@ export const useWorkOrderListStore = defineStore('workOrderList', () => {
   }
 
   return {
+    workKind, selectWorkKind, prepareEntry,
+    visibleItems: computed(() => items.value.filter(item => matchesWorkKind(item, workKind.value))),
     loadState,
     // Appending keeps the current page's listed membership. A fresh page-one
     // intent must establish its membership again before cached cards navigate.

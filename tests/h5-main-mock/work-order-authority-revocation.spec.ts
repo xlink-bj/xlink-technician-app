@@ -119,8 +119,12 @@ async function evidence(page: Page, info: TestInfo, state: Awaited<ReturnType<ty
 test('fresh dual menus authorize ordinary All without permission bypass parameters', async ({ page, baseURL }, info) => {
   const s = await fixture(page, baseURL!); await open(page)
   const calls = s.calls.filter(c => [ordinary, todoPath].includes(c.path))
-  expect(calls).toHaveLength(1); expect(calls[0]!.path).toBe(ordinary)
-  expect(calls[0]!.body).toEqual({ page: '1', rows: '20', sortField: 'createTime', sortOrder: 'desc', 'is:state|integer#and': '1' })
+  // Home reads once; entering the list independently re-establishes its authority.
+  expect(calls).toHaveLength(2)
+  for (const call of calls) {
+    expect(call.path).toBe(ordinary)
+    expect(call.body).toEqual({ page: '1', rows: '20', sortField: 'createTime', sortOrder: 'desc', 'is:state|integer#and': '1' })
+  }
   await evidence(page, info, s)
 })
 for (const mode of ['todo-only', 'drift'] as const) {
@@ -129,7 +133,12 @@ for (const mode of ['todo-only', 'drift'] as const) {
     await page.locator('.load-more').click()
     await expect(page.getByText('工单加载失败', { exact: true })).toBeVisible()
     await expect(names(page)).toHaveCount(0)
-    expect(s.calls.filter(c => [ordinary, todoPath].includes(c.path))).toHaveLength(1)
+    const authorizedReads = s.calls.filter(c => [ordinary, todoPath].includes(c.path))
+    expect(authorizedReads).toHaveLength(2)
+    for (const call of authorizedReads) {
+      expect(call.path).toBe(ordinary)
+      expect(call.body).toEqual({ page: '1', rows: '20', sortField: 'createTime', sortOrder: 'desc', 'is:state|integer#and': '1' })
+    }
     await page.getByText('再次尝试', { exact: true }).click()
     await expect(names(page)).toHaveText(['待联系新结果'])
     const last = s.calls.filter(c => [ordinary, todoPath].includes(c.path)).at(-1)!
@@ -165,7 +174,7 @@ test('logout and a new normal login isolate a late old pagination response', asy
   const held = gate(); s.pageGate = held
   await page.locator('.load-more').click(); await held.entered
   await page.getByTestId('main-tab-home').click(); await expect(page.locator('.home-page')).toBeVisible()
-  await page.locator('.home-footer .secondary').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
+  await page.getByTestId('main-tab-me').click(); await expect(page.locator('.me-page')).toBeVisible(); await page.locator('.main-logout').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.me-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
   await login(page); await page.locator('.work-orders-entry').click()
   await expect(names(page)).toHaveText(['新会话结果'])
   s.events.push({event:'new-session:rendered',at:Date.now()})

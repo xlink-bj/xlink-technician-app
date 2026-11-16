@@ -20,7 +20,7 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
       document.querySelectorAll('uni-page-wrapper, uni-page-body').forEach(element => { element.scrollTop = 0 })
     })
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
-    expect(await page.locator('body').innerText()).not.toMatch(/SYNTHETIC|DEV-Q00|Mock|测试数据|演示数据/)
+    expect(await page.locator('body').innerText()).not.toMatch(/SYNTHETIC|DEV-Q00|Mock|测试数据/)
     await page.screenshot({ path: `.review/home-service-copy/${brand}-after/${state}-${width}x${width === 430 ? 932 : 667}.png`, animations: 'disabled', caret: 'hide' })
   }
   const touch = async (selector: string) => {
@@ -29,16 +29,18 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   }
   await page.goto('/#/pages/index/index')
   await expect(page.locator('.home-page')).toBeVisible()
-  await expect(page.locator('.home-brand-name')).toHaveText(name)
-  await expect(page.locator('.home-brand-tagline')).toHaveText('家装服务')
+  await expect(page.locator('.c1-next')).toBeVisible()
+  await expect(page.locator('.c1-brand')).toHaveText(`${name}服务`)
+  await expect(page.locator('.c1-title')).toHaveText('工作台')
+  await expect(page.locator('.c1-demo')).toHaveText('演示数据')
   await expect(page.locator('.uni-page-head__title')).toHaveText(name)
   await expect(page.locator('.home-greeting')).toContainText('王师傅')
   if (brand === 'yuhong') {
     await expect(page.locator('.home-greeting')).toHaveCSS('font-size', '20px')
-    await expect(page.locator('.section-title').first()).toHaveCSS('font-size', '18px')
+    await expect(page.locator('.c1-section').first()).toHaveCSS('font-size', '18px')
     await expect(page.locator('.section-link')).toHaveCount(0)
-    await touch('.work-orders-entry-content')
-    await touch('.home-footer .secondary')
+    await touch('[data-testid=home-next]')
+    await touch('[data-testid=home-work-all]')
   }
   await screenshot('01-home')
   // Actual Mock session remains unchanged except display-only long-name data.
@@ -54,7 +56,7 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   await expect(page).toHaveURL(/#\/pages\/work-orders\/work-orders/)
   await page.getByTestId('main-tab-home').click()
   await expect(page.locator('.home-page')).toBeVisible()
-  await page.locator('.home-footer .secondary').click()
+  await page.getByTestId('main-tab-me').click(); await expect(page.locator('.me-page')).toBeVisible(); await page.locator('.main-logout').click()
   await expect(page.locator('.uni-modal')).toBeVisible()
   await page.locator('.uni-modal__btn').filter({ hasText: '退出登录' }).click()
   await expect(page.locator('.launch-stage')).toBeVisible()

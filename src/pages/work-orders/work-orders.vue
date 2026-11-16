@@ -34,6 +34,7 @@
         </view>
       </scroll-view>
 
+      <AppStatus v-if="workOrders.workKind !== 'all'" :message="`${workKindLabels[workOrders.workKind]} · 请先选择工单，再在详情核验可用记录与作业权限。筛选范围为当前已加载工单。`" />
       <AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="list" />
 
       <AppFeedbackState
@@ -77,7 +78,7 @@
           <view class="inline-refresh-indicator" />
         </view>
         <view
-          v-for="item in workOrders.items"
+          v-for="item in workOrders.visibleItems"
           :key="String(item.id)"
           class="work-order-card"
           :hover-class="canOpenDetail(item) ? 'work-order-card-hover' : 'none'"
@@ -153,6 +154,7 @@
           </AppRecordCard>
         </view>
 
+        <AppFeedbackState v-if="workOrders.visibleItems.length === 0 && workOrders.workKind !== 'all'" layout="list" appearance="search-empty" title="当前已加载工单没有匹配事项" description="可继续加载更多，或切换全部分类查看工单。" />
         <button v-if="workOrders.hasMore === true" class="state-action load-more" @tap="loadMore">加载更多</button>
       </view>
 
@@ -177,6 +179,7 @@
 </template>
 
 <script setup lang="ts">
+import { workKindLabels } from '@features/work-orders/work-kind'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import { hasAuthenticatedSession } from '@features/home/access'

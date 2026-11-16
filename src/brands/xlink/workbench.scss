@@ -1,0 +1,10 @@
+.home-page.c1-workbench {
+  --wb-primary: var(--app-craft-action); --wb-on-primary: var(--app-color-surface); --wb-primary-soft: var(--app-craft-action-surface);
+  --wb-page: var(--app-craft-canvas); --wb-surface: var(--app-craft-surface); --wb-subtle: var(--app-craft-field-surface);
+  --wb-ink: var(--app-craft-ink); --wb-secondary: var(--app-craft-secondary); --wb-border: var(--app-craft-divider);
+  --wb-roof: var(--app-color-primary-border); --wb-link: var(--app-craft-action); --wb-info-soft: var(--app-color-primary-soft);
+  --wb-warning: var(--app-color-warning); --wb-warning-soft: var(--app-color-warning-soft); --wb-success: var(--app-color-success); --wb-success-soft: var(--app-color-success-soft);
+  --wb-font: var(--app-font-family); --wb-title: 20px; --wb-title-line: 28px; --wb-section: 18px; --wb-section-line: 26px;
+  --wb-body: 16px; --wb-body-line: 24px; --wb-meta: 14px; --wb-meta-line: 20px; --wb-card: var(--app-craft-surface-radius); --wb-control: var(--app-craft-control-radius);
+}
+@import '../../shared/ui/workbench.scss';

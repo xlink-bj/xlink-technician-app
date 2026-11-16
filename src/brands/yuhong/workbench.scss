@@ -1,0 +1,11 @@
+.home-page.c1-workbench {
+  --wb-primary: var(--yh-action-primary); --wb-on-primary: var(--yh-color-action-on-primary); --wb-primary-soft: var(--yh-color-action-subtle);
+  --wb-page: var(--yh-color-surface-page); --wb-surface: var(--yh-color-surface-card); --wb-subtle: var(--yh-color-surface-subtle);
+  --wb-ink: var(--yh-color-text-primary); --wb-secondary: var(--yh-color-text-secondary); --wb-border: var(--yh-border-subtle);
+  --wb-roof: var(--yh-palette-neutral-200); --wb-link: var(--yh-link); --wb-info-soft: var(--yh-color-status-info-bg);
+  --wb-warning: var(--yh-color-status-warning-fg); --wb-warning-soft: var(--yh-color-status-warning-bg); --wb-success: var(--yh-color-status-success-fg); --wb-success-soft: var(--yh-color-status-success-bg);
+  --wb-font: var(--yh-type-family); --wb-title: var(--yh-type-title-size); --wb-title-line: var(--yh-type-title-line);
+  --wb-section: var(--yh-type-section-size); --wb-section-line: var(--yh-type-section-line); --wb-body: var(--yh-type-body-size); --wb-body-line: var(--yh-type-body-line);
+  --wb-meta: var(--yh-type-meta-size); --wb-meta-line: var(--yh-type-meta-line); --wb-card: var(--yh-radius-card); --wb-control: var(--yh-radius-control);
+}
+@import '../../shared/ui/workbench.scss';

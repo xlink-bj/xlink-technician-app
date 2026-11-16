@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
+import { workKindLabels } from '@features/work-orders/work-kind'
 import { workOrderCategories } from '@features/work-orders/list-categories'
 
 // Actual SFC template/events and actual Pinia load lifecycle. Visual primitives
@@ -42,7 +43,8 @@ async function mounted() {
     '@features/work-orders/detail': { workOrderDetailRouteFor: (id: string) => 'detail/' + id },
     '@features/work-orders/list-actions': { workOrderListActionFor: () => ({ detailAccessible: true }) },
     '@features/work-orders/list': { useWorkOrderListStore: () => store }, '@shared/state': { useSessionStore: () => session },
-    '@features/work-orders/read-identity-scope': { workOrderReadScopeKey }, '@features/work-orders/list-categories': { workOrderCategories },
+    '@features/work-orders/read-identity-scope': { workOrderReadScopeKey }, '@features/work-orders/work-kind': { workKindLabels },
+      '@features/work-orders/list-categories': { workOrderCategories },
     '@shared/ui/loading': { appLoadingSkeletonDelayMs: 120 },
   }
   const module = { exports: {} as { default: Vue.Component } }

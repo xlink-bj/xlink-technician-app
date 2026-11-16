@@ -5,3 +5,6 @@
  * internal Workspace coordination or API/Mock implementations.
  */
 export { actionWorkspaceRouteFor } from './action-workspace-routes'
+
+export { workOrderReadScopeKey } from './read-identity-scope'
+export { workOrderListActionFor } from './list-actions'

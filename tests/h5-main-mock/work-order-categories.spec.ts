@@ -22,7 +22,7 @@ test(`${width}: five R2 categories constrain the normal App list and keep unknow
   const evidence = await openList(page, width)
   await expect(page.locator('.work-order-categories-row').getByRole('tab')).toHaveText(['待接单', '待联系', '待上门', '待跟进', '全部'])
   await expect(category(page, 'all')).toHaveAttribute('aria-selected', 'true')
-  await expect(page.locator('.card-customer')).toHaveCount(hasCategoryFixtures ? 15 : 12)
+  await expect(page.locator('.card-customer')).toHaveCount(hasCategoryFixtures ? 16 : 13)
   const initial = await page.locator('.card-customer').allTextContents()
   await category(page, 'to_accept').click()
   await expect(page.locator('.card-customer')).toHaveText(['李先生'])
@@ -34,7 +34,7 @@ test(`${width}: five R2 categories constrain the normal App list and keep unknow
   await expect(page.locator('.card-customer')).toHaveText(hasCategoryFixtures ? ['周先生'] : [])
   await expect(category(page, 'need_contact')).toHaveAttribute('aria-selected', 'true')
   await category(page, 'onsite').click()
-  await expect(page.locator('.card-customer')).toHaveText(hasCategoryFixtures ? ['钱女士', '郑先生'] : [])
+  await expect(page.locator('.card-customer')).toHaveText(hasCategoryFixtures ? ['钱女士', '郑先生', '邓先生'] : ['邓先生'])
   // Existing symbolic Mock-only statuses are not fabricated into the real R1 groups.
   await category(page, 'all').click()
   await expect(page.locator('.card-customer')).toHaveText(initial)

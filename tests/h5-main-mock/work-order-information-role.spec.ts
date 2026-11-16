@@ -64,7 +64,7 @@ test('real detail rejects malformed/legacy role rules, stale A and logout/missin
   const h = await fixture(page, baseURL!)
   const relogin = async (role: string | null) => {
     await h.back(); await page.getByTestId('main-tab-home').click(); await expect(page.locator('.home-page')).toBeVisible()
-    await page.locator('.home-footer .secondary').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
+    await page.getByTestId('main-tab-me').click(); await expect(page.locator('.me-page')).toBeVisible(); await page.locator('.main-logout').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.me-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
     await expect(h.rows).toHaveCount(0); h.role(role); await h.login()
   }
   try {

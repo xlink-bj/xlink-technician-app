@@ -1,3 +1,4 @@
+import { withWorkbenchMockRows, workbenchDemoEnabled, workbenchStatusOption } from './workbench-demo'
 import { duplicateFileDefinition } from './duplicate-file-fixture'
 import { normalSurveyMockAppointment, normalSurveyMockNode, normalSurveyMockRead } from './normal-survey-read'
 import { mockOrderFieldsRead } from './order-fields'
@@ -842,7 +843,8 @@ function matchedResponse(
       || rows !== 50 || requestData.sidx !== 'order,_id' || requestData.sord !== 'asc'
       || (requestData.parentId !== undefined && (typeof requestData.parentId !== 'string'
         || !requestData.parentId.trim() || requestData.parentId.trim() !== requestData.parentId))) return null
-    const matching = mockStatusOptionsResponse.data.filter(row =>
+    const statusRows = workbenchDemoEnabled() ? [...mockStatusOptionsResponse.data, workbenchStatusOption] : mockStatusOptionsResponse.data
+    const matching = statusRows.filter(row =>
       requestData.parentId === undefined || row.parentId === requestData.parentId)
     const data = matching.slice((page - 1) * rows, page * rows)
     return { data, page, rows, size: rows, total: matching.length, dataCount: data.length }
@@ -924,10 +926,10 @@ function matchedResponse(
     return mockWorkOrderActivityResponseFor(workOrderId)
   }
   if (route === 'basic/serviceAppointment/querySAWorkflowNode') {
-    return listResponse(mode, withCategoryMockRows(r1MpUxListResponse(journeyListResponse(mockCommandState().listResponse)), true), requestData)
+    return listResponse(mode, withWorkbenchMockRows(withCategoryMockRows(r1MpUxListResponse(journeyListResponse(mockCommandState().listResponse)), true), true), requestData)
   }
   if (route === 'basic/serviceAppointment/query') {
-    return listResponse(mode, withCategoryMockRows(mockOrdinaryListResponse, false), requestData)
+    return listResponse(mode, withWorkbenchMockRows(withCategoryMockRows(mockOrdinaryListResponse, false), false), requestData)
   }
 
   const detailPrefix = 'basic/serviceAppointment/queryById/'

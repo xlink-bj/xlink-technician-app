@@ -4,6 +4,7 @@ import ts from 'typescript'
 import * as Vue from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
+import { workKindLabels } from '@features/work-orders/work-kind'
 import { workOrderCategories } from '@features/work-orders/list-categories'
 
 const source = readFileSync('src/pages/work-orders/work-orders.vue', 'utf8')
@@ -32,6 +33,7 @@ function harness() {
       '@features/work-orders/list': {useWorkOrderListStore: () => store},
       '@shared/state': {useSessionStore: () => session},
       '@features/work-orders/read-identity-scope': {workOrderReadScopeKey},
+      '@features/work-orders/work-kind': { workKindLabels },
       '@features/work-orders/list-categories': {workOrderCategories},
       '@shared/ui/loading': {appLoadingSkeletonDelayMs: 120},
     }

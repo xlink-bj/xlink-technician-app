@@ -66,7 +66,7 @@ for (const mode of ['selected-r', 'selected-other', 'invalid-list', 'old-conditi
     }
     if (mode === 'session-switch') {
       await leaveNormalFormForList(page); await page.getByTestId('main-tab-home').click(); await expect(page.locator('.home-page')).toBeVisible()
-      await page.locator('.home-footer .secondary').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.home-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
+      await page.getByTestId('main-tab-me').click(); await expect(page.locator('.me-page')).toBeVisible(); await page.locator('.main-logout').click();await expect(page.locator('.uni-modal')).toBeVisible();await expect(page.locator('.me-page')).toBeVisible();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click(); await expect(page.locator('.login-page')).toBeVisible()
       role = 'other'; node.handlerIds = [role]
       await page.locator('.launch-cta').click()
       await page.locator('.method-card').filter({ hasText: '快捷登录' }).click(); await expect(page.locator('.home-page')).toBeVisible()

@@ -12,6 +12,7 @@ export interface BusinessDetailReadStorePort {
 export interface BusinessReadStores {
   readonly list: BusinessReadStorePort
   readonly detail: BusinessDetailReadStorePort
+  readonly workbench?: BusinessDetailReadStorePort
 }
 
 /**
@@ -19,6 +20,7 @@ export interface BusinessReadStores {
  * The auth/session store is intentionally not part of this orchestration.
  */
 export async function reloadBusinessReadStores(stores: BusinessReadStores): Promise<unknown> {
+  stores.workbench?.clear()
   stores.list.clear()
   stores.detail.clear()
   return stores.list.refresh()

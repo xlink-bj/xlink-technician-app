@@ -1,66 +1,6 @@
 <template>
   <AppLoadingState v-if="session.status === 'unknown'" label="正在准备应用" />
-  <view v-else-if="showHome" class="home-page">
-    <view class="home-hero">
-      <view class="home-hero-circles" aria-hidden="true">
-        <view class="home-hero-circle home-hero-circle-large" />
-        <view class="home-hero-circle home-hero-circle-small" />
-      </view>
-      <view class="home-hero-inner">
-        <view class="home-brand">
-          <text class="home-brand-name">{{ homeBrand.name }}</text>
-          <text class="home-brand-tagline">{{ homeBrand.tagline }}</text>
-        </view>
-        <text class="home-greeting">{{ homeGreeting }}</text>
-        <text class="home-subtitle">从当前可见的工单开始今天的工作</text>
-        <text class="home-identity">{{ session.session?.currentRole?.name || '当前身份待确认' }}</text>
-      </view>
-    </view>
-
-    <view class="home-content">
-      <view class="home-surface work-surface">
-        <view class="section-heading-row">
-          <view class="section-heading-copy">
-            <text class="section-title">今日任务</text>
-            <text class="section-description">优先处理会影响履约节奏的事项</text>
-          </view>
-        </view>
-
-        <view class="work-orders-entry" role="button" @tap="enterWorkOrders">
-          <view class="work-orders-entry-content">
-            <view class="entry-icon" aria-hidden="true">
-              <text>工</text>
-            </view>
-            <view class="entry-copy">
-              <text class="entry-title">进入工单</text>
-              <text class="entry-subtitle">查看当前可见工单</text>
-            </view>
-            <text class="entry-arrow" aria-hidden="true">›</text>
-          </view>
-        </view>
-      </view>
-
-      <view class="home-surface home-shortcuts">
-        <view class="section-heading-row"><view class="section-heading-copy">
-          <text class="section-title">按任务查找</text>
-          <text class="section-description">进入工单后查看当前账号可执行的事项</text>
-        </view></view>
-        <view class="home-shortcut-grid">
-          <button v-for="item in workOrderCategories" :key="item.key" class="home-shortcut"
-            @tap="openCategory(item.key)">{{ item.label }}<text aria-hidden="true">›</text></button>
-        </view>
-      </view>
-
-    </view>
-
-    <view class="home-footer">
-      <text class="home-account-label">账号操作</text>
-      <button class="secondary" :disabled="isBusy" @tap="logout">
-        {{ logoutInFlight ? '退出中…' : '退出登录' }}
-      </button>
-      <text v-if="feedback" class="feedback">{{ feedback }}</text>
-    </view>
-  </view>
+  <WorkbenchHome v-else-if="showHome" />
   <view v-else class="login-page">
     <view v-if="loginStage === 'launch'" class="login-stage launch-stage">
       <view class="brand-lockup">
@@ -245,15 +185,12 @@ import { computed, reactive, ref, watch } from 'vue'
 // Uni H5 forwards page query attributes (for example devReview). This page
 // renders a fragment because its authenticated root also owns the tab bar.
 defineOptions({ inheritAttrs: false })
+import WorkbenchHome from '@app/components/WorkbenchHome.vue'
 import { homeBrand } from '@brand-ui/home-brand'
-import { openMainRoute } from '@app/main-navigation'
 import { setActionWorkspacePageTitle as setHomePageTitle } from '@app/action-page-title'
 import { onLoad } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
-import { workOrderCategories } from '@features/work-orders/list-categories'
-import { useWorkOrderListStore } from '@features/work-orders/list'
-import type { WorkOrderCategory } from '@shared/ports'
 import AppMainNavigation from '@app/components/AppMainNavigation.vue'
 import { submitLogin, type LoginSubmissionState } from '@features/session/login'
 import {
@@ -272,10 +209,8 @@ import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import { redirectToIsolatedQaConsole } from '@app/dev-qa-navigation'
-import { confirmLogout } from '@app/logout-confirmation'
 
 const session = useSessionStore()
-const workOrders = useWorkOrderListStore()
 const phoneNumber = ref('')
 const verificationCode = ref('')
 const manualConsent = ref(false)
@@ -283,14 +218,9 @@ const loginPolicies = legalLoginPolicies(import.meta.env)
 const loginPoliciesReady = computed(() => Boolean(loginPolicies.privacyUrl && loginPolicies.agreementUrl))
 const loginStage = ref<LoginStage>('launch')
 const message = ref('')
-const logoutInFlight = ref(false)
 const submissionState = reactive<LoginSubmissionState>({ inFlight: false })
-const homeGreeting = computed(() => {
-  const displayName = session.session?.user.displayName?.trim()
-  return displayName ? `您好，${displayName}` : '您好'
-})
 const isBusy = computed(
-  () => submissionState.inFlight || logoutInFlight.value || session.status === 'authenticating',
+  () => submissionState.inFlight || session.status === 'authenticating',
 )
 const showHome = computed(() => hasAuthenticatedSession(session.status, session.session))
 const quickLoginAvailable = computed(() => resolveQuickLoginInput() !== null)
@@ -300,26 +230,6 @@ const quickLoginSubtitle = computed(() => {
 })
 const quickLoginBadge = computed(() => '快捷')
 const feedback = computed(() => message.value || userFacingLoginMessage(session.error))
-let enteringWorkOrders = false
-
-async function navigateWorkOrders(category?: WorkOrderCategory): Promise<void> {
-  if (!showHome.value || enteringWorkOrders) return
-  enteringWorkOrders = true
-  message.value = ''
-  try {
-    if (category) await workOrders.selectCategory(category)
-    const opened = await openMainRoute('workOrders')
-    if (!opened) message.value = '暂时无法进入工单，请重试'
-  }
-  finally { enteringWorkOrders = false }
-}
-
-function enterWorkOrders(): Promise<void> { return navigateWorkOrders() }
-
-async function openCategory(category: WorkOrderCategory): Promise<void> {
-  await navigateWorkOrders(category)
-}
-
 // Legacy QA deep links are redirected to a distinct DEV surface. The Home DOM
 // remains identical for the same business session, with or without query flags.
 onLoad((options) => {
@@ -388,21 +298,6 @@ async function submit(): Promise<void> {
     verificationCode.value = ''
   } else {
     message.value = userFacingLoginMessage(result.error)
-  }
-}
-
-async function logout(): Promise<void> {
-  if (logoutInFlight.value) return
-  logoutInFlight.value = true
-  message.value = ''
-  try {
-    if (!await confirmLogout()) return
-    const result = await session.endSession()
-    if (result.state !== 'succeeded') {
-      message.value = userFacingLoginMessage(result.error) || '退出登录失败，请稍后重试'
-    }
-  } finally {
-    logoutInFlight.value = false
   }
 }
 

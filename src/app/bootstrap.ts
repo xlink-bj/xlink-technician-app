@@ -1,3 +1,5 @@
+import { useWorkbenchStore } from '@features/home/workbench'
+import { workbenchDemo } from '@adapters/api/mock/workbench-demo'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { surveyLeakageCauseReadKey } from '@features/work-orders/survey-leakage-cause-read'
 import { resolveAStageDynamicFormMockWorkspace } from './a-stage-dynamic-form-mock-ui'
@@ -137,6 +139,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const surveyLeakageCauseProvider = dependencies.surveyLeakageCauseProvider ?? createDefaultSurveyLeakageCauseProvider(authSession)
   app.provide(surveyLeakageCauseReadKey, { provider: surveyLeakageCauseProvider, tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? '') })
   sessionStore.configureAuth(authSession)
+  useWorkbenchStore(pinia).configure(apiRead, () => sessionStore.session, workbenchDemo, () => sessionStore.endSession())
   const workOrderListStore = useWorkOrderListStore(pinia)
   const workOrderDetailStore = useWorkOrderDetailStore(pinia)
   workOrderListStore.configureApi(

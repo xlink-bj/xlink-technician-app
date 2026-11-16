@@ -1,0 +1,53 @@
+/* C1 shared geometry; each brand supplies its own semantic token mapping. */
+.home-page.c1-workbench {
+  display: block; min-height: 100vh; padding-bottom: calc(88px + env(safe-area-inset-bottom));
+  background: var(--wb-page); color: var(--wb-ink); font-family: var(--wb-font); font-size: var(--wb-body); line-height: var(--wb-body-line);
+  button { box-sizing: border-box; margin: 0; border: 0; font: inherit; color: inherit; white-space: normal; border-radius: var(--wb-control); &::after { border: 0; } }
+  button:focus-visible { outline: 2px solid var(--wb-link); outline-offset: 2px; }
+  .c1-brandbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px; background: var(--wb-primary); color: var(--wb-on-primary); }
+  .c1-brand { display: block; font-size: var(--wb-meta); line-height: var(--wb-meta-line); }
+  .c1-title { display: block; margin-top: 4px; font-size: var(--wb-title); line-height: var(--wb-title-line); font-weight: 600; }
+  .c1-demo { padding: 4px 8px; border: 1px solid currentColor; border-radius: var(--wb-control); font-size: var(--wb-meta); line-height: var(--wb-meta-line); }
+  .c1-welcome { position: relative; overflow: hidden; padding: 20px 16px; }
+  .c1-welcome-row { position: relative; display: flex; align-items: baseline; gap: 12px; justify-content: space-between; }
+  .c1-greeting { margin: 0; color: var(--wb-ink); font-size: var(--wb-title); line-height: var(--wb-title-line); font-weight: 600; letter-spacing: normal; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .c1-role { display: block; position: relative; margin-top: 4px; color: var(--wb-secondary); }
+  .c1-date { flex-shrink: 0; color: var(--wb-secondary); font-size: var(--wb-meta); line-height: var(--wb-meta-line); }
+  .c1-roof { position: absolute; width: 136px; height: 100px; right: 48px; top: 55px; transform: rotate(-30deg) skew(25deg); border-top: 1px solid var(--wb-roof); border-right: 1px solid var(--wb-roof); }
+  .c1-roof::after { content: ''; position: absolute; inset: 12px; border-top: 1px solid var(--wb-roof); border-right: 1px solid var(--wb-roof); }
+  .c1-content { display: flex; flex-direction: column; gap: 12px; padding: 0 16px; }
+  .c1-card { box-sizing: border-box; padding: 16px; border: 1px solid var(--wb-border); border-radius: var(--wb-card); background: var(--wb-surface); min-width: 0; }
+  .c1-todos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 12px; }
+  .c1-todo { padding: 8px 0; min-height: 72px; background: var(--wb-subtle); }
+  .c1-count { display: block; font-size: var(--wb-title); line-height: var(--wb-title-line); font-weight: 600; color: var(--wb-primary); }
+  .c1-todo-label { display: block; font-size: var(--wb-meta); line-height: var(--wb-meta-line); color: var(--wb-secondary); margin-top: 4px; }
+  .c1-section-row { display: flex; align-items: baseline; gap: 12px; }
+  .c1-section { font-size: var(--wb-section); line-height: var(--wb-section-line); font-weight: 600; }
+  .c1-muted { display: block; color: var(--wb-secondary); font-size: var(--wb-meta); line-height: var(--wb-meta-line); overflow-wrap: anywhere; }
+  .c1-next { border-left: 4px solid var(--wb-primary); }
+  .c1-task-main { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+  .c1-task-icon, .c1-shortcut-icon { display: flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: var(--wb-card); background: var(--wb-primary-soft); color: var(--wb-primary); }
+  .c1-task-copy { flex: 1; min-width: 0; text-align: left; }
+  .c1-task-title { display: block; font-size: var(--wb-body); line-height: var(--wb-body-line); font-weight: 600; overflow-wrap: anywhere; }
+  .c1-task-copy .c1-muted { margin-top: 4px; }
+  .c1-task-footer { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+  .c1-instruction { flex: 1; color: var(--wb-secondary); font-size: var(--wb-meta); line-height: var(--wb-meta-line); overflow-wrap: anywhere; }
+  .c1-primary { flex-shrink: 0; min-height: 44px; padding: 10px 14px; background: var(--wb-primary); color: var(--wb-on-primary); font-weight: 600; }
+  .c1-time { color: var(--wb-primary); font-size: var(--wb-section); line-height: var(--wb-section-line); font-weight: 600; }
+  .c1-schedule-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 76px; padding: 12px 0; background: var(--wb-surface); border-top: 1px solid var(--wb-border); }
+  .c1-schedule-row:first-of-type { margin-top: 12px; }
+  .c1-schedule-row .c1-time { flex: 0 0 50px; }
+  .c1-schedule-row .c1-task-copy { border-left: 2px solid var(--wb-roof); padding-left: 12px; }
+  .c1-arrow { color: var(--wb-secondary); }
+  .c1-common-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 4px; margin-top: 12px; }
+  .c1-shortcut { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 76px; padding: 4px 0; background: var(--wb-surface); font-size: var(--wb-meta); line-height: var(--wb-meta-line); }
+  .c1-shortcut-icon--survey { color: var(--wb-link); background: var(--wb-info-soft); }
+  .c1-shortcut-icon--construction { color: var(--wb-warning); background: var(--wb-warning-soft); }
+  .c1-shortcut-icon--acceptance { color: var(--wb-success); background: var(--wb-success-soft); }
+  .c1-month { display: flex; align-items: center; gap: 12px; min-height: 60px; }
+  .c1-month-value { margin-left: auto; color: var(--wb-primary); font-weight: 600; }
+  .c1-note { color: var(--wb-secondary); font-size: var(--wb-meta); line-height: var(--wb-meta-line); }
+  .c1-state { display: flex; flex-direction: column; gap: 8px; }
+  .c1-state-copy { margin-top: 16px; }
+  .c1-text-button { min-height: 44px; background: var(--wb-surface); color: var(--wb-link); align-self: flex-start; padding: 8px 0; }
+}

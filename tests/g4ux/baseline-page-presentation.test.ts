@@ -17,14 +17,12 @@ describe('baseline page-local presentation safeguards (source contracts)', () =>
       expect(css(descriptor)).not.toMatch(/(?:^|\n)\s*(?:body|html|:root|\*)\s*\{[^}]*font-family:/)
     }
   })
-  it('keeps navigation and uses an explicit cross-platform inner view for the entry row', () => {
-    const template = home.template!.content
-    expect(template).toMatch(/<view class="work-orders-entry" role="button" @tap="enterWorkOrders">\s*<view class="work-orders-entry-content">/)
-    expect(home.scriptSetup!.content).toContain("openMainRoute('workOrders')")
-    expect(template).not.toMatch(/render-link|navigator-wrap|v-html/)
-    expect(css(home)).toMatch(/\.work-orders-entry-content\s*\{[^}]*display: flex;[^}]*width: 100%;/)
-    expect(css(home)).toMatch(/\.entry-icon\s*\{[^}]*flex: 0 0 84rpx;[^}]*height: 84rpx;/)
-    expect(home.scriptSetup!.content).not.toMatch(/document\.|window\.|querySelector|inject.*CSS/)
+  it('keeps native buttons and root replacement for the work entry', () => {
+    const workbench = source('app/components/WorkbenchHome.vue')
+    expect(workbench).toContain('class="c1-shortcut"')
+    expect(workbench).toContain("openMainRoute('workOrders')")
+    expect(workbench).toContain('await list.navigateTo(workOrderDetailRouteFor(current.id))')
+    expect(workbench).not.toMatch(/render-link|navigator-wrap|v-html|querySelector|inject.*CSS/)
   })
   it('includes footer padding in its existing full width rather than hiding or clipping overflow', () => {
     expect(css(home)).toMatch(/\.home-footer\s*\{\s*box-sizing: border-box;\s*padding: 44rpx 24rpx 0;/)

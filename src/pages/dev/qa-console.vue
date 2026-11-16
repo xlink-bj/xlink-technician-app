@@ -72,6 +72,7 @@ import {
   confirmMockCommercialCheckpoint, pauseMockCommercialReview, readMockCommercialProgress,
   resumeMockCommercialReview, revokeLastMockCommercialCheckpoint,
 } from '@app/mock-commercial-journey'
+import { useWorkbenchStore } from '@features/home/workbench'
 import { reloadBusinessReadStores, switchBusinessDataSource } from '@features/home/business-data-source'
 import { useLocalDraftDiagnosticsStore } from '@features/home/draft-diagnostics'
 import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiagnosticsPanel.vue'
@@ -119,7 +120,7 @@ async function handleMockToggle(event: Event): Promise<void> {
   mockSwitchInFlight.value = true
   try {
     await switchBusinessDataSource(enabled ? 'mock' : 'real', setBusinessMockMode,
-      { list: workOrders, detail: workOrderDetail })
+      { list: workOrders, detail: workOrderDetail, workbench: useWorkbenchStore() })
   } finally {
     mockMode.value = isBusinessMockMode()
     await draftDiagnostics.refresh()
@@ -131,7 +132,7 @@ async function selectMockMode(mode: Exclude<BusinessMockMode, 'off'>): Promise<v
   if (!authorized.value || mockMode.value === 'off' || mockSwitchInFlight.value) return
   mockSwitchInFlight.value = true
   setBusinessMockMode(mode)
-  try { await reloadBusinessReadStores({ list: workOrders, detail: workOrderDetail }) }
+  try { await reloadBusinessReadStores({ list: workOrders, detail: workOrderDetail, workbench: useWorkbenchStore() }) }
   finally {
     mockMode.value = isBusinessMockMode()
     await draftDiagnostics.refresh()
