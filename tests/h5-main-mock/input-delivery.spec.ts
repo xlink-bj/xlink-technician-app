@@ -34,7 +34,7 @@ test('rapid multiline note is saved before the appointment action unmounts its e
   expect(external).toEqual([])
 })
 
-test('rapid scalar input is saved before the normal action unmounts its editor', async ({ page }) => {
+test('rapid scalar input is saved before the isolated Mock action unmounts its editor', async ({ page }) => {
   page.setDefaultTimeout(15_000)
   await page.setViewportSize({ width: 430, height: 932 })
   const external: string[] = []
@@ -47,13 +47,19 @@ test('rapid scalar input is saved before the normal action unmounts its editor',
   await page.locator('.action-content-field--note textarea').fill('输入交付回归')
   await page.getByTestId('mock-journey-advance').click()
   await page.locator('.primary-task-action').click()
+  await expect(page.getByTestId('survey-part-picker-trigger')).toBeVisible()
+  await expect(page.getByTestId('mock-journey-advance')).toHaveCount(0)
+  // Synthetic advancement requires explicit re-entry through the isolated QA console.
+  await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('mock-continuous-journey-entry').click()
+  await expect(page.getByTestId('mock-journey-progress')).toContainText('独立测试旅程')
   await page.getByTestId('survey-part-picker-trigger').click()
   await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
   await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()
   await page.getByTestId('survey-part-picker-confirm').click()
   await expect(page.getByTestId('dynamic-field-squareMeter')).toBeVisible()
   // Native browser events only: do not set any Vue store, draft or mock ACK.
-  // Keep the second input and normal action in the same browser task so the
+  // Keep the second input and isolated Mock action in the same browser task so the
   // result cannot accidentally pass merely because automation waits >100ms.
   const gap = await page.evaluate(async () => {
     const input = document.querySelector('[data-testid="dynamic-field-squareMeter"] input') as HTMLInputElement | HTMLTextAreaElement

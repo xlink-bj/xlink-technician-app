@@ -35,6 +35,12 @@ for (const viewport of [{width:375,height:667},{width:390,height:844}]) {
     await info.attach(`mock-survey-step-${viewport.width}`, {body: await page.screenshot({fullPage:true}), contentType:'image/png'})
 
     await page.locator('.primary-task-action').click()
+    await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
+    await expect(page.getByTestId('mock-journey-advance')).toHaveCount(0)
+    // Synthetic advancement requires explicit re-entry through the isolated QA console.
+    await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
+    await page.getByTestId('mock-continuous-journey-entry').click()
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('独立测试旅程')
     await expect(page.getByTestId('mock-journey-context-appointment')).toContainText('平屋顶渗漏')
     // R1 survey field visibility depends on the repair-part cascade; choose
     // the actual option before asserting a conditional measurement control.

@@ -98,6 +98,11 @@ test.describe('A-stage P1 real-H5 operator acceptance', () => {
     await page.locator('.primary-task-action').click()
     const repairPart = page.getByTestId('survey-part-picker-trigger')
     await expect(repairPart).toBeVisible()
+    await expect(page.getByTestId('mock-journey-advance')).toHaveCount(0)
+    // Synthetic advancement requires explicit re-entry through the isolated QA console.
+    await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
+    await page.getByTestId('mock-continuous-journey-entry').click()
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('独立测试旅程')
     await repairPart.click()
     await expect(page.getByTestId('survey-part-picker-panel')).toBeVisible()
     await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()

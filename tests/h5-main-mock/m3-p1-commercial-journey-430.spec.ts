@@ -29,13 +29,28 @@ test('430×932 Appointment → Survey → Quotation, then scoped Order/C01 read-
     // DEV QA is a launch mechanism, never part of the commercial screen.
     await expect(page.getByTestId('qa-console')).toHaveCount(0)
     await expect(page.getByTestId('mock-commerce-handoff')).toHaveCount(0)
+    await expect(page.getByTestId('mock-journey-progress')).toHaveCount(0)
     const screenshot = await page.screenshot({ animations: 'disabled', caret: 'hide' })
     await writeFile(resolve(evidenceDir, `${name}-430x932.png`), screenshot)
     await info.attach(name, { body: screenshot, contentType: 'image/png' })
   }
+  const reenterSavedJourneyThroughQa = async () => {
+    // Observe the real draft ACK before leaving the commercial editor; no state injection.
+    await expect.poll(() => page.evaluate(async () => {
+      const modulePath = '/src/features/work-orders/action-workspace.ts'
+      const { useActionWorkspaceStore } = await import(modulePath)
+      return useActionWorkspaceStore().draftStatus
+    })).toMatch(/^(saved_local|restore_available)$/)
+    await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
+    await page.getByTestId('mock-continuous-journey-entry').click()
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('独立测试旅程')
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
+  }
 
-  await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
-  await page.getByTestId('mock-continuous-journey-entry').click()
+  await page.goto('/#/pages/index/index', { waitUntil: 'domcontentloaded' })
+  await page.locator('.work-orders-entry').click()
+  await (await searchMockWorkOrder(page, { orderNum: '26019', customer: '蒋女士' })).click()
+  await page.locator('.primary-task-action').click()
   await expect(page.locator('.uni-page-head__title')).toContainText('预约上门')
   const appointmentSubmit = page.getByTestId('action-workspace-submit')
   await expect(appointmentSubmit).toBeVisible()
@@ -58,8 +73,8 @@ test('430×932 Appointment → Survey → Quotation, then scoped Order/C01 read-
   // touch target, not the nested text node which the parent intercepts.
   await page.locator('.confirmation-action').filter({ hasText: '返回修改' }).click()
   await expect(page.locator('.appointment-time-selected')).toBeVisible()
-  await expect(page.getByTestId('mock-journey-progress')).toContainText('已保存，可继续下一步')
   await captureCommercialScreen('01-appointment')
+  await reenterSavedJourneyThroughQa()
   await page.getByTestId('mock-journey-advance').click()
 
   await expect(page.locator('.summary-number')).toContainText('#26019')
@@ -75,6 +90,8 @@ test('430×932 Appointment → Survey → Quotation, then scoped Order/C01 read-
   await expect(page.getByTestId('dynamic-media-add-images2')).toBeVisible()
   await page.getByTestId('dynamic-field-squareMeter').locator('input').fill('18.5')
   await captureCommercialScreen('03-survey')
+  await reenterSavedJourneyThroughQa()
+  await expect(page.getByTestId('dynamic-field-squareMeter').locator('input')).toHaveValue('18.5')
   await page.getByTestId('mock-journey-advance').click()
 
   await expect(page.locator('.current-task-card')).toContainText('报价')

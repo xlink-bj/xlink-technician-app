@@ -41,6 +41,12 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
   await page.locator('.action-content-field--note textarea').fill('预约上门核对维修范围')
   await page.getByTestId('mock-journey-advance').click()
   await page.locator('.primary-task-action').click()
+  await expect(page.getByTestId('survey-part-picker-trigger')).toBeVisible()
+  await expect(page.getByTestId('mock-journey-advance')).toHaveCount(0)
+  // Synthetic advancement requires explicit re-entry through the isolated QA console.
+  await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
+  await page.getByTestId('mock-continuous-journey-entry').click()
+  await expect(page.getByTestId('mock-journey-progress')).toContainText('独立测试旅程')
   await page.getByTestId('survey-part-picker-trigger').click()
   await page.getByTestId('survey-repair-part-parents').locator('.app-cascade-selector__parent').first().click()
   await page.getByTestId('survey-repair-part-children').locator('.app-cascade-selector__child').first().click()

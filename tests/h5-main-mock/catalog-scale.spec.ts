@@ -12,6 +12,12 @@ async function open019Quotation(page: Page) {
     await page.getByTestId('mock-journey-advance').click()
     await expect(page).toHaveURL(/work-orders\/detail/)
     await page.locator('.primary-task-action').click()
+    await expect(page.getByTestId('survey-part-picker-trigger')).toBeVisible()
+    await expect(page.getByTestId('mock-journey-advance')).toHaveCount(0)
+    // Synthetic advancement requires explicit re-entry through the isolated QA console.
+    await page.goto('/#/pages/dev/qa-console', { waitUntil: 'domcontentloaded' })
+    await page.getByTestId('mock-continuous-journey-entry').click()
+    await expect(page.getByTestId('mock-journey-progress')).toContainText('独立测试旅程')
     const repairPart = page.getByTestId('survey-part-picker-trigger')
     await expect(repairPart).toBeVisible()
     await repairPart.click()
@@ -134,6 +140,8 @@ for (const lostAck of [false, true]) test(`430: priced package quote to official
   await shot('02-报价已保存-独立报价编号', 'a-stage-quote-readback')
   await page.getByTestId('order-field-mock-order-person').getByText('客户', { exact: true }).click()
   await page.getByTestId('order-field-mock-order-submit-note').locator('textarea').fill('套餐组合及维修范围已与客户核对')
+  // A hard reload must follow the actual draft ACK, not just input delivery.
+  await expect(page.getByTestId('order-extfield-editor')).toHaveAttribute('data-draft-status', 'saved_local')
   await page.reload()
   await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page.getByTestId('order-field-mock-order-submit-note').locator('textarea')).toHaveValue('套餐组合及维修范围已与客户核对')
