@@ -71,7 +71,7 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     // the async transaction; reloading before its cleanup finishes correctly
     // leaves the durable uncertain fence and cannot permit another edit.
     await expect(count).toHaveValue('')
-    await expect(page.getByTestId('a-special-save')).toHaveText('保存记录')
+    await expect(page.getByTestId('a-special-save')).toHaveText('保存本条记录')
     await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
     await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
     await page.reload({ waitUntil: 'domcontentloaded' })

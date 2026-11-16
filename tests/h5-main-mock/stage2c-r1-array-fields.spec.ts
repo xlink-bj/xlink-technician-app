@@ -30,7 +30,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     // or local cleanup; interrupting either intentionally leaves a fence.
     const saved = async (id = 'mock-special-form-data-forms-1') => {
       await expect(page.getByTestId('a-special-row-' + id)).toBeVisible()
-      await expect(page.getByTestId('a-special-save')).toHaveText('保存记录')
+      await expect(page.getByTestId('a-special-save')).toHaveText('保存本条记录')
       await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
       await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
       await expect(page.getByTestId('a-special-cleanup-pending')).toHaveCount(0)
