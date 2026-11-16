@@ -71,7 +71,7 @@ for(const mode of ['success','cancel-before-upload','cancel-after-upload','known
   await expect(page.getByTestId('r1-normal-form-record')).toHaveCount(2)
   await expect(row().locator('.r1-file-item')).toHaveCount(expected.length+1)
   await expect(row().locator('.r1-file-preview')).toHaveCount(expected.length)
-  await expect(row().locator('.r1-file-name')).toHaveText('private-kept')
+  await expect(row().locator('.form-read__field').filter({has:page.getByText('keptAttachments',{exact:true})}).locator('.r1-file-name')).toHaveText('原有附件 1 · private-kept')
   for(let index=0;index<expected.length;index++){
    const escaped=expected[index].url.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')
    await expect(row().locator('.r1-file-preview').nth(index).locator('div').first()).toHaveCSS('background-image',new RegExp(escaped))
@@ -96,7 +96,7 @@ for(const mode of ['success','cancel-before-upload','cancel-after-upload','known
   await stableRead()
   await expect(row().locator('.r1-file-item')).toHaveCount(3)
   await expect(row().locator('.r1-file-preview')).toHaveCount(2)
-  await expect(row().locator('.r1-file-name')).toHaveText('private-kept')
+  await expect(row().locator('.form-read__field').filter({has:page.getByText('keptAttachments',{exact:true})}).locator('.r1-file-name')).toHaveText('原有附件 1 · private-kept')
   await expect(row().getByTestId('r1-normal-file-remove-attachments-0')).toHaveCount(0)
   await expect(page.getByTestId('r1-normal-edit-saved-b')).toHaveCount(0)
   await page.getByTestId('r1-normal-edit-saved-a').click();await expect(editor.locator('.r1-file-item')).toHaveCount(2)

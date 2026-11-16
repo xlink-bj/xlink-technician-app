@@ -6,6 +6,7 @@ import * as Vue from 'vue'
 import {it,expect,vi} from 'vitest'
 import * as retained from '@shared/form/r1-retained-file-values'
 import * as imageContract from '@shared/form/r1-normal-image-contract'
+import * as attachmentPresentation from '@features/work-orders/attachment-presentation'
 
 type Host={type:string;props:Record<string,any>;text:string;children:Host[];parent:Host|null}
 const node=(type:string,text=''):Host=>({type,text,props:{},children:[],parent:null})
@@ -26,7 +27,7 @@ function component(){
     .replaceAll('import.meta.env',JSON.stringify({VITE_XLINK_MEDIA_DOWNLOAD_BASE_URL:'https://media.example.test/assets'}))
   const js=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
   const Button=Vue.defineComponent({props:['disabled'],emits:['tap'],setup:(p,c)=>()=>Vue.h('button',{...c.attrs,disabled:p.disabled,onTap:()=>c.emit('tap')},c.slots.default?.())})
-  const modules:Record<string,unknown>={vue:Vue,'@shared/form/r1-retained-file-values':retained,'@shared/form/r1-normal-image-contract':imageContract,'@shared/ui/AppButton.vue':{default:Button}}
+  const modules:Record<string,unknown>={vue:Vue,'@shared/form/r1-retained-file-values':retained,'@shared/form/r1-normal-image-contract':imageContract,'./attachment-presentation':attachmentPresentation,'@shared/ui/AppButton.vue':{default:Button}}
   const module={exports:{} as {default:Vue.Component}}
   new Function('require','module','exports',js)((key:string)=>{if(!(key in modules))throw Error('Unmapped '+key);return modules[key]},module,module.exports)
   return module.exports.default
