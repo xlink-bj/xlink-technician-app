@@ -242,6 +242,9 @@
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from 'vue'
+// Uni H5 forwards page query attributes (for example devReview). This page
+// renders a fragment because its authenticated root also owns the tab bar.
+defineOptions({ inheritAttrs: false })
 import { homeBrand } from '@brand-ui/home-brand'
 import { openMainRoute } from '@app/main-navigation'
 import { setActionWorkspacePageTitle as setHomePageTitle } from '@app/action-page-title'
