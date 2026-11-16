@@ -88,3 +88,43 @@ test('role change clears a held response, and returning roots reloads the curren
  await page.locator('.main-logout').click();await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click();await expect(page.locator('.login-page')).toBeVisible();await expect(page.locator('.c1-workbench')).toHaveCount(0)
  await page.reload();await ready(page)
 })
+
+for (const entry of ['next', 'schedule'] as const) test(`C1 navigation failure from ${entry} recovers through reload and the same real task`, async ({page}) => {
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
+ await page.goto('/#/pages/index/index');await ready(page)
+ const id=entry==='next'?'mock-work-order-017-survey-success':'mock-work-order-002'
+ const target=()=>page.getByTestId(entry==='next'?'home-next':`home-schedule-${id}`)
+ await page.evaluate(()=>{
+  const runtime=(window as any).uni, original=runtime.navigateTo
+  runtime.navigateTo=(options:any)=>{runtime.navigateTo=original;options.fail?.({errMsg:'navigateTo:fail synthetic C1 regression'})}
+ })
+ await target().click()
+ await expect(page.getByText('工作事项加载失败',{exact:true})).toBeVisible()
+ await expect(page.getByText('工单暂时无法打开，请重新加载后再试',{exact:true})).toBeVisible()
+ await expect(page.getByText('正在整理工作事项',{exact:true})).toHaveCount(0)
+ await expect(page).toHaveURL(/pages\/index\/index/)
+ await page.screenshot({path:`.review/c1/${brand}-p2-${entry}-navigation-failure.png`,fullPage:true})
+ await page.locator('.c1-text-button').filter({hasText:'重新加载'}).click();await ready(page)
+ await expect(page.getByText('工单暂时无法打开，请重新加载后再试',{exact:true})).toHaveCount(0)
+ await expect(target()).toBeEnabled();await target().click()
+ await expect(page).toHaveURL(new RegExp(`detail\\?id=${id}`));await expect(page.locator('.detail-page')).toBeVisible()
+ expect(errors).toEqual([])
+})
+for (const change of ['leave-and-return','role-change'] as const) test(`C1 late navigation failure after ${change} cannot replace the refreshed home`, async ({page}) => {
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
+ await page.goto('/#/pages/index/index');await ready(page)
+ await page.evaluate(()=>{
+  const runtime=(window as any).uni, original=runtime.navigateTo
+  runtime.navigateTo=(options:any)=>{runtime.navigateTo=original;(window as any).__c1RejectNavigation=()=>options.fail?.({errMsg:'navigateTo:fail delayed synthetic regression'})}
+ })
+ await page.getByTestId('home-next').click()
+ await expect.poll(()=>page.evaluate(()=>typeof (window as any).__c1RejectNavigation)).toBe('function')
+ if(change==='leave-and-return') {await page.getByTestId('main-tab-me').click();await expect(page.locator('.me-page')).toBeVisible();await home(page)}
+ else {await page.evaluate(async()=>{const path='/src/shared/state/index.ts';(await import(path)).useSessionStore().session.roleVersion='navigation-new-role'});await ready(page)}
+ await page.evaluate(async()=>{(window as any).__c1RejectNavigation();await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())))})
+ await ready(page);await expect(page.locator('.c1-todo .c1-count')).toHaveText(['1','0','1','2'])
+ await expect(page.getByText('工单暂时无法打开，请重新加载后再试',{exact:true})).toHaveCount(0)
+ await expect(page.getByTestId('home-next')).toBeEnabled();await page.getByTestId('home-next').click()
+ await expect(page).toHaveURL(/detail\?id=mock-work-order-017-survey-success/);await expect(page.locator('.detail-page')).toBeVisible()
+ expect(errors).toEqual([])
+})

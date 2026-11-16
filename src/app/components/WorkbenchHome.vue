@@ -19,7 +19,7 @@
       <text v-if="board.state === 'ready' && !board.demoDate" class="c1-note">待办统计未接入，可按分类查看当前可见工单</text>
       <view v-if="board.state === 'loading' || board.state === 'idle'" class="c1-card c1-state" role="status"><text class="c1-section">正在整理工作事项</text><text class="c1-muted">核对当前身份与可见工单</text></view>
       <view v-else-if="board.state === 'unavailable'" class="c1-card c1-state"><text class="c1-section">当前身份待确认</text><text class="c1-muted">暂不能读取工单，请确认登录身份后重试</text></view>
-      <view v-else-if="board.state === 'error'" class="c1-card c1-state" role="alert"><text class="c1-section">工作事项加载失败</text><text class="c1-muted">未能确认当前任务，请重试</text><button class="c1-text-button" @tap="board.refresh">重新加载</button></view>
+      <view v-else-if="board.state === 'error'" class="c1-card c1-state" role="alert"><text class="c1-section">工作事项加载失败</text><text class="c1-muted">未能确认当前任务，请重试</text><button class="c1-text-button" @tap="reloadWorkbench">重新加载</button></view>
       <view v-else-if="board.next" class="c1-card c1-next">
         <view class="c1-section-row"><text class="c1-section">{{ board.demoDate ? '下一项任务' : '当前可查看工单' }}</text><text v-if="board.next.time" class="c1-time">{{ board.next.time }}</text></view>
         <view class="c1-task-main">
@@ -63,16 +63,18 @@ import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope
 import type { WorkKind } from '@features/work-orders/work-kind'
 const session = useSessionStore(), board = useWorkbenchStore(), list = useWorkOrderListStore()
 const navigating = ref(false), feedback = ref('')
-let active = true
+let active = true, navigationVersion = 0
+function invalidateNavigation() { navigationVersion++; navigating.value = false }
+function reloadWorkbench() { feedback.value = ''; return board.refresh() }
 const categories = workOrderCategories.filter(item => item.key !== 'all')
 const shortcuts = [ { key: 'all', label: '全部工单', icon: 'task' }, { key: 'survey', label: '勘查作业', icon: 'search' }, { key: 'construction', label: '施工记录', icon: 'order' }, { key: 'acceptance', label: '验收记录', icon: 'complete' } ] as const
 const greeting = computed(() => `您好${session.session?.user.displayName?.trim() ? `，${session.session.user.displayName.trim()}` : ''}`)
 const dateText = computed(() => { const date = new Date(); return `${date.getMonth() + 1}月${date.getDate()}日 周${'日一二三四五六'[date.getDay()]}` })
 function location(order: WorkOrderSummary) { return [order.customerName, order.serviceAddress || order.serviceDistrict].filter(Boolean).join(' · ') || '客户与地点待确认' }
-watch(() => workOrderReadScopeKey(session.session), () => { feedback.value = ''; if (active) void board.refresh() }, { immediate: true, flush: 'sync' })
-onHide(() => { active = false; board.clear() })
-onShow(() => { active = true; if (board.state !== 'loading') void board.refresh() })
-onBeforeUnmount(() => board.clear())
+watch(() => workOrderReadScopeKey(session.session), () => { invalidateNavigation(); feedback.value = ''; if (active) void board.refresh() }, { immediate: true, flush: 'sync' })
+onHide(() => { active = false; invalidateNavigation(); board.clear() })
+onShow(() => { active = true; if (board.state !== 'loading') void reloadWorkbench() })
+onBeforeUnmount(() => { active = false; invalidateNavigation(); board.clear() })
 async function openCategory(category: WorkOrderCategory) {
   if (navigating.value) return
   navigating.value = true; board.clear()
@@ -85,18 +87,23 @@ async function openWork(kind: WorkKind) {
 }
 async function openTask(task: WorkbenchTask) {
   if (navigating.value || board.state !== 'ready') return
-  const scope = workOrderReadScopeKey(session.session)
+  const scope = workOrderReadScopeKey(session.session), version = navigationVersion
+  const isCurrent = () => active && version === navigationVersion && Boolean(scope) && scope === workOrderReadScopeKey(session.session)
   navigating.value = true; feedback.value = ''; board.clear()
   try {
     // Re-establish ordinary list membership immediately before detail navigation.
     const result = await list.selectWorkKind('all')
-    if (!scope || scope !== workOrderReadScopeKey(session.session)) return
+    if (!isCurrent()) return
     const current = list.items.find(item => item.id === task.order.id)
     if (result.state !== 'succeeded' || !current || !workOrderListActionFor(current, session.session).detailAccessible) {
       board.clear(); board.state = 'error'; feedback.value = '该任务已变化或暂不可访问，请重新加载工作台'; return
     }
     await list.navigateTo(workOrderDetailRouteFor(current.id))
-  } finally { navigating.value = false }
+  } catch {
+    if (isCurrent()) {
+      board.clear(); board.state = 'error'; feedback.value = '工单暂时无法打开，请重新加载后再试'
+    }
+  } finally { if (version === navigationVersion) navigating.value = false }
 }
 </script>
 <style lang="scss">
