@@ -18,6 +18,12 @@ test('appointment real navigation, time selection, cancellation, confirmation an
       const box = (await footer.boundingBox())!
       expect(box.y + box.height).toBeLessThanOrEqual(933)
       expect(box.y).toBeGreaterThan(500)
+      await expect(footer).toHaveClass(/app-action-bar/)
+      await expect(footer.locator('.app-action-bar')).toHaveCount(0)
+      if (brand === 'yuhong') {
+        await expect(footer).toHaveCSS('padding-top', '12px')
+        await expect(footer).toHaveCSS('padding-bottom', '12px')
+      }
     }
     await page.screenshot({ path: `${directory}/${name}.png`, animations: 'disabled', caret: 'hide' })
   }

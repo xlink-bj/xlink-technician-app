@@ -19,7 +19,7 @@ describe('Action Workspace Shell structural contract', () => {
     const shell = presentationSource('shared/ui/ActionWorkspaceShell.vue')
     const scrollStart = shell.indexOf('<scroll-view class="action-workspace-scroll"')
     const scrollEnd = shell.indexOf('</scroll-view>')
-    const footerStart = shell.indexOf('class="action-workspace-footer"')
+    const footerStart = shell.search(/class="(?:[^"\s]+\s+)*action-workspace-footer(?:\s+[^"\s]+)*"/)
 
     expect(scrollStart).toBeGreaterThanOrEqual(0)
     expect(scrollEnd).toBeGreaterThan(scrollStart)

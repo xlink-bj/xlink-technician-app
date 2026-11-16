@@ -59,7 +59,8 @@
       </view>
     </scroll-view>
 
-    <AppActionBar class="action-workspace-footer" :class="{ 'xl-craft__action-bar': compactQuoteEntry }" :label="`当前工单操作`">
+    <!-- Keep safe-area padding on one native node on both H5 and MP. -->
+    <view class="app-action-bar action-workspace-footer" :class="{ 'xl-craft__action-bar': compactQuoteEntry }" role="group" aria-label="当前工单操作" data-testid="app-action-bar">
       <view class="action-workspace-footer-inner">
         <template v-if="lifecycle !== 'succeeded'">
           <template v-if="preferDefaultActions || !$slots.actions">
@@ -80,7 +81,7 @@
           <slot name="success-actions" />
         </template>
       </view>
-    </AppActionBar>
+    </view>
   </view>
 </template>
 
@@ -89,7 +90,6 @@ import { ref, watch } from 'vue'
 
 import type { AppActionDraftStatus, AppActionLifecycle } from './types'
 import AppButton from './AppButton.vue'
-import AppActionBar from './AppActionBar.vue'
 import AppWorkOrderSummary from './AppWorkOrderSummary.vue'
 import AppStatus from './AppStatus.vue'
 

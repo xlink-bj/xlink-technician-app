@@ -27,6 +27,12 @@ Read first: [AGENTS.md](../../AGENTS.md), [EQ03 test lanes](./EQ03_TEST_LANES_AN
 
 **Commercial UI invariant:** Mock and Real share the same user-facing components and information architecture at matching business states. DEV controls and synthetic provenance remain in the isolated QA surface, not on customer-facing pages. No unapproved Golden refresh, layout redesign or generic visual replacement.
 
+### Cross-platform style changes: targeted checks, not another gate
+
+Keep unit tests and related H5 flows as the fast feedback loop. When a shared component or brand stylesheet changes, additionally exercise the affected controls in the real WeChat runtime: component host/style isolation, spacing, click bubbling, disabled behavior and footer scrolling where relevant. H5 success or a successful MP build alone does not establish native visual correctness.
+
+Use the official SDK for repeatable navigation, measurements and screenshots; visually inspect representative affected states. Record automated checks, visual observations and unverified items separately. Script input is not evidence that a software keyboard opened; keyboard occlusion, dismissal recovery and physical-device safe areas need their own observation. Match coverage to the change rather than introducing stage-specific quotas or a mandatory full-page matrix.
+
 ## 3. Reuse the existing commands
 
 From the repository root, after confirming the active runtime:

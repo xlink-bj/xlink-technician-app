@@ -12,15 +12,15 @@ const skeletonSource = presentationSource('shared/ui/AppWorkOrderSkeleton.vue')
 
 describe('G4-UX detail D3 semantic boundary', () => {
   it('keeps the accepted summary, quick-action shell, and vertically stacked read-only summaries', () => {
-    expect(detailPage).toContain('class="summary-card"')
+    expect(detailPage).toMatch(/class="(?:[^"\s]+\s+)*summary-card(?:\s+[^"\s]+)*"/)
     expect(detailPage).toContain('class="summary-actions"')
     expect(detailPage).toContain('class="part-badge"')
     expect(detailPage).not.toContain('class="summary-mark"')
     expect(detailPage).not.toContain('class="summary-status"')
     expect(detailPage).not.toContain('class="location-icon"')
-    expect(detailPage).toContain('class="information-card"')
+    expect(detailPage).toMatch(/class="(?:[^"\s]+\s+)*information-card(?:\s+[^"\s]+)*"/)
     expect(detailPage.indexOf('class="summary-actions"')).toBeLessThan(
-      detailPage.indexOf('class="information-card"'),
+      detailPage.search(/class="(?:[^"\s]+\s+)*information-card(?:\s+[^"\s]+)*"/),
     )
     expect(detailPage).toContain("label: '联系'")
     expect(detailPage).toContain("label: '资料'")

@@ -258,7 +258,7 @@ describe('App UI Design System v0.2', () => {
   it('keeps the shared action footer outside the scroll region', async () => {
     const shell = await Promise.resolve(presentationSource('shared/ui/ActionWorkspaceShell.vue'))
     const scrollEnd = shell.indexOf('</scroll-view>')
-    const footerStart = shell.indexOf('class="action-workspace-footer"')
+    const footerStart = shell.search(/class="(?:[^"\s]+\s+)*action-workspace-footer(?:\s+[^"\s]+)*"/)
 
     expect(scrollEnd).toBeGreaterThanOrEqual(0)
     expect(footerStart).toBeGreaterThan(scrollEnd)
