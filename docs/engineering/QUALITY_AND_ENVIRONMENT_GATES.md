@@ -1,8 +1,8 @@
 # Quality & Environment Gates — Current Mainline
 
-> **Status: ACTIVE (effective on main merge)** · 2026-11-14 · 以 [AGENTS.md](../../AGENTS.md)、package.json 与当前 workflow 为执行依据。本文件不授予任何新的 Production/Beta 业务权限。
+> **Status: ACTIVE** · 2026-11-16 · 以 [AGENTS.md](../../AGENTS.md)、当前 `package.json` 与现行 workflow 为执行依据。本文件不授予任何新的 Production/Beta 业务权限。
 > **Owner:** ChatGPT Lead (maintainer); Product Owner approved 2026-10-30.
-> **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
+> **Scope:** 当前开发与验证入口；历史阶段报告只记录当时证据，不定义今日门禁。
 
 ## 1. 三类开发/验证环境，证据不跨级
 
@@ -20,8 +20,10 @@
 
 | 目的 | 命令 | 说明 |
 | --- | --- | --- |
-| 最快跨层静态/关键回归 | pnpm run verify:quick | 适合频繁开发反馈 |
-| 全量静态、测试与质量计数 | pnpm run verify:full | verify + 质量 census，不代表视觉/真机 |
+| 局部开发反馈 | `pnpm exec vitest run <受影响的测试文件>`；按改动运行 `pnpm run typecheck` 或对应 `check:*` | 先测实际受影响行为，不必每次跑整套 |
+| 较广的本地回归 | `pnpm run verify:quick` | 固定关键样本、边界、类型检查；不能替代全量测试 |
+| 主干完整工程验证 | `VITE_XLINK_ENVIRONMENT=test pnpm run verify` | 现行 17 个串行步骤：静态检查、类型与全部 Vitest；`verify:full` 只是其兼容别名 |
+| 可选规模盘点 | `pnpm run audit:quality` | 独立 census，不在 `verify` / `verify:full` 内，也不是覆盖率或尺寸门禁 |
 | 架构与业务 owner | pnpm run check:boundaries、pnpm run check:engineering-ownership | 禁止直接平台/API Wire/价目越界 |
 | 关键业务负例 | pnpm run check:critical / pnpm run verify:critical | 检查 manifest 和执行对应 suites |
 | 共享 UI 与商业 CSS | pnpm run check:ui-governance | 包含可静态约束的样式所有权 |
@@ -31,15 +33,15 @@
 | 微信构建 | pnpm run build:mp-weixin | 包含 WXSS 检查；不代表真机 |
 | App 构建 | pnpm run build:app | 不代表双平台实体运行 |
 
-检查命令以当前提交的 package.json 为准；若有版本/参数变更，更新此表和实际 CI。关键 CI：[Validate](../../.github/workflows/validate.yml)、[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml)。
+检查命令以当前提交的 package.json 为准。局部测试之后按影响选择真实 H5 Mock、三端构建或视觉检查；主干 push 的完整门禁由 [Validate](../../.github/workflows/validate.yml) 与 [Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 执行。`verify` 本身不构建三端，也不启动浏览器。
 
-**2026-10-30 实测补记：**C1-FIX [#238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 合并后，H5/MP/APP 发布脚本会拒绝继承 `XLINK_DEV_QA` 编译标记；H5/MP 还检查最终发布产物中四个 QA 页面缺席。仅运行裸 `uni build` 不等于通过这些发布边界检查。全量本机验证应使用与 `.github/workflows/validate.yml` 相同的测试前提：`VITE_XLINK_ENVIRONMENT=test` 和完整 Git 历史（`fetch-depth: 0`）；否则可能出现 Mock reader 被关闭或祖先提交不可见的假失败。[#239](https://github.com/xlink-bj/xlink-technician-app/issues/239) 已通过原始主干 1470/1470 和 C2-A 1472/1472 的对照验证收口。
+发布构建脚本会拒绝继承 `XLINK_DEV_QA` 编译标记；H5/MP 还检查当前 `scripts/check-c1-release-qa-pages.mjs` 所列 DEV-only 路由不进入发布产物。QA 路由清单以该脚本和 `src/pages.json` 为准，不以旧阶段的页面数为准。全量本机测试使用 `VITE_XLINK_ENVIRONMENT=test`；现行 Validate 的完整 checkout 用于仍依赖历史提交的检查。局部行为测试不要求每次拉取全历史；若完整验证因浅历史失败，应先核明缺失的 Git 证据，不把它解释为业务回归。
 
 ## 3. CI 层次与真实含义
 
 - **L1 / 开发回路**：受影响单测、类型、静态边界，必要时本机/云 H5 UI；工具不应承诺从 GitHub PR 获得即时 HMR。
 - **主干 CI / main push、手动**：Validate/verify 运行 pnpm verify + MP/App build；Validate Main H5 UX/h5-ux 运行 H5 build、入口、主 App Mock 与历史回归。
-- **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。历史的 47 个 workflow 不意味着 47 个都属于每次主干必跑门禁。
+- **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。旧 Draft 分支专项 workflow 与历史阶段报告不构成当前 main push 门禁。
 - **Release/Owner**：同视口商业 UI 接受、微信开发者工具/物理设备、Android/iOS、Beta 真实写入分别记录。不能用 CI green 替代这些 Gate。
 
 **历史 CI 示例（2026-10-29，非当前验收）：**[Validate](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40884013124) 和 [Main H5 UX](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40884013114) 于 2026-10-29 成功；quick 在 main push 依条件跳过属于预期。每次提交核对自己的 exact HEAD CI；不用历史通过替代当前结果。
@@ -59,5 +61,5 @@
 
 ## 5. 文档-only 的门禁
 
-只改 docs/、README 的提交仍应通过其适用的 GitHub CI；不因为它“不改业务”就跳过 exact-head 验证。没有变动商业 UI 的情况下，视觉/真机应诚实记录 NOT_RUN（无 UI 变更，不作为新的验收证据）。按已授权的 main-only 流程提交；不由此授权 deploy 或真实业务写入。报告和日志输出到 `test-results/`，`.review/` 仅保留需要查看的系统截图，不承载运行脚本、数据库或构建工程。
+只改 docs/、README 的提交也要按当前 workflow 记录 exact-head CI 结果；现行 main push 仍会触发完整验证。文档局部审阅不必为了提交前反馈先重复运行所有构建和浏览器测试。没有商业 UI 变化时，视觉/真机记录 NOT_RUN。报告和日志输出到 `test-results/`，`.review/` 仅保留需要查看的系统截图，不承载运行脚本、数据库或构建工程。
 
