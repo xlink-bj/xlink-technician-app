@@ -18,7 +18,7 @@
 | **E03** | 同一 [Main H5 UX 成功运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40191966540)，[A P1 附件 #12598288075](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40191966540/artifacts/12598288075) | `d822bb7`；MOCK-019 的 ¥107 本机订单；MOCK-020/021 表单保存/完成/重启 UI，375×667 | 证明实现和呈现，不代表商用视觉签收 |
 | **E04** | [历史 S2 全景 12 帧×2 视口 #38428279113](https://github.com/xlink-bj/xlink-technician-app/actions/runs/38428279113)，[附件 #11829397708](https://github.com/xlink-bj/xlink-technician-app/actions/runs/38428279113/artifacts/11829397708) | `334e133f`；工单/预约/勘察/报价/签约实际主 H5 基线；提供时序和已认可页面的视觉参考 | **历史快照**，不能作为 `d822bb7` 勘察现状缺陷的断言 |
 | **E05** | [Mac 375×667 MP 模拟器 `MP_DEVICE_PASS`](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398597783) | `d822bb7`；20/21 表单/重启、裁切、WXSS 兼容修复 | 仅已记录的原生场景；实体手机与商业化视觉未签收 |
-| **E06** | [阶段 A 工程退出账本](../engineering/A_STAGE_ENGINEERING_EXIT.md)、[Lead 验收评论](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398758924)、[动态表单标准](./DYNAMIC_FORM_COMMERCIAL_UI_UX_STANDARD_V1.md)、[共享系统](./APP_UI_DESIGN_SYSTEM.md) | 已有业务和产品约束；防止视觉审计侵犯业务真值 | 设计批准、工程 PASS 与生产写入权限各自独立 |
+| **E06** | [阶段 A 工程退出账本](../verification/HISTORICAL_A_STAGE_ENGINEERING_EXIT_20261025.md)、[Lead 验收评论](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398758924)、[动态表单标准](./DYNAMIC_FORM_COMMERCIAL_UI_UX_STANDARD_V1.md)、[共享系统](./APP_UI_DESIGN_SYSTEM.md) | 已有业务和产品约束；防止视觉审计侵犯业务真值 | 设计批准、工程 PASS 与生产写入权限各自独立 |
 
 本仓库 `tests/s2-ux-review/flow.spec.ts`、`tests/s2-ux-review/review-sheet.ts` 已定义主 App 稳定场景和可重现的截图协议；但 `d822bb7` 上 **S2 UX Review Sheet 的 PR job 被设计为 Draft 跳过**，故本次不声称“精确 HEAD 的完整 26 帧 Sheet 全部重跑”。E01–E03 是精确 HEAD 的实际截图补证；B1 提交视觉效果时使用**同一屏幕 ID/相同状态/375×667**的前后对比，并再跑主 App 全 Sheet。
 

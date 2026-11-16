@@ -14,6 +14,8 @@
 
 配置入口、端口及 dotenv 继承规则以 [README](../../README.md#development-environments) 为准。Beta 是显式选择的远程目标，不是默认本地开发环境，也不新增一套日常工作流程。选择环境不授予业务操作权限；生产/Beta 写入和外部上传仍须单独授权。前端只读开关不能代替服务端/账号权限证明。
 
+真实写入验收若将来获单独授权，需先确定隔离目标、临时 actor/role 与列明的 WorkOrder/node、允许的命令及独立读回、清理和回滚办法；只在该范围内执行。Mock 保存与生产只读均不能证明真实写入。这一边界沿用[当时的授权决策证据](../verification/HISTORICAL_NO_BETA_ENGINEERING_PARITY_PATH_20261024.md)，不复用其中旧阶段的执行命令。
+
 日常开发复用固定项目目录与既有测试，按新增或修改功能补充受影响用例；不逐次新建隔离工程、接口白名单或审核流程。开发环境的数据库、存储和外部集成边界在配置中保持明确，边界发生实际变化时再核实。Mock、开发联调与生产证据分别记录，不相互冒充。
 
 ## 2. 当前标准命令
@@ -38,7 +40,7 @@
 
 历史 G4F Phase1A/1B 的源码字符串自证已退役；报价的目录桥接、身份、草稿、金额和只读边界由现行行为测试、`check:critical` 与受影响 H5 流程验证。旧阶段报告中的命令记录不再是当前入口。
 
-Stage1B 的 20 用例步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。离线草稿/媒体 10 用例步骤在对应 CI 中由 124 秒降至 97 秒；这只证明局部步骤收益，完整 H5 的耗时与结果仍以该次完整 run 为准。
+表单保存/流程推进的 20 用例步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。离线草稿/媒体 10 用例步骤在对应 CI 中由 124 秒降至 97 秒；这只证明局部步骤收益，完整 H5 的耗时与结果仍以该次完整 run 为准。
 
 发布构建脚本会拒绝继承 `XLINK_DEV_QA` 编译标记；H5/MP 还检查当前 `scripts/check-c1-release-qa-pages.mjs` 所列 DEV-only 路由不进入发布产物。QA 路由清单以该脚本和 `src/pages.json` 为准，不以旧阶段的页面数为准。全量本机测试使用 `VITE_XLINK_ENVIRONMENT=test`；现行 Validate 的完整 checkout 用于仍依赖历史提交的检查。局部行为测试不要求每次拉取全历史；若完整验证因浅历史失败，应先核明缺失的 Git 证据，不把它解释为业务回归。
 
@@ -46,7 +48,7 @@ Stage1B 的 20 用例步骤使用两个 Playwright worker；[此前成功基线]
 
 - **L1 / 开发回路**：受影响单测、类型、静态边界，必要时本机/云 H5 UI；工具不应承诺从 GitHub PR 获得即时 HMR。
 - **每次 main push**：Validate 运行 `verify` 与三端构建；Validate Main H5 Smoke 运行现有 16 条真实 App Mock 用例，覆盖 Save/Process 与报价回读、输入/搜索 DOM、媒体恢复及双品牌。两个 workflow 的实际结果分别记录；快检通过不代表完整 H5 矩阵通过。
-- **完整 H5**：[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 每日 19:15 UTC 定时运行，也可在 GitHub Actions 手动运行（`gh workflow run validate-main-h5.yml --ref main`）；既有标记 PR 入口继续可用。它保留 Stage1B、草稿、角色媒体、创建与 L3 专项的全部既定用例和失败汇总，普通 main push 不会取消完整验收。
+- **完整 H5**：[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 每日 19:15 UTC 定时运行，也可在 GitHub Actions 手动运行（`gh workflow run validate-main-h5.yml --ref main`）；既有标记 PR 入口继续可用。它保留表单保存/流程、草稿、角色媒体、创建与其他专项的既定用例和失败汇总。需显式本地合成写入授权的问卷、业务选择器用例分别在专项配置中运行；不带该授权的泛用 Mock 不冒充其通过。普通 main push 不会取消完整验收。
 - **何时补跑完整 H5**：权限/角色及租户数据隔离、报价/订单金额或签署、草稿异步与弱网、媒体、共享平台或跨端关键流程，以及 workflow、Playwright 配置、测试设施、共享 fixture、构建/运行环境发生变化时，改动负责人在对应 main SHA 上手动运行并核对 run 的 `head_sha`。完整失败未修复时，相关范围不得报告验收完成；快检绿不替代完整结果，也不借用旧 SHA 的 PASS。
 - **每日失败归责**：日常项目协调 owner 检查定时完整 H5 run 的终态，指派最近相关改动负责人排查、修复并重跑；未修复前相关范围保持 FAIL/NOT_ACCEPTED。普通 main push 不因此暂停。
 - **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。旧 Draft 分支专项 workflow 与历史阶段报告不构成当前 main push 门禁。

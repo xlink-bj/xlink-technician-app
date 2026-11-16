@@ -1,5 +1,7 @@
 # R1 Checkbox / multiple Select / Cascade：正常节点契约盘点
 
+> 历史契约记录（2026-11-11）；旧阶段名称和当时的能力边界保留为证据，不作为当前运行规范。当前 Mock 能力见[能力矩阵](../engineering/R1_OFFLINE_DYNAMIC_FORM_CAPABILITY_MATRIX.md)。
+
 原契约盘点基线：`34102c11429d233ac9230e15f765c2098ca70cc1`；本次只读形状修复基线：`947de625b4a4898b5e55a4cdcd1efda6cf107fe8`，2026-11-11。本次仅修复选项显示形状判断，不新增控件、写权限或表单业务 profile。下列合成字段和选项不是生产配置。旧 Stage2C、Radio、canonical part/height 的通过历史不计成本片新成果。
 
 ## 固定来源

@@ -2,8 +2,8 @@ import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-fo
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
-test.describe('Stage 2D R1 temporal/rating record roundtrip', () => {
-  test.skip(process.env.VITE_XLINK_R1_STAGE2D_FIELDS !== 'true', 'Explicit synthetic temporal FormDef required')
+test.describe('R1 temporal and rating record roundtrip', () => {
+  test.skip(process.env.VITE_XLINK_R1_TEMPORAL_RATING_FIELDS !== 'true', 'Explicit synthetic temporal FormDef required')
   for (const kind of ['forms', 'repeat'] as const) {
     test(`430×932 ${kind}: picker/rating save → reload → clear → independent readback`, async ({ page }, info) => {
       await page.setViewportSize({ width: 430, height: 932 })

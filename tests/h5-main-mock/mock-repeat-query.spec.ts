@@ -3,8 +3,8 @@ import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
 test.skip(process.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true'
-  || process.env.VITE_XLINK_R1_STAGE2B_FIELDS !== 'true',
-  'Requires the explicit MOCK-021 and Stage2B synthetic fixture configuration')
+  || process.env.VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS !== 'true',
+  'Requires the explicit MOCK-021 and typed primitive fixture configuration')
 
 test('normal App repeat list → exact record read → synthetic save → refresh → remove', async ({ page, baseURL }, info) => {
   const external: string[] = [], errors: string[] = []

@@ -18,6 +18,7 @@ const suite = readOnly ? 'survey-readonly' : sharedAppointment ? (narrow ? 'appo
 const phase = process.env.XLINK_SURVEY_HOST_PHASE === 'before' ? 'before' : 'after'
 export default defineConfig({
   ...base,
+  testIgnore: [],
   testMatch: readOnly ? 'normal-survey-mock-reader.spec.ts' : sharedAppointment ? 'normal-appointment-experience.spec.ts' : 'brand-survey-host.spec.ts',
   outputDir: rootPath(`test-results/brand-survey-host/${brand}/${phase}/${suite}/attachments`),
   reporter: [['list'], ['json', { outputFile: rootPath(`test-results/brand-survey-host/${brand}/${phase}/${suite}/results.json`) }]],

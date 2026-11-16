@@ -87,7 +87,7 @@ async function rejectsAtArraySchema(h: Harness, actions: Actions, value: unknown
 beforeEach(() => installLocalFixtureBrowser())
 afterEach(() => vi.unstubAllGlobals())
 
-describe('normal source-bound array read, distinct from Stage2C Mock transactions', () => {
+describe('normal source-bound array read, distinct from synthetic array/cascade transactions', () => {
   it.each<Kind>(['checkbox', 'select', 'cascade'])('reads %s through its actual provider and retains private exact slots', async type => {
     for (const preset of [0, 1]) {
       const h = harness(type, preset), s = await h.reader.load(scope.workOrderId, scope.runtimeNodeId)

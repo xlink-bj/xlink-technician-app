@@ -4,9 +4,9 @@ import { expect, test } from '@playwright/test'
 
 /** R1 legacy extForm checkbox[]/cascade[] on the real App, isolated from
  * ordinary commercial Mock and every Production business-write adapter. */
-test.describe('Stage 2C source-backed array FormDef round-trip', () => {
+test.describe('R1 source-backed checkbox and cascade FormDef round-trip', () => {
   test.skip(process.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true'
-    || process.env.VITE_XLINK_R1_STAGE2C_ARRAYS !== 'true',
+    || process.env.VITE_XLINK_R1_ARRAY_CASCADE_FIELDS !== 'true',
   'The 020/021 and opt-in R1 array fixture are required.')
 
   test('430×932: checkbox and cascade save, edit, restart and readback', async ({ page }, info) => {
@@ -36,7 +36,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
       await expect(page.getByTestId('a-special-cleanup-pending')).toHaveCount(0)
       await expect(page.getByTestId('a-special-edit-' + id)).toHaveAttribute('aria-disabled', 'false')
     }
-    await field('inspectionSummary').locator('textarea').fill('Stage2C 数组字段验证')
+    await field('inspectionSummary').locator('textarea').fill('数组级联回读验证')
     await field('inspectionNote').locator('textarea').fill('清空前备注')
     await field('inspectionResult').locator('.app-choice').filter({ hasText: '可继续施工' }).click()
     await field('inspectionChecks').locator('.app-choice').filter({ hasText: '排水口' }).click()
@@ -47,7 +47,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await page.getByTestId('a-special-save').click()
     await saved()
     const row = page.getByTestId('a-special-row-mock-special-form-data-forms-1')
-    await expect(row).toContainText('Stage2C 数组字段验证')
+    await expect(row).toContainText('数组级联回读验证')
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
     await expect(field('inspectionChecks').locator('.app-choice--selected')).toHaveCount(2)
     await expect(field('inspectionLocation').locator('.app-cascade-selector__child')
@@ -58,7 +58,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await page.getByTestId('a-special-save').click()
     await saved()
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(row).toContainText('Stage2C 数组字段验证')
+    await expect(row).toContainText('数组级联回读验证')
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
     await expect(field('inspectionChecks').locator('.app-choice--selected')).toHaveCount(1)
     await expect(field('inspectionLocation').locator('.app-cascade-selector__child')
@@ -69,7 +69,7 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await field('inspectionChecks').locator('.app-choice--selected').click()
     await page.getByTestId('a-special-save').click()
     await saved()
-    await expect(row).toContainText('Stage2C 数组字段验证')
+    await expect(row).toContainText('数组级联回读验证')
     await page.reload({ waitUntil: 'domcontentloaded' })
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
     await expect(field('inspectionNote').locator('textarea')).toHaveValue('')
@@ -95,8 +95,8 @@ test.describe('Stage 2C source-backed array FormDef round-trip', () => {
     await page.getByTestId('a-special-delete-mock-special-form-data-forms-2').click()
     await page.getByTestId('a-special-confirm-delete-mock-special-form-data-forms-2').click()
     await expect(second).toContainText('已删除')
-    await expect(row).toContainText('Stage2C 数组字段验证')
-    await info.attach('stage2c-arrays-430', {
+    await expect(row).toContainText('数组级联回读验证')
+    await info.attach('array-cascade-form-430', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
     expect(external).toEqual([])

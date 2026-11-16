@@ -10,9 +10,9 @@ const optInFixtureFlags = [
   'VITE_XLINK_R1_SPECIAL_MEDIA',
   'VITE_XLINK_R1_BUSINESS_FIELDS',
   'VITE_XLINK_R1_DEEP_CASCADE',
-  'VITE_XLINK_R1_STAGE2D_FIELDS',
-  'VITE_XLINK_R1_STAGE2C_ARRAYS',
-  'VITE_XLINK_R1_STAGE2B_FIELDS',
+  'VITE_XLINK_R1_TEMPORAL_RATING_FIELDS',
+  'VITE_XLINK_R1_ARRAY_CASCADE_FIELDS',
+  'VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS',
   'VITE_XLINK_DYNAMIC_SCALAR_QA',
   'VITE_XLINK_R1_CATALOG_SCALE',
   'VITE_XLINK_R1_CATEGORY_FIXTURES',
@@ -32,6 +32,9 @@ const enabledOptInFixtureEnv = Object.fromEntries(
  */
 export default defineConfig({
   testDir: rootPath('tests/h5-main-mock'),
+  // These write-path suites require explicit scoped grants supplied by their
+  // dedicated configs; the inert general Mock cannot exercise their contract.
+  testIgnore: ['**/brand-survey-host.spec.ts', '**/map-bizselect-scalar-edit.spec.ts'],
   workers: 1,
   fullyParallel: false,
   retries: 0,

@@ -128,3 +128,23 @@ for (const change of ['leave-and-return','role-change'] as const) test(`C1 late 
  await expect(page).toHaveURL(/detail\?id=mock-work-order-017-survey-success/);await expect(page.locator('.detail-page')).toBeVisible()
  expect(errors).toEqual([])
 })
+
+test('C1 expired read clears workbench facts and returns to normal login', async ({page}) => {
+ const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message))
+ await page.goto('/#/pages/index/index');await ready(page)
+ await page.evaluate(async()=>{
+  const boardPath='/src/features/home/workbench.ts',statePath='/src/shared/state/index.ts'
+  const board=(await import(boardPath)).useWorkbenchStore(),session=(await import(statePath)).useSessionStore()
+  // Inject only the read-port expiry result; actual Home, session teardown and login render remain live.
+  board.configure({listWorkOrders:async()=>({state:'failed_terminal',error:{category:'session_invalid',message:'Synthetic expired read'}})},()=>session.session,()=>null,()=>session.endSession())
+  await board.refresh()
+ })
+ await expect(page.locator('.login-page')).toBeVisible();await expect(page.locator('.c1-workbench')).toHaveCount(0)
+ await expect(page.getByTestId('main-tab-home')).toHaveCount(0)
+ expect(await page.evaluate(async()=>{
+  const boardPath='/src/features/home/workbench.ts',statePath='/src/shared/state/index.ts'
+  const board=(await import(boardPath)).useWorkbenchStore(),session=(await import(statePath)).useSessionStore()
+  return {session:session.session,counts:board.counts,tasks:board.tasks,next:board.next,demoDate:board.demoDate}
+ })).toEqual({session:null,counts:{},tasks:[],next:null,demoDate:null})
+ await page.reload();await ready(page);expect(errors).toEqual([])
+})

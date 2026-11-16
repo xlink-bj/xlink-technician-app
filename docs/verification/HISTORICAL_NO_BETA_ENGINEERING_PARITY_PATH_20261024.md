@@ -1,5 +1,11 @@
 # New App: engineering path when no writable Beta exists
 
+> **Historical decision and execution snapshot (2026-10-24/25).** The A/B/C
+> lanes, commands and PR status below describe that date. Current environment,
+> verification and authorization boundaries are in the
+> [quality entry](../engineering/QUALITY_AND_ENVIRONMENT_GATES.md); supported
+> synthetic behavior is in the [Mock capability inventory](../engineering/R1_OFFLINE_DYNAMIC_FORM_CAPABILITY_MATRIX.md).
+
 Date: 2026-10-24. Owner: ChatGPT Lead. Status: **engineering continues; live R1 write acceptance remains HOLD**.
 
 ## Decision
@@ -15,7 +21,7 @@ Keep two independent gates:
 
 | Lane | Required exit | Current independently established result |
 | --- | --- | --- |
-| **A — source-shaped offline Mock, including explicit unsupported gates** | Main-App UI can save/edit, read back and advance each *supported* synthetic action with R1-shaped command/status/failure semantics; appointment, survey, dynamic forms, Workflow, quotation/SKU/Order/Contract have a supported or explicitly blocked outcome | **A ENGINEERING EXIT ACCEPTED (bounded).** The two P0 paths and three P1 gates have end-to-end Mock/function/negative tests. 019 appointment→survey→quotation, 020 forms and 021 repeat save/edit/delete/finalize, plus 019 priced ordinary Material+procedure → synthetic `type=1` Order with fresh readback/restart and no real submit, passed H5 and 375×667 Mac native acceptance at the pinned code tree. Unknown effective SKU price, unsupported field providers and Contract/sign/PDF/SMS remain **explicitly blocked**; they are *not* treated as completed positive business paths. This is an offline Mock engineering exit, **not full live R1 parity**. See [`A_STAGE_ENGINEERING_EXIT.md`](./A_STAGE_ENGINEERING_EXIT.md) and the [exact-source MP acceptance](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398758924). |
+| **A — source-shaped offline Mock, including explicit unsupported gates** | Main-App UI can save/edit, read back and advance each *supported* synthetic action with R1-shaped command/status/failure semantics; appointment, survey, dynamic forms, Workflow, quotation/SKU/Order/Contract have a supported or explicitly blocked outcome | **A ENGINEERING EXIT ACCEPTED (bounded).** The two P0 paths and three P1 gates have end-to-end Mock/function/negative tests. 019 appointment→survey→quotation, 020 forms and 021 repeat save/edit/delete/finalize, plus 019 priced ordinary Material+procedure → synthetic `type=1` Order with fresh readback/restart and no real submit, passed H5 and 375×667 Mac native acceptance at the pinned code tree. Unknown effective SKU price, unsupported field providers and Contract/sign/PDF/SMS remain **explicitly blocked**; they are *not* treated as completed positive business paths. This is an offline Mock engineering exit, **not full live R1 parity**. See [the historical A exit ledger](./HISTORICAL_A_STAGE_ENGINEERING_EXIT_20261025.md) and the [exact-source MP acceptance](https://github.com/xlink-bj/xlink-technician-app/pull/217#issuecomment-6398758924). |
 | **B — Production read-only** | Current role-authorized App pages use official bounded API reads; Production database used only to reconcile semantics and redacted inconsistencies; no business commands/uploads | **PARTIAL, existing read evidence.** #199 and the three-pillar contract matrix verify bounded WorkOrder/Workflow/FormData/Order/Contract shapes, plus explicitly distinct Order query semantics. No new Production network request is required to repeat that historical evidence. Full live App/WeChat read-path UX acceptance remains open; default allowlists must not expand by inference. |
 | **C — isolated Beta/test writes** | Owner-approved R1-backed disposable scope, audited FormData/EXTS/Workflow and later commercial actions, server ACK plus fresh authoritative readback and cleanup | **HOLD — no approved writable R1-backed fixture.** Offline stateful shadow and scoped staging gateway exist but remain outside the default App. Production business writes are categorically forbidden. |
 
@@ -69,7 +75,7 @@ fail-closed pending-receipt/readback guidance, confirmed local-receipt recovery
 without command replay, and clearer synthetic Order labeling. The cross-page
 operation → command → Mock persistence → readback → regression trace and the
 two-viewport H5 CI screenshot gate are enumerated in
-`docs/engineering/A_STAGE_P1_ACCEPTANCE_EVIDENCE.md`. Local full verification
+`docs/verification/HISTORICAL_A_STAGE_P1_ACCEPTANCE_EVIDENCE_20261025.md`. Local full verification
 and H5/MP-WEIXIN/App builds passed. **2026-10-25 update:** the exact-tree H5 CI
 and scoped 375×667 Mac WeChat DevTools gesture-level review subsequently
 passed; see the canonical A engineering exit ledger. Owner commercial visual

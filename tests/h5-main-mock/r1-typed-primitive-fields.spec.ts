@@ -2,12 +2,12 @@ import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-fo
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test } from '@playwright/test'
 
-/** Isolated Stage 2B FormDef variant. Both fixture flags must be explicit.
+/** Isolated typed primitive FormDef variant. Both fixture flags must be explicit.
  * The normal 020/021 commercial Mock screen remains unchanged. */
-test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
+test.describe('R1 typed primitive FormDef on the real H5 App', () => {
   test.skip(process.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true'
-    || process.env.VITE_XLINK_R1_STAGE2B_FIELDS !== 'true',
-  'Both 020/021 and the Stage 2B field variant must be enabled.')
+    || process.env.VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS !== 'true',
+  'Both 020/021 and the typed primitive field variant must be enabled.')
 
   test('430×932: primitive input, typed readback, edit and reload with zero external traffic', async ({ page }, info) => {
     await page.setViewportSize({ width: 430, height: 932 })
@@ -27,7 +27,7 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
     await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
     const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
-    await field('inspectionSummary').locator('textarea').fill('Stage2B 现场类型验证')
+    await field('inspectionSummary').locator('textarea').fill('类型字段回读验证')
     await field('inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()
     await field('inspectionContactPhone').locator('input').fill('0013800100200')
     await field('inspectionIdentityNumber').locator('input').fill('000100200300400500')
@@ -54,7 +54,7 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     await page.getByTestId('a-special-save').click()
 
     const row = page.getByTestId('a-special-row-mock-special-form-data-forms-1')
-    await expect(row).toContainText('Stage2B 现场类型验证')
+    await expect(row).toContainText('类型字段回读验证')
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
     await expect(field('inspectionContactPhone').locator('input')).toHaveValue('0013800100200')
     await expect(field('inspectionIdentityNumber').locator('input')).toHaveValue('000100200300400500')
@@ -75,7 +75,7 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
     await expect(page.getByTestId('a-special-local-submission-pending')).toHaveCount(0)
     await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(row).toContainText('Stage2B 现场类型验证')
+    await expect(row).toContainText('类型字段回读验证')
     await page.getByTestId('a-special-edit-mock-special-form-data-forms-1').click()
     await expect(count).toHaveValue('14')
     await expect(area).toHaveValue('14.25')
@@ -83,7 +83,7 @@ test.describe('Stage 2B R1 primitive FormDef types on real H5 App', () => {
       .toHaveClass(/app-choice--selected/)
     await expect(field('inspectionCategory').locator('.app-choice').filter({ hasText: '外墙' }))
       .toHaveClass(/app-choice--selected/)
-    await info.attach('stage2b-synthetic-form-430', {
+    await info.attach('typed-primitive-form-430', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
     expect(external).toEqual([])

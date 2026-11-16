@@ -1,5 +1,12 @@
 # Stage 2B — R1 FormDef primitive field parity
 
+> **Historical snapshot (2026-11-02).** This records the scope, commands and open
+> questions at that date; it is not current execution guidance. Use the
+> [current capability inventory](../engineering/R1_OFFLINE_DYNAMIC_FORM_CAPABILITY_MATRIX.md)
+> and [current quality entry](../engineering/QUALITY_AND_ENVIRONMENT_GATES.md)
+> for supported behavior and verification paths. Names and flags below are
+> preserved as historical evidence.
+
 **Decision baseline:** `main@5b0c37373e46268e98ec651c9807575395f2235c` (Stage 2A). 2026-11-02.
 **State at first-slice implementation:** `SCALAR_SLICE_CODE_PASS / EXACT_MAIN_CI_PENDING` (2026-11-02). The remaining conditional/array/provider work is not implemented. This document does not authorize real business writes or native device acceptance.
 

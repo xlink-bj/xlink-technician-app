@@ -12,7 +12,7 @@ export default defineConfig({
     ...server,
     command: './node_modules/.bin/uni -p h5 --host localhost --port 5183 --strictPort',
     url: baseURL,
-    env: { ...server.env, VITE_XLINK_R1_MP_UX_FIXTURES: 'true', VITE_XLINK_R1_STAGE2B_FIELDS: 'true' },
+    env: { ...server.env, VITE_XLINK_R1_MP_UX_FIXTURES: 'true', VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true' },
   },
   use: { ...base.use, baseURL, viewport: { width: 430, height: 932 }, trace: 'on' },
 })

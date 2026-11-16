@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  stage1b-mock-h5:
+  main-app-flows-h5:
     # Complete browser acceptance runs nightly, manually, or for a marked PR.
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
@@ -92,36 +92,43 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: node scripts/check-playwright-runtime.mjs
-      - name: Verify Stage 1B/2A CRUD and appointment/signing returns at 375/390/430 (one browser boot)
-        # Preserve the original grep; the anchored file-title branch adds all deferred cases.
-        run: >-
-          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2
-          tests/h5-main-mock/stage1b-r1-forms-after-save.spec.ts
-          tests/h5-main-mock/stage2a-r1-multifield.spec.ts
-          tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
-          tests/h5-main-mock/normal-survey-mock-reader.spec.ts
-          tests/h5-main-mock/dynamic-field-registry.spec.ts
-          tests/h5-main-mock/detail-archives.spec.ts
-          tests/h5-main-mock/deferred-appointment-r1.spec.ts
-          --grep 'Stage 1B|Stage 2A|020 forms|021 repeat|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)'
-      - name: Verify Stage 2B optional typed primitives on source-shaped Mock FormDef
+      - name: Verify forms Save/Process, source fields and appointment readback at 375/390/430
+        # The P1 job runs 020/021 on schedule/manual; keep those cases here for FORM-BATCH PRs.
+        # The anchored file-title branch still selects all deferred cases.
+        run: |
+          p1_cases=()
+          p1_pattern=''
+          if [[ "${GITHUB_EVENT_NAME:-}" == 'pull_request' ]]; then
+            p1_cases=(tests/h5-main-mock/a-stage-p1-acceptance.spec.ts)
+            p1_pattern='|020 forms|021 repeat'
+          fi
+          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2 \
+            tests/h5-main-mock/forms-save-process-readback.spec.ts \
+            tests/h5-main-mock/r1-source-formdef-multifield.spec.ts \
+            "${p1_cases[@]}" \
+            tests/h5-main-mock/normal-survey-mock-reader.spec.ts \
+            tests/h5-main-mock/dynamic-field-registry.spec.ts \
+            tests/h5-main-mock/detail-archives.spec.ts \
+            tests/h5-main-mock/deferred-appointment-r1.spec.ts \
+            --grep "R1 forms Save→EXTS→Process|R1 source FormDef multi-field save/edit/readback${p1_pattern}|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)"
+      - name: Verify source-shaped typed primitive fields on the real H5 App
         env:
-          VITE_XLINK_R1_STAGE2B_FIELDS: 'true'
-        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage2b-r1-primitive-fields.spec.ts
-      - name: Verify Stage 2C R1 checkbox/cascade arrays on the real App
+          VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/r1-typed-primitive-fields.spec.ts
+      - name: Verify R1 checkbox and cascade array roundtrip on the real H5 App
         env:
-          VITE_XLINK_R1_STAGE2C_ARRAYS: 'true'
-        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/stage2c-r1-array-fields.spec.ts
+          VITE_XLINK_R1_ARRAY_CASCADE_FIELDS: 'true'
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/r1-array-cascade-fields.spec.ts
       - name: Verify real GenericDynamicFormActionContent scalar preview and write fence at 430
         env:
           VITE_XLINK_DYNAMIC_SCALAR_QA: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/dynamic-form-scalar-closure.spec.ts
       - name: Verify offline drafts, persistent media recovery and temporal records at 430
         env:
-          VITE_XLINK_R1_STAGE2D_FIELDS: 'true'
+          VITE_XLINK_R1_TEMPORAL_RATING_FIELDS: 'true'
         run: >-
           pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2
-          tests/h5-main-mock/stage2d-r1-temporal-fields.spec.ts
+          tests/h5-main-mock/r1-temporal-rating-fields.spec.ts
           tests/h5-main-mock/weak-network-recovery.spec.ts
           tests/h5-main-mock/m3-survey-media-430.spec.ts
           tests/h5-main-mock/media-interrupted-receipt.spec.ts
@@ -160,7 +167,7 @@ jobs:
       - name: Verify R1 Mock repeat query readback and record lifecycle at 430
         env:
           VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
-          VITE_XLINK_R1_STAGE2B_FIELDS: 'true'
+          VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true'
         run: pnpm exec playwright test --config config/playwright/mock-repeat-query.config.ts
       - name: Verify normal App Survey 59 conditions and read-only media at 430
         env:
@@ -170,11 +177,11 @@ jobs:
         run: |
           VITE_XLINK_BRAND=xlink pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts tests/h5-main-mock/brand-attachment-states.spec.ts
           VITE_XLINK_BRAND=yuhong pnpm exec playwright test --config config/playwright/brand-h5.config.ts tests/h5-main-mock/brand-quotation.spec.ts tests/h5-main-mock/brand-home.spec.ts tests/h5-main-mock/brand-signing-read.spec.ts tests/h5-main-mock/brand-attachment-states.spec.ts
-      - name: Preserve Stage 1B/2A/2B/2C offline H5 evidence
+      - name: Preserve main App flows and offline H5 evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: stage1b-main-h5-${{ github.run_id }}
+          name: main-app-flows-h5-${{ github.run_id }}
           path: |
             test-results/main-h5-mock/
             test-results/brand-h5/
@@ -428,6 +435,11 @@ jobs:
           VITE_XLINK_ENVIRONMENT: 'test'
           VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
         run: pnpm exec playwright test --config config/playwright/survey-conditional-create.config.ts
+      - name: Verify scoped Survey creation, saved readback and uncertain-save recovery
+        env:
+          VITE_XLINK_ENVIRONMENT: 'test'
+          VITE_XLINK_R1_MP_UX_FIXTURES: 'false'
+        run: pnpm exec playwright test --config config/playwright/brand-survey-host.config.ts
       - name: Verify restricted typed Survey first-image creation and exact readback
         env:
           XLINK_H5_SURVEY_FIRST_MEDIA_SAVE: 'true'
@@ -530,6 +542,7 @@ jobs:
             test-results/work-order-detail-lifecycle/
             test-results/survey-part-create/
             test-results/survey-conditional-create/
+            test-results/brand-survey-host/
             test-results/survey-first-media-save/
             test-results/survey-regions-is-read/
             test-results/work-order-refresh-navigation/

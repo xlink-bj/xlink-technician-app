@@ -1,17 +1,48 @@
-# A — R1-shaped Offline Mock capability inventory
+# R1-shaped Offline Mock capability inventory
 
 This is a source/test inventory of the main App, not live/native certification.
 Implemented means the named layer is implemented; preview alone is not a saved
 FormData transaction. Unknown schemas remain Unsupported rather than invented.
 
+The default commercial synthetic inspection FormDef has four fields. Explicit
+DEV-only fixture switches select the 10-field typed primitive, 12-field
+array/cascade or 16-field temporal/rating variant; each extends the preceding
+shape. These switches do not grant a Production/Beta write or establish a live
+tenant's ExtField schema. The original 2026-11-02 implementation scope is
+[historical evidence](../verification/HISTORICAL_STAGE2B_FORMDEF_SCOPE_20261102.md),
+not a current runbook.
+
+| DEV Mock FormDef | Explicit switch with `VITE_XLINK_R1_MP_UX_FIXTURES=true` | Fields | Browser evidence |
+| --- | --- | ---: | --- |
+| Default inspection | none | 4 | existing forms/repeat flow |
+| Typed primitives | `VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS=true` | 10 | `r1-typed-primitive-fields.spec.ts` |
+| Checkbox/cascade arrays | `VITE_XLINK_R1_ARRAY_CASCADE_FIELDS=true` | 12 | `r1-array-cascade-fields.spec.ts` |
+| Temporal/rating | `VITE_XLINK_R1_TEMPORAL_RATING_FIELDS=true` | 16 | `r1-temporal-rating-fields.spec.ts` |
+
+When several switches are enabled, temporal/rating takes precedence over
+array/cascade, which takes precedence over typed primitives. The current
+[H5 workflow](../../.github/workflows/validate-main-h5.yml) sets each switch
+for its corresponding test step; the default path does not inherit one.
+
+In the current synthetic work-order journeys, 019 covers appointment → Survey
+→ quotation; a priced ordinary Material + Procedure may produce a local
+`type=1` Order only after confirmation and exact-ID readback. An unverified SKU
+price blocks that path. 020 `forms` and 021 `repeat` keep FormData, EXTS and
+workflow-run identity scoped through save/edit/delete/finalize and fresh
+readback; uncertain ACKs retain a receipt and never replay automatically.
+Contract/signing/PDF/SMS effects remain blocked. These are DEV Mock behaviors,
+not live R1 write permission. The [historical acceptance ledger](../verification/HISTORICAL_A_STAGE_ENGINEERING_EXIT_20261025.md)
+records its pinned CI and device evidence; current verification follows the
+[quality entry](QUALITY_AND_ENVIRONMENT_GATES.md).
+
 | Capability | Status / scope | Code and behavioral evidence |
 | --- | --- | --- |
-| text / textarea / phone / IDNumber | Implemented: scalar draft + forms/repeat save/readback; leading zeros preserved | dynamic-form/values, r1-local-form-fields, r1-special-mock-form-fields; stage2b-r1-special-fields, stage2b-r1-primitive-fields H5 |
+| text / textarea / phone / IDNumber | Implemented: scalar draft + forms/repeat save/readback; leading zeros preserved | dynamic-form/values, r1-local-form-fields, r1-special-mock-form-fields; r1-typed-primitive-fields unit and H5 |
 | number / digit | Implemented: safe integers; finite decimals; special write precision guard | same modules; invalid and partial numeric inputs tested |
-| switch | Implemented: R1 special wire strings 1/0, no default value | shared field controls; Stage 2B H5 |
-| date / time / datetime / rate | Implemented: common native controls and forms/repeat record save, edit, clear, restart readback | R1FormFieldControl reuses AppDateTimeField/AppRatingField and field-control-registry; stage2d-r1-temporal-fields H5; controller negative tests reject impossible dates, UTC conversion and out-of-range rating |
-| select / radio / checkbox | Implemented with resolved source options; array bounds/membership enforced | Runtime + local/special validators; Stage 2B/2C H5 |
-| cascade | Implemented: ordered paths; two-level layout retained, deeper trees use recursive leaves; forged sibling paths rejected | Runtime values; Stage 2C H5 and deep-cascade-record H5 (three-level selection/edit/save/reload with exact persisted path) |
+| switch | Implemented: R1 special wire strings 1/0, no default value | shared field controls; r1-typed-primitive-fields H5 |
+| date / time / datetime / rate | Implemented: common native controls and forms/repeat record save, edit, clear, restart readback | R1FormFieldControl reuses AppDateTimeField/AppRatingField and field-control-registry; r1-temporal-rating-fields H5; controller negative tests reject impossible dates, UTC conversion and out-of-range rating |
+| select / radio / checkbox | Implemented with resolved source options; array bounds/membership enforced | Runtime + local/special validators; r1-typed-primitive-fields and r1-array-cascade-fields H5 |
+| cascade | Implemented: ordered paths; two-level layout retained, deeper trees use recursive leaves; forged sibling paths rejected | Runtime values; r1-array-cascade-fields and deep-cascade-record H5 (three-level selection/edit/save/reload with exact persisted path) |
 | multiple cascade / arbitrary nested objects | Unsupported: no verified generic R1 write representation | explicit local/special validation fence |
 | bizSelect | Implemented in generic Runtime/provider scope boundary and DEV-only special forms/repeat; offline `projPackage` synthetic Provider resolves IDs, validates membership, saves/edits/clears with main-App readback; real endpoint remains HOLD | provider-visibility and a-stage-main-app-special-controller; special-business-record main-App H5 (forms/repeat); no CodeService fallback or live Provider mapping inferred |
 | area / button / unknown controls | Unsupported: generic region/action protocol is not established; area is NOT decimal area measurement | classifyFieldType/normalizeFieldValue fail closed; existing named area measurement compatibility rule remains isolated |
@@ -19,14 +50,14 @@ FormData transaction. Unknown schemas remain Unsupported rather than invented.
 | visibility / required / readonly | Implemented in shared Runtime; complete special submissions now independent of field order | full input used for submit-time normalization; regression reverses dependent/controller row order, missing/hidden values remain rejected |
 | providers / conditional branches | Implemented for verified finite providers; malformed expressions fail closed | dynamic-form-provider-visibility, dynamic-form-r1-complex-closure |
 | ordinary dynamic-form media | Implemented shared policy/dispatch/queue/retry/local restore; source-specific media codecs remain Adapter-owned | dynamic-media-policy, media-upload-queue, Action Workspace; media-queue / c3c / c3c2 tests; main-App media H5 |
-| special forms/repeat writable media | Missing, independently from real-upload HOLD: current R1 special transaction value type is primitive/string-array and the known inspection image is a read-only reference | do not relabel reference image or accept arbitrary media objects into that protocol. Needs source-backed writable ExtField + its existing codec composed through shared queue, not a new uploader |
-| multiple FormDefs / repeat | Implemented: independently saved records, edit/delete, authoritative readback, explicit finish, no replay after uncertain ACK | a-stage-dynamic-form-mock-ui + r1-multistep-offline-transaction; controller/protocol tests; Stage 1B/2A/2C and a-stage-p1-acceptance H5 |
-| optional clear | Implemented in offline protocol including arrays and temporal/rating values; required/read-only values stay fenced | special validator + Mock protocol clear allowlist; Stage 2C/2D and controller tests |
+| special forms/repeat writable media | Implemented for an explicit DEV-only synthetic `type=file` ExtField: shared queue, retry, reload, removal and typed file-reference write/readback; live writable field/authorization remains HOLD | a-stage-last-two H5, special-duplicate-file-controller and P08 attachment-target tests; the ordinary inspection image remains read-only and is never an upload grant |
+| multiple FormDefs / repeat | Implemented: independently saved records, edit/delete, authoritative readback, explicit finish, no replay after uncertain ACK | a-stage-dynamic-form-mock-ui + r1-multistep-offline-transaction; controller/protocol, r1-array-cascade-fields and a-stage-p1-acceptance H5 |
+| optional clear | Implemented in offline protocol including arrays and temporal/rating values; required/read-only values stay fenced | special validator + Mock protocol clear allowlist; r1-array-cascade-fields, r1-temporal-rating-fields and controller tests |
 | Action Draft Repository | Implemented identity-keyed records + metadata registry, role/node/work-order/content isolation, no command payloads; damaged canonical drafts fail closed and cannot be overwritten | shared Action Runtime repository, draft-repository corruption regressions, dedicated weak-network H5 editor coverage |
 | incomplete special editor drafts | Implemented on existing Action Draft Repository; form-definition AND saved-record identity, local autosave, restart recovery, completed tombstone before cleanup | controller draft methods + actual special panel; weak-network-recovery H5 |
 | network recovery | Explicit user resubmit only; offline edits/autosave continue; no automatic command replay | existing NetworkStatusPort + platform adapter, special controller pre-dispatch guard |
 | browser media bytes | Implemented IndexedDB DurableMediaStorePort; task metadata alone is insufficient; fresh Blob URL after restart; failed database open can be retried | browser-durable-media-store, failure-injection unit tests; main-App media failure → full reload → manual retry H5 |
-| MP/App media files | Existing native saveFile DurableMediaStorePort retained | build checks + existing unit contracts; native operation is outside A completion criteria |
+| MP/App media files | Existing native saveFile DurableMediaStorePort retained | build checks + existing unit contracts; native operation is outside this inventory's evidence |
 
 ## Weak network acceptance boundaries
 
@@ -37,19 +68,19 @@ this does not claim a PWA cold launch with no cached App shell. Offline editing
 of an already-open App and recoverability of local records/files are separate
 from offline installation/bootstrap.
 
-## Remaining Cloud-only work
+## Current unverified scope
 
-Special writable media remains unsupported until a verified R1 writable ExtField
-and codec can be identified; reference-only images must not be relabeled. The
-DEV-only special bizSelect Mock transaction is implemented, but real Provider
+The DEV-only special file fixture does not establish a live writable R1 ExtField,
+real upload permission or codec parity; reference-only images must not be relabeled.
+The DEV-only special bizSelect Mock transaction is implemented, but real Provider
 semantics remain LIVE_BIZSELECT_HOLD. Interrupted submit/ACK, quota-denial retry and stale-revision preservation
 have main-App H5 coverage. Damaged drafts, storage faults and completed-tombstone
 rejection have unit regressions. Atomic cross-tab compare-and-swap is not
 provided by the current StoragePort; a future multi-editor editing protocol
 must not treat this timestamp guard as an atomic transaction. No live API work is required
-or proposed here. A is not declared complete while remaining acceptance gates are open.
+or proposed here. Open evidence boundaries remain independent of completed Mock cases.
 
-## Independent HOLD ledger (not A tasks or completion gates)
+## Independent HOLD ledger
 
 LIVE_BIZSELECT_HOLD; Optional Clear Beta business writes; real media upload/save;
 real Workflow progression; Mac WeChat device operations. No Production/Beta
