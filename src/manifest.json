@@ -10,5 +10,12 @@
   },
   "h5": {
     "title": "XLink Technician"
+  },
+  "mp-weixin": {
+    "setting": {
+      "minified": true,
+      "minifyWXSS": true,
+      "minifyWXML": true
+    }
   }
 }
