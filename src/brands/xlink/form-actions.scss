@@ -1,0 +1,5 @@
+.action-workspace-form-actions-wrap { display: flex; flex-direction: column; gap: var(--app-space-sm); width: 100%; }
+.action-workspace-form-actions__hint { display: flex; align-items: center; justify-content: center; gap: var(--app-space-xs); color: var(--app-color-warning); font-size: var(--app-font-meta); line-height: 1.5; }
+.action-workspace-form-actions__status { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); line-height: 1.5; }
+.action-workspace-form-actions { display: flex; gap: var(--app-action-bar-gap); width: 100%; }
+.action-workspace-form-actions > .app-button { flex: 1 1 0; min-width: 0; }

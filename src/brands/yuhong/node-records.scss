@@ -29,3 +29,6 @@
 .special-forms__draft-error { color: var(--yh-color-status-error-fg); }
 .special-forms__message--error { color: var(--yh-color-status-error-fg); }
 .special-forms__confirmation { flex-wrap: wrap; padding: var(--yh-space-16) 0; font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+
+.special-forms__save-finish-option { margin-top: var(--yh-space-16); padding-top: var(--yh-space-12); border-top: var(--yh-border-width) solid var(--yh-color-border-divider); }
+.special-forms__completion-confirmation { flex-direction: column; align-items: stretch; gap: var(--yh-space-12); padding: 0; }

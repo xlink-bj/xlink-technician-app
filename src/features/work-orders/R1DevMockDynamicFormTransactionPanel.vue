@@ -143,34 +143,41 @@
           <view class="special-forms__buttons">
             <view class="special-forms__save-button">
               <AppButton block :disabled="busy || restoringDraft || !formValid || hasPendingMedia" :loading="busy"
-                data-testid="a-special-save" @tap="save">{{ editingId ? '保存修改' : '保存记录' }}</AppButton>
+                data-testid="a-special-save" @tap="save">{{ editingId ? '保存本条修改' : '保存本条记录' }}</AppButton>
             </view>
             <view v-if="editingId" class="special-forms__cancel-button">
               <AppButton variant="text" :disabled="busy || restoringDraft" @tap="cancelEdit">取消</AppButton>
             </view>
           </view>
-          <view v-if="kind === 'forms' && !editingId" class="special-forms__finish">
-            <AppButton v-if="!confirmSaveFinish" variant="secondary" block
-              :disabled="busy || restoringDraft || !formValid || hasPendingMedia" data-testid="a-special-save-finish-request"
-              @tap="confirmSaveFinish = true">保存并完成节点</AppButton>
-            <view v-else class="special-forms__confirmation">
-              <text>确认保存本条记录，并立即完成当前节点？</text>
-              <AppButton :disabled="busy || restoringDraft || !formValid || hasPendingMedia" data-testid="a-special-save-finish-confirm"
-                @tap="run({ kind: 'save_finish', fields: draftValues, formDefinitionId: selectedFormDefinitionId })">确认保存并完成</AppButton>
-              <AppButton variant="text" :disabled="busy || restoringDraft" @tap="confirmSaveFinish = false">返回检查</AppButton>
-            </view>
-          </view>
         </view>
-        <view class="special-forms__finish">
-          <text class="special-forms__finish-copy">{{ canFinish ? '确认记录齐全后可以完成；完成后不可再编辑。' : '请先保存至少一条有效记录。' }}</text>
-          <AppButton v-if="!confirmFinish" variant="secondary" block
-            :disabled="busy || restoringDraft || !canFinish" data-testid="a-special-finish-request"
-            @tap="confirmFinish = true">完成现场记录</AppButton>
-          <view v-else class="special-forms__confirmation">
-            <text>确认记录已齐全并完成当前节点？</text>
-            <AppButton :disabled="busy || restoringDraft" data-testid="a-special-finish-confirm"
-              @tap="run({ kind: 'finish' })">确认完成</AppButton>
-            <AppButton variant="text" :disabled="busy || restoringDraft" @tap="confirmFinish = false">返回检查</AppButton>
+        <view class="special-forms__finish" data-testid="a-special-completion-section">
+          <text class="special-forms__section-title">完成当前节点</text>
+          <text class="special-forms__finish-copy">仅处理记录列表中已保存的记录，不会自动保存本机草稿。</text>
+          <text v-if="!confirmFinish && !confirmSaveFinish" class="special-forms__finish-copy" data-testid="a-special-finish-readiness">{{ finishReadiness }}</text>
+          <template v-if="!confirmFinish && !confirmSaveFinish">
+            <AppButton variant="secondary" block
+              :disabled="busy || restoringDraft || !canFinish || hasPendingMedia" data-testid="a-special-finish-request"
+              @tap="confirmFinish = true">核对已保存记录并完成</AppButton>
+            <view v-if="kind === 'forms' && !editingId && hasUnsavedRecordChanges" class="special-forms__save-finish-option">
+              <text class="special-forms__finish-copy">若本条也需要计入本次完成，可先保存本条并完成当前节点。</text>
+              <AppButton variant="text" block
+                :disabled="busy || restoringDraft || !formValid || hasPendingMedia" data-testid="a-special-save-finish-request"
+                @tap="confirmSaveFinish = true">保存本条并完成节点</AppButton>
+            </view>
+          </template>
+          <view v-else-if="confirmSaveFinish" class="special-forms__confirmation special-forms__completion-confirmation">
+            <text>确认先保存当前填写的本条记录，再完成当前节点？保存或结果核对未成功时，不会显示完成。</text>
+            <AppButton :disabled="busy || restoringDraft || !formValid || hasPendingMedia" data-testid="a-special-save-finish-confirm"
+              @tap="run({ kind: 'save_finish', fields: draftValues, formDefinitionId: selectedFormDefinitionId })">确认保存并完成</AppButton>
+            <AppButton variant="text" :disabled="busy || restoringDraft" data-testid="a-special-save-finish-back" @tap="confirmSaveFinish = false">返回继续填写</AppButton>
+          </view>
+          <view v-else class="special-forms__confirmation special-forms__completion-confirmation">
+            <text data-testid="a-special-finish-confirm-copy">{{ hasUnsavedRecordChanges
+              ? '当前编辑内容尚未保存为记录。请返回保存本条，再完成节点；本次不会自动保存或丢弃这些改动。'
+              : '请确认已保存记录齐全。本次仅完成当前节点，核验成功后将返回只读记录摘要。' }}</text>
+            <AppButton :disabled="busy || restoringDraft || !canFinish || hasPendingMedia || hasUnsavedRecordChanges" data-testid="a-special-finish-confirm"
+              @tap="run({ kind: 'finish' })">确认完成当前节点</AppButton>
+            <AppButton variant="text" :disabled="busy || restoringDraft" data-testid="a-special-finish-back" @tap="confirmFinish = false">返回继续填写</AppButton>
           </view>
         </view>
       </template>
@@ -383,6 +390,21 @@ const confirmFinish = ref(false)
 const confirmSaveFinish = ref(false)
 const canFinish = computed(() => Boolean(viewState.value?.entries.some(row =>
   row.state === 'active' && (props.kind === 'forms' || row.editable))))
+// Compare the current editor with the exact saved row. Local persistence alone
+// is not FormData saving; an empty new editor is not an unsaved record.
+const hasUnsavedRecordChanges = computed(() => {
+  if (!editingId.value) return Object.keys(draftValues.value).length > 0
+  const original = viewState.value?.entries.find(row => row.id === editingId.value)?.values
+  if (!original) return true
+  const keys = new Set([...Object.keys(original), ...Object.keys(draftValues.value)])
+  return [...keys].some(key => JSON.stringify(original[key]) !== JSON.stringify(draftValues.value[key]))
+})
+const finishReadiness = computed(() => hasPendingMedia.value
+  ? '当前附件尚未处理完成，请先核对附件状态。'
+  : hasUnsavedRecordChanges.value
+    ? '当前还有未保存为记录的改动，请先保存本条。'
+    : canFinish.value ? '可核对已保存记录后完成。' : '请先保存至少一条有效记录。')
+
 let revision = 0
 let loadRevision = 0
 let controller: AStageDynamicFormMockController | null = null
@@ -542,6 +564,13 @@ async function save(): Promise<void> {
 }
 async function run(action: AStageDynamicFormAction): Promise<void> {
   if ('fields' in action && !inputsValid.value) return
+  // Confirmation safeguard only. Do not change canFinish or the controller's
+  // source-owned completion rules, and never silently omit the current edits.
+  if (action.kind === 'finish' && hasUnsavedRecordChanges.value) {
+    confirmFinish.value = true
+    operationFeedback.value = '当前编辑内容尚未保存为记录，请先保存本条。'
+    return
+  }
   const current = controller
   if (!current || busy.value || restoringDraft.value || localSubmissionPending.value || cleanupPending.value || hasPendingMedia.value) return
   busy.value = true

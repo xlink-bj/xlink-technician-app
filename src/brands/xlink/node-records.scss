@@ -20,6 +20,7 @@
 .special-forms__reference { margin-top:16rpx; padding:16rpx 18rpx; border-radius:12rpx; background:var(--app-color-surface, #f5f7fa); color:var(--app-color-text-secondary); font-size:26rpx; }
 .special-forms__validation { display:block; margin-top:16rpx; font-size:26rpx; color:#985919; }
 .special-forms__required { color:#b55343; }
+.special-forms--confirming .special-forms__buttons { display: none; }
 .special-forms__buttons { margin-top:22rpx; }
 .special-forms__save-button { flex:1 1 0; min-width:0; }
 .special-forms__cancel-button { flex:0 0 auto; min-width:96rpx; }
@@ -27,3 +28,6 @@
 .special-forms__message,.special-forms__empty { display:block; padding:24rpx 0; font-size:25rpx; line-height:1.5; color:var(--app-color-text-secondary); }
 .special-forms__message--error { color:#985919; }
 .special-forms__confirmation { flex-wrap:wrap; padding:16rpx 0; font-size:24rpx; }
+
+.special-forms__save-finish-option { margin-top: var(--app-space-lg); padding-top: var(--app-space-md); border-top: 1rpx solid var(--app-color-border); }
+.special-forms__completion-confirmation { flex-direction: column; align-items: stretch; gap: var(--app-space-md); padding: 0; }

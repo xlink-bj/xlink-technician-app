@@ -1,0 +1,5 @@
+.action-workspace-form-actions-wrap { display: flex; flex-direction: column; gap: var(--yh-space-8); width: 100%; }
+.action-workspace-form-actions__hint { display: flex; align-items: center; justify-content: center; gap: var(--yh-space-4); color: var(--yh-color-status-warning-fg); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.action-workspace-form-actions__status { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.action-workspace-form-actions { display: flex; gap: var(--yh-layout-footer-gap); width: 100%; }
+.action-workspace-form-actions > .app-button { flex: 1 1 0; min-width: 0; }

@@ -1,14 +1,16 @@
 <template>
   <view class="action-workspace-form-actions-wrap" data-testid="action-workspace-form-actions-wrap">
     <view v-if="hint" class="action-workspace-form-actions__hint" data-testid="survey-complete-hint">
-      <AppIcon name="warning" :size="14" color="#db8a2e" />
+      <AppIcon name="warning" :size="14" color="var(--app-color-warning)" />
       <text>{{ hint }}</text>
     </view>
+    <text v-if="saveState !== 'saved'" class="action-workspace-form-actions__status" data-testid="dynamic-form-save-status">{{ saveState === 'saving' ? '正在保存当前表单，请稍候。' : saveState === 'failed' ? '表单保存未成功，当前输入仍保留。' : '当前修改尚未保存为记录。' }}</text>
+    <text v-else class="action-workspace-form-actions__status" data-testid="dynamic-form-save-status">表单已保存；完成操作仍需满足当前节点条件。</text>
     <view class="action-workspace-form-actions" data-testid="action-workspace-form-actions">
     <AppButton
       data-testid="dynamic-form-save"
       class="action-workspace-form-actions__save"
-      variant="secondary"
+      :variant="saveState === 'saved' ? 'secondary' : 'primary'"
       :disabled="!canSave || saveState === 'saved' || lifecycle === 'submitting' || transitioning || saveState === 'saving'"
       :loading="saveState === 'saving'"
       block
@@ -19,6 +21,7 @@
     <AppButton
       data-testid="action-workspace-submit"
       class="action-workspace-form-actions__complete"
+      :variant="saveState === 'saved' ? 'primary' : 'secondary'"
       :disabled="!canSubmit || lifecycle === 'submitting' || transitioning || saveState === 'saving'"
       :loading="lifecycle === 'submitting' || transitioning"
       block
@@ -62,17 +65,5 @@ defineEmits<{
 </script>
 
 <style>
-.action-workspace-form-actions-wrap { display:flex; flex-direction:column; gap:9rpx; width:100%; }
-.action-workspace-form-actions__hint { text-align:center; color:var(--app-color-text-secondary); font-size:var(--app-font-meta); line-height:1.4; }
-.action-workspace-form-actions {
-  display: flex;
-  gap: var(--app-action-bar-gap);
-  width: 100%;
-}
-
-.action-workspace-form-actions > .app-button {
-  flex: 1 1 0;
-  min-width: 0;
-}
-.action-workspace-form-actions__hint { display:flex; align-items:center; justify-content:center;
-  gap:8rpx; font-size:22rpx; color:#ad6b28; line-height:1.45; padding:0 4rpx; }</style>
+@import "@brand-ui/form-actions.scss";
+</style>
