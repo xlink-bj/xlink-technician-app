@@ -98,7 +98,7 @@ jobs:
       - name: Verify Stage 1B/2A CRUD and appointment/signing returns at 375/390/430 (one browser boot)
         # Preserve the original grep; the anchored file-title branch adds all deferred cases.
         run: >-
-          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts
+          pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2
           tests/h5-main-mock/stage1b-r1-forms-after-save.spec.ts
           tests/h5-main-mock/stage2a-r1-multifield.spec.ts
           tests/h5-main-mock/a-stage-p1-acceptance.spec.ts

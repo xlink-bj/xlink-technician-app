@@ -28,6 +28,7 @@
 | 关键业务负例 | pnpm run check:critical / pnpm run verify:critical | 检查 manifest 和执行对应 suites |
 | 共享 UI 与商业 CSS | pnpm run check:ui-governance | 包含可静态约束的样式所有权 |
 | 主 App H5 Mock | pnpm run test:main-h5-mock | 网络隔离的真实主 App 操作 |
+| 主 App H5 局部冒烟 | `pnpm run test:main-h5-smoke` | 现有 430 视口业务/媒体/双品牌场景、430 搜索和 430/默认 390 输入用例；用于开发反馈，完整 H5 验收仍看现行 CI 或手动运行 |
 | H5 基础启动 | pnpm run test:main-h5-boot | 检查生产级入口启动，不代表登录成功 |
 | H5 正式构建 | pnpm run build:h5 | C1-FIX 后包含 QA 路由与 JS 产物缺席校验 |
 | 微信构建 | pnpm run build:mp-weixin | 包含 WXSS 检查；不代表真机 |
@@ -40,7 +41,7 @@
 ## 3. CI 层次与真实含义
 
 - **L1 / 开发回路**：受影响单测、类型、静态边界，必要时本机/云 H5 UI；工具不应承诺从 GitHub PR 获得即时 HMR。
-- **主干 CI / main push、手动**：Validate/verify 运行 pnpm verify + MP/App build；Validate Main H5 UX/h5-ux 运行 H5 build、入口、主 App Mock 与历史回归。
+- **主干 CI / main push、手动**：Validate 运行 `verify` 与三端构建；Validate Main H5 UX 的 Stage1B、草稿/角色媒体/创建组运行完整的既定 H5 用例。`h5-ux` 专项只在定时或手动运行；本地局部冒烟不代表这些完整 job 通过。
 - **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。旧 Draft 分支专项 workflow 与历史阶段报告不构成当前 main push 门禁。
 - **Release/Owner**：同视口商业 UI 接受、微信开发者工具/物理设备、Android/iOS、Beta 真实写入分别记录。不能用 CI green 替代这些 Gate。
 
