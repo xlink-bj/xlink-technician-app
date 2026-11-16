@@ -98,17 +98,19 @@
     :display-number="workspace.detail?.displayNumber"
     :commercial-survey="workspace.descriptor.formPurpose === 'survey'"
     :h5-navigation-fit="Boolean(workspace.appointmentForm)"
-    :prefer-default-actions="Boolean(workspace.appointmentForm)"
     :demo-survey="Boolean(localJourneyContext)"
     :lifecycle="workspace.lifecycle"
-    :draft-status="workspace.draftStatus"
+    :draft-status="workspace.appointmentForm ? 'clean' : workspace.draftStatus"
     :transitioning="isNavigating"
     :can-submit="inputsValid && workspace.canSubmit"
     :business-feedback="feedback"
     :submit-label="workspace.descriptor.formPurpose === 'survey' ? '完成勘查' : workspace.descriptor.actionIntent === 'interact_with_form' ? '完成' : '继续确认'"
     @submit="submitWorkspace"
   >
-    <MockJourneyContextPanel v-if="localJourneyContext && workspace.descriptor.formPurpose !== 'survey'"
+    <AppStatus v-if="workspace.appointmentForm && appointmentUi.draftCopy" class="appointment-draft-note"
+      data-testid="appointment-draft-note" :message="appointmentUi.draftCopy" variant="strip" quiet
+      :tone="workspace.draftStatus === 'save_failed' ? 'warning' : 'neutral'" />
+    <MockJourneyContextPanel v-if="devJourneyEntry && localJourneyContext && workspace.descriptor.formPurpose !== 'survey'"
       :context="localJourneyContext" />
     <!-- One Dynamic Form Action for every verified FormDef. The host may pick
          an approved visual preset; field controls, values and Workflow never
@@ -215,15 +217,15 @@
     <!-- DEV-only synthetic FormData/Process/readback; never a real Workflow write.
          The same 019 WorkOrderId is used by all three normal App pages. -->
     <view
-      v-if="mockJourney && mockJourney.stage !== 'quotation'"
+      v-if="devJourneyEntry && mockJourney && mockJourney.stage !== 'quotation'"
       class="mock-journey-progress app-surface"
       data-testid="mock-journey-progress"
     >
-      <text class="mock-journey-progress__note">完成当前步骤后，可继续处理后续任务。</text>
+      <text class="mock-journey-progress__note">独立测试旅程 · 仅本机合成数据，不代表预约已确认。</text>
       <text class="mock-journey-progress__note" data-testid="mock-journey-save-state">
         {{ workspace.draftStatus === 'saved_local' || workspace.draftStatus === 'restore_available'
-          ? '已保存，可继续下一步'
-          : '填写信息并保存后，即可继续下一步' }}
+          ? '本机草稿已保存，可继续下一步测试；未提交后台。'
+          : '填写信息并保存后，可继续本机测试；未提交后台。' }}
       </text>
       <text v-if="journeyFeedback" class="mock-journey-progress__error" role="alert"
         data-testid="mock-journey-feedback">{{ journeyFeedback }}</text>
@@ -236,8 +238,14 @@
       >{{ mockJourney.nextLabel }}</AppButton>
     </view>
 
-    <template #actions v-if="workspace.descriptor?.actionIntent === 'interact_with_form'">
-      <ActionWorkspaceFormActions
+    <template #actions>
+      <view v-if="workspace.appointmentForm" class="appointment-action-content">
+        <text v-if="appointmentUi.reason" class="appointment-gate-reason" data-testid="appointment-gate-reason" role="status">{{ appointmentUi.reason }}</text>
+        <AppButton data-testid="action-workspace-submit" class="action-workspace-submit" block
+          :disabled="!appointmentUi.canContinue" :loading="workspace.lifecycle === 'submitting' || isNavigating"
+          @tap="submitWorkspace">{{ workspace.lifecycle === 'submitting' ? '提交中' : '继续确认' }}</AppButton>
+      </view>
+      <ActionWorkspaceFormActions v-else-if="workspace.descriptor?.actionIntent === 'interact_with_form'"
         :lifecycle="workspace.lifecycle"
         :save-state="workspace.dynamicFormSaveState"
         :can-save="inputsValid && workspace.descriptor.execution === 'enabled'"
@@ -278,6 +286,7 @@
 </template>
 
 <script setup lang="ts">
+import { appointmentPresentation } from './appointment-presentation'
 import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
 import { computed, nextTick, ref, watch } from 'vue'
 import type { AppActionDraftStatus } from '@shared/ui/types'
@@ -478,6 +487,13 @@ watch(() => [aStageMockOrderEnabled.value, quotationHubVisible.value,
   session.session?.roleVersion] as const, () => { void loadMockOrderRead() }, { immediate: true })
 const feedback = computed(() => exitFeedback.value || actionErrorCopy(workspace.error))
 const mockJourney = computed(() => mockJourneyContext(routeId.value))
+const devJourneyEntry = ref(false)
+const appointmentUi = computed(() => appointmentPresentation({
+  draftStatus: workspace.draftStatus, lifecycle: workspace.lifecycle,
+  canSubmit: workspace.canSubmit, inputsValid: inputsValid.value, transitioning: isNavigating.value,
+  executionEnabled: workspace.descriptor?.execution === 'enabled',
+  localPreview: mockJourney.value?.stage === 'appointment',
+}))
 const canAdoptSurveySuggestion = computed(() =>
   routeAction.value === 'place_order'
   && routeId.value === mockJourney.value?.workOrderId
@@ -593,6 +609,9 @@ watch(() => workspace.descriptor, (action) => {
 }, { flush: 'sync' })
 
 onLoad((options) => {
+  // The existing isolated DEV console is the only UI entry to synthetic advancement.
+  devJourneyEntry.value = import.meta.env.DEV && typeof getCurrentPages === 'function'
+    && getCurrentPages().slice(0, -1).some(page => page.route === 'pages/dev/qa-console')
   normalPage.begin(formHostHasDetailBack(options,typeof getCurrentPages==='function'?getCurrentPages():[]))
   routeId.value = parseActionWorkspaceId(options?.id)
   routeNodeId.value = parseActionWorkspaceNodeId(options?.node)
@@ -645,7 +664,7 @@ async function exit(): Promise<void> {
 
 async function advanceJourney(): Promise<void> {
   const context = mockJourney.value
-  if (!inputsValid.value || !context || context.stage === 'quotation' || isNavigating.value) return
+  if (!devJourneyEntry.value || !inputsValid.value || !context || context.stage === 'quotation' || isNavigating.value) return
   const stage = context.stage
   isNavigating.value = true
   journeyFeedback.value = ''
@@ -740,4 +759,5 @@ function actionErrorCopy(error: OperationError | null): string {
 
 <style>
 @import "@brand-ui/action-page.scss";
+@import "@brand-ui/appointment-feedback.scss";
 </style>

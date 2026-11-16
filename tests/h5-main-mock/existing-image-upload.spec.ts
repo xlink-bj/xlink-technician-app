@@ -111,7 +111,11 @@ for(const mode of ['success','cancel-before-upload','cancel-after-upload','known
    await choose()
    if(mode==='actor-change-during-upload'){
     await expect.poll(()=>entered).toBe(true)
-    await page.goto('/#/pages/index/index');await expect(page.locator('.home-page')).toBeVisible();await page.locator('.home-footer .secondary').click();await expect(page.locator('.login-page')).toBeVisible()
+    await page.goto('/#/pages/index/index');await expect(page.locator('.home-page')).toBeVisible();await page.locator('.home-footer .secondary').click()
+    await expect(page.locator('.uni-modal')).toBeVisible()
+    await expect(page.locator('.home-page')).toBeVisible()
+    await page.locator('.uni-modal__btn').filter({hasText:'退出登录'}).click()
+    await expect(page.locator('.login-page')).toBeVisible()
     release!();await expect(editor).toHaveCount(0);expect(a).toEqual(oldA);expect(writes).toHaveLength(0)
    }else{
     await settled()

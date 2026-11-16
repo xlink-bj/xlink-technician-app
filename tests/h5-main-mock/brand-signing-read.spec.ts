@@ -52,9 +52,10 @@ for (const width of [430, 375]) test(`build-selected ${brand} signing read only 
     await expect(page.getByTestId('signing-read-stage-title')).toHaveCSS('line-height', '28px')
     await expect(page.locator('.signing-read-hero-title')).toHaveCSS('font-size', '18px')
     await expect(page.locator('.signing-read-body').first()).toHaveCSS('font-size', '16px')
-    await expect(page.locator('.signing-read-stage-index')).toHaveCSS('font-size', '14px')
+    await expect(page.locator('.signing-read-stage-index')).toHaveCount(0)
     await expect(page.locator('.signing-read-stage')).toHaveCSS('border-radius', '8px')
-    await expect(page.locator('.xl-craft__progress-track > .is-active').first()).toHaveCSS('background-color', 'rgb(200, 32, 43)')
+    await expect(page.locator('.xl-craft__progress-track')).toHaveCount(0)
+    await expect(page.getByTestId('signing-order-read-verified')).toContainText('订单身份已核验')
   }
   await screenshot('01-pending-contract')
   await contractRead.click()

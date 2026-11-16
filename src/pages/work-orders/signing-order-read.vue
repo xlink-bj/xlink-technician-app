@@ -22,17 +22,12 @@
     <template v-else>
       <view class="signing-read-stage xl-craft__surface" :class="{ 'signing-read-stage--error': signingFeedbackError }" data-testid="signing-review-progress">
         <view class="xl-craft__progress-labels">
-          <text class="xl-craft__caption">当前签约状态</text>
-          <text v-if="signingStepIndex > 0" class="signing-read-stage-index">步骤 {{ signingStepIndex }}/3</text>
-        </view>
-        <view v-if="signingStepIndex > 0" class="xl-craft__progress-track" aria-hidden="true">
-          <view :class="{ 'is-active': signingStepIndex >= 1 }" />
-          <view :class="{ 'is-active': signingStepIndex >= 2 }" />
-          <view :class="{ 'is-active': signingStepIndex >= 3 }" />
+          <text class="xl-craft__caption">合同状态核验</text>
+          <AppMetaTag label="只读" tone="neutral" />
         </view>
         <view class="signing-read-reconciled-inline" data-testid="signing-read-reconciled-status">
-          <text class="signing-read-phase xl-craft__caption">{{ signingPhaseTitle }}</text>
-          <text class="signing-read-progress-title xl-craft__section-title" data-testid="signing-read-stage-title">{{ signingStage.title }}</text>
+          <text v-if="review.contractSnapshot.state === 'succeeded'" class="signing-read-phase xl-craft__caption">合同记录回读结果</text>
+          <text class="signing-read-progress-title xl-craft__section-title" data-testid="signing-read-stage-title">{{ signingStatusTitle }}</text>
         </view>
         <view class="signing-read-next">
           <text class="signing-read-next-label">接下来</text>
@@ -42,7 +37,8 @@
           v-if="scopedContractReadEnabled && (review.contractSnapshot.state === 'idle' || review.contractSnapshot.state === 'failed_retryable')"
           class="signing-read-contract-cta signing-read-stage-cta"
           block data-testid="signing-contract-read-request" @tap="readContracts"
-        >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态' : '核验当前订单合同' }}</AppButton>
+        >{{ review.contractSnapshot.state === 'failed_retryable' ? '重新核验合同状态 · 只读' : '核验当前订单合同 · 只读' }}</AppButton>
+        <text class="signing-read-help">仅核对状态，不发起签署、发送短信或读取合同文件。</text>
         <button class="signing-read-context-toggle" type="button" :aria-expanded="stageInfoExpanded"
           @tap="stageInfoExpanded = !stageInfoExpanded">
           <text class="xl-craft__caption">状态说明</text><AppIcon name="chevron-right" :size="15" color="var(--signing-read-detail-icon, #7b8aa0)" />
@@ -53,7 +49,7 @@
       <view class="app-record-card signing-read-section signing-read-hero xl-craft__surface" data-testid="signing-order-read-verified">
         <view class="signing-read-hero-top">
           <text class="signing-read-hero-title">当前订单</text>
-          <AppMetaTag class="xl-craft__badge" label="已核验" tone="success" />
+          <AppMetaTag class="xl-craft__badge" label="订单身份已核验" tone="success" />
         </view>
         <view class="signing-read-order-identity">
           <text class="xl-craft__caption">订单编号</text>
@@ -64,8 +60,8 @@
             <text class="signing-read-meta xl-craft__meta">订单金额</text>
             <AppAmountValue class="signing-read-amount-value" size="prominent" :value="`¥${review.snapshot.review.order.totalPrice.toFixed(2)}`" />
           </view>
-          <text v-else-if="devFixtureContractRead" class="signing-read-meta xl-craft__meta" data-testid="signing-read-amount-unverified">订单金额待核验</text>
-          <text class="signing-read-meta xl-craft__meta">{{ review.snapshot.review?.order.groups.length || 0 }} 个维修分组</text>
+          <text v-else class="signing-read-meta xl-craft__meta" data-testid="signing-read-amount-unverified">订单金额待核验</text>
+          <text class="signing-read-meta xl-craft__meta">{{ review.snapshot.review?.order.groups.length ? `${review.snapshot.review.order.groups.length} 个可识别维修分组` : '维修分组待核验' }}</text>
         </view>
         <view class="signing-read-order-details">
           <button class="signing-read-detail-toggle" type="button" :aria-expanded="orderAuditExpanded"
@@ -212,12 +208,9 @@ const signingProgress = computed(() => signingReviewProgress({
   stage: signingStage.value.stage,
   handlerState: review.handlerSnapshot.state,
 }))
-// The read model is the sole authority for progress. An unrecognized title
-// hides the visual segments rather than inventing a contract/signing state.
-const signingStepIndex = computed(() => {
-  const match = /^步骤\s*([123])\s*\/\s*3/.exec(signingProgress.value.title)
-  return match ? Number(match[1]) : 0
-})
+// A read lifecycle is not a signing-completion percentage.
+const signingStatusTitle = computed(() => review.contractSnapshot.state === 'succeeded'
+  ? signingStage.value.title : signingProgress.value.title)
 function contractStatusDisplay(status: string | undefined): string {
   if (status === '10') return '记录显示已签署 · 待核验'
   if (status === '2') return '签署处理中'
@@ -225,13 +218,10 @@ function contractStatusDisplay(status: string | undefined): string {
   return '合同状态待核验'
 }
 function orderStageDisplay(processState: number | undefined): string {
-  if (processState === 0) return '订单当前待签约；请以合同核验结果为准'
-  if (processState === 4) return '订单签约处理中，请勿重复发起'
+  if (processState === 0) return '订单记录显示待签约；请以合同核验结果为准'
+  if (processState === 4) return '订单记录显示签约处理中，请勿重复发起'
   return '订单签约阶段尚待核验，不能据此判断合同已签署'
 }
-const signingPhaseTitle = computed(() => signingProgress.value.title.replace(
-  /^步骤\s*[123]\s*\/\s*3\s*[·•:：\s]*/, '',
-))
 /** Task-facing language derived only from the authoritative read state. */
 const signingNextActionDisplay = computed(() => {
   switch (review.contractSnapshot.state) {

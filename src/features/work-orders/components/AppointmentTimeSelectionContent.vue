@@ -13,9 +13,10 @@
             :key="shortcut.key"
             class="date-shortcut" :disabled="disabled"
             :class="{ 'date-shortcut--selected': shortcut.date === selectedDate }"
+            :aria-pressed="shortcut.date === selectedDate"
             @tap="emit('select-date', shortcut.date)"
           >
-            <text class="date-shortcut-label">{{ shortcut.label }}</text>
+            <view class="date-shortcut-label"><AppIcon v-if="shortcut.date === selectedDate" name="complete" :size="14" color="var(--app-color-primary)" aria-hidden="true" /><text>{{ shortcut.label }}</text></view>
             <text class="date-shortcut-date">{{ shortcut.date.slice(5) }}</text>
           </button>
           <picker class="date-shortcuts-more" mode="date" :disabled="disabled" :value="selectedDate" @change="handleDateChange">
@@ -39,6 +40,7 @@
             :key="option.key"
             class="time-slot" :disabled="disabled"
             :class="{ 'time-slot--selected': selectedOptionKey === option.key }"
+            :aria-pressed="selectedOptionKey === option.key"
             @tap="emit('select-option', option.key)"
           >
             <text>{{ option.label }}</text>

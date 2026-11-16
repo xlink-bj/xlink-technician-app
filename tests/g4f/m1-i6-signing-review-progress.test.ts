@@ -16,7 +16,8 @@ describe('M1 I6 read-only signing state progression', () => {
   it.each(['idle', 'loading', 'failed_retryable', 'failed_terminal'] as const)(
     'distinguishes Contract read state %s', state => {
       const result = progress({ ...sample(), contractState: state })
-      expect(result.title).toContain('步骤 2/3')
+      expect(result.title).not.toMatch(/步骤|\d\s*\/\s*3|%/)
+      expect(result.title).toBe({ idle: '合同状态尚未核验', loading: '正在只读核验合同', failed_retryable: '合同读取失败', failed_terminal: '合同核验受阻' }[state])
       expect(result.executable).toBe(false)
     })
   it('does not confuse processing status or recorded signature with legal proof', () => {
@@ -33,7 +34,8 @@ describe('M1 I6 read-only signing state progression', () => {
     })
   it('node evidence is DEV-only and not a command permission', () => {
     const result = progress({ ...sample(), handlerState: 'verified' })
-    expect(result.title).toContain('仅 DEV')
+    expect(result.title).toContain('当前节点候选已核验')
+    expect(result.title).not.toContain('DEV')
     expect(result.executable).toBe(false)
   })
 })

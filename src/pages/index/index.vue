@@ -23,10 +23,6 @@
             <text class="section-title">今日任务</text>
             <text class="section-description">优先处理会影响履约节奏的事项</text>
           </view>
-          <navigator class="section-link" :url="workOrdersRoute">
-            <text>全部任务</text>
-            <text class="section-link-arrow" aria-hidden="true">›</text>
-          </navigator>
         </view>
 
         <navigator class="work-orders-entry" :url="workOrdersRoute">
@@ -35,8 +31,8 @@
               <text>工</text>
             </view>
             <view class="entry-copy">
-              <text class="entry-title">查看当前可见工单</text>
-              <text class="entry-subtitle">打开工单列表</text>
+              <text class="entry-title">进入工单</text>
+              <text class="entry-subtitle">查看当前可见工单</text>
             </view>
             <text class="entry-arrow" aria-hidden="true">›</text>
           </view>
@@ -46,6 +42,7 @@
     </view>
 
     <view class="home-footer">
+      <text class="home-account-label">账号操作</text>
       <button class="secondary" :disabled="isBusy" @tap="logout">
         {{ logoutInFlight ? '退出中…' : '退出登录' }}
       </button>
@@ -254,6 +251,7 @@ import { useSessionStore } from '@shared/state'
 import type { OperationError } from '@shared/types'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import { redirectToIsolatedQaConsole } from '@app/dev-qa-navigation'
+import { confirmLogout } from '@app/logout-confirmation'
 
 const session = useSessionStore()
 const phoneNumber = ref('')
@@ -357,6 +355,7 @@ async function logout(): Promise<void> {
   logoutInFlight.value = true
   message.value = ''
   try {
+    if (!await confirmLogout()) return
     const result = await session.endSession()
     if (result.state !== 'succeeded') {
       message.value = userFacingLoginMessage(result.error) || '退出登录失败，请稍后重试'

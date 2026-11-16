@@ -41,17 +41,20 @@
     </view>
     <template v-else>
     <view v-if="!isVisualSample && (displayReadState === 'loading' || displayReadState === 'idle')" class="app-record-card quotation-hub__empty" data-testid="quotation-hub-loading">
-      <text class="quotation-hub__empty-title">正在核对订单记录</text>
-      <text class="quotation-hub__empty-detail">正在读取当前工单的可见订单。</text>
+      <text class="quotation-hub__empty-title">{{ displayReadState === 'idle' ? '订单尚未读取' : '正在核对订单记录' }}</text>
+      <text class="quotation-hub__empty-detail">{{ displayReadState === 'idle' ? '尚未核对当前工单的可见订单，不能判断有无订单。' : '正在读取当前工单的可见订单。' }}</text>
     </view>
-    <view v-else-if="!isVisualSample && (displayReadState === 'failed_retryable' || displayReadState === 'failed_terminal')" class="app-record-card quotation-hub__empty" data-testid="quotation-hub-read-error">
-      <view class="quotation-hub__empty-icon" aria-hidden="true">!</view>
-      <text class="quotation-hub__empty-title">暂无法读取已有订单</text>
-      <text class="quotation-hub__empty-detail">{{ displayReadError || '订单读取暂不可用，请稍后重试。' }}</text>
-      <AppButton variant="secondary" @tap="refresh">重新读取</AppButton>
-      <text class="quotation-hub__empty-detail">仍可创建报价草稿，但无法据此判断是否已有订单。</text>
-      <AppButton v-if="!readOnly && !draftLoading" block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified" :disabled="draftLoading"
-        @tap="startEditor">{{ hasLocalDraft ? uxStateLanguage.draftResumeAction : `＋ ${uxStateLanguage.draftAction}` }}</AppButton>
+    <view v-else-if="readFailed" class="app-record-card quotation-hub__read-error" data-testid="quotation-hub-read-error" role="alert">
+      <view class="quotation-hub__read-error-heading">
+        <AppIcon name="warning" :size="22" color="var(--app-color-danger)" />
+        <text class="quotation-hub__read-error-title">订单读取失败</text>
+      </view>
+      <text class="quotation-hub__read-error-detail">未能读取当前工单的订单，不能判断是否已有订单。</text>
+      <text class="quotation-hub__read-error-reason">{{ readFailureGuidance }}</text>
+      <AppButton v-if="canRetryRead" block variant="secondary" data-testid="quotation-hub-read-retry" @tap="retryRead">
+        <template #leading><AppIcon name="refresh" :size="18" color="var(--app-link, #3174c6)" /></template>
+        重新读取订单
+      </AppButton>
     </view>
     <template v-else-if="records.length === 0">
     <view class="app-record-card quotation-hub__empty" data-testid="quotation-hub-no-records">
@@ -90,19 +93,19 @@
         <view class="quotation-hub__order-actions">
           <AppButton variant="secondary" :data-testid="`quotation-hub-view-${order.id}`"
             :aria-expanded="expandedId === order.id" @tap="toggleDetails(order.id)">
-            <template #leading><AppIcon name="order" :size="17" color="#3174c6" /></template>
+            <template #leading><AppIcon name="task" :size="17" color="var(--app-link, #3174c6)" /></template>
             {{ expandedId === order.id ? '收起详情' : '订单详情' }}
           </AppButton>
-          <AppButton v-if="!readOnly && !mockJourneyOrder && !isVisualSample && !hasLocalDraft" variant="secondary"
+          <AppButton v-if="!readOnly && !mockJourneyOrder && !isVisualSample && !hasLocalDraft" variant="text"
             :disabled="editingId !== null"
             :data-testid="`quotation-hub-edit-${order.id}`" @tap="edit(order.id)">
-            <AppIcon name="order" :size="17" color="#2479eb" />{{ editingId === order.id ? '核验中…' : '修改订单' }}
+            <template #leading><AppIcon name="order" :size="17" color="var(--app-link, #2479eb)" /></template>{{ editingId === order.id ? '核验中…' : '修改订单' }}
           </AppButton>
           <navigator v-if="!isVisualSample && isSigningReadOrderCandidate(order) && signingOrderReadRouteFor(workOrderId, order.id)"
             class="quotation-hub__order-signing"
             :url="signingOrderReadRouteFor(workOrderId, order.id) || undefined"
             :data-testid="`quotation-hub-signing-${order.id}`">
-            <text>签约进度</text><AppIcon class="quotation-hub__order-signing-icon" name="chevron-right" :size="16" color="#216bd0" />
+            <text>签约进度 · 只读</text><AppIcon class="quotation-hub__order-signing-icon" name="chevron-right" :size="16" color="var(--app-link, #216bd0)" />
           </navigator>
         </view>
         <text v-if="!isVisualSample && !isSigningReadOrderCandidate(order)"
@@ -117,10 +120,11 @@
           <view v-if="order.updateTime" class="quotation-hub__order-line">
             <text>更新时间</text><text class="quotation-hub__order-line-value">{{ order.updateTime }}</text>
           </view>
-          <text v-if="order.groups.length === 0" class="quotation-hub__detail-note">该订单暂无可识别的维修分组。</text>
+          <text v-if="order.groups.length === 0" class="quotation-hub__detail-note">本次回读未识别到维修分组，不代表订单无维修内容。</text>
           <view v-for="(group, index) in order.groups" :key="index" class="quotation-hub__detail-group">
             <text class="quotation-hub__detail-title">{{ group.partDescription || `维修部位 ${index + 1}` }}</text>
-            <text class="quotation-hub__detail-note">工程量：{{ group.maintainAreaNum || '未提供' }} · 可识别项目 {{ group.lines.length }} 项</text>
+            <text class="quotation-hub__detail-note">工程量：{{ group.maintainAreaNum || '未提供' }}</text>
+            <text class="quotation-hub__detail-note">{{ group.lines.length > 0 ? `本次回读可识别 ${group.lines.length} 项` : '本次回读未识别到项目，不代表订单无项目。' }}</text>
             <text v-if="!group.contentSupported" class="quotation-hub__detail-warning">部分历史字段尚不能安全识别，详情仅作只读参考。</text>
           </view>
         </view>
@@ -128,13 +132,22 @@
     </view>
     </template>
     <view v-if="editError" class="quotation-hub__error" data-testid="quotation-hub-edit-error" role="alert">{{ editError }}</view>
-    <view v-if="hasLocalDraft" class="app-record-card quotation-hub__draft-checkpoint"
+    <view v-if="hasLocalDraft && !choosingMode" class="app-record-card quotation-hub__draft-checkpoint"
       data-testid="quotation-hub-local-draft">
       <view class="quotation-hub__draft-checkpoint-title">
         <text class="quotation-hub__detail-title">本地报价草稿</text>
         <AppMetaTag label="非正式订单" tone="neutral" />
       </view>
       <text class="quotation-hub__draft-checkpoint-count quotation-hub__order-group-count">{{ localDraftGroupCount }} 个维修部位组 · {{ draftSaveLabel }}</text>
+      <text class="quotation-hub__detail-note">草稿未提交后台，不是正式订单。</text>
+      <AppButton v-if="readFailed && !readOnly && !draftLoading" block class="quotation-hub__empty-action"
+        data-testid="quotation-hub-create-unverified" @tap="startEditor">{{ uxStateLanguage.draftResumeAction }}</AppButton>
+    </view>
+    <view v-if="readFailed && !hasLocalDraft && !readOnly && !draftLoading" class="app-record-card quotation-hub__draft-checkpoint">
+      <text class="quotation-hub__detail-title">本地报价草稿</text>
+      <text class="quotation-hub__detail-note">可先编辑草稿；草稿不会提交后台，也不能确认有无正式订单。</text>
+      <AppButton block class="quotation-hub__empty-action" data-testid="quotation-hub-create-unverified"
+        @tap="startEditor">＋ {{ uxStateLanguage.draftAction }}</AppButton>
     </view>
     <AppStatus v-if="!choosingMode && records.length > 0 && (displayReadState === 'succeeded' || isVisualSample)"
       class="quotation-hub__signing-boundary" variant="strip" tone="neutral" quiet
@@ -196,20 +209,28 @@ const emit = defineEmits<{
   (event: 'mock-read-retry'): void
 }>()
 const browse = useQuotationOrderBrowseStore()
-const syntheticFixture = computed(() => import.meta.env.DEV
-  && props.workOrderId.startsWith('mock-work-order-'))
 const isVisualSample = computed(() => import.meta.env.DEV
   && (props.devVisualSample === 'orders' || props.devVisualSample === 'empty'))
 const mockJourneyOrder = computed(() => import.meta.env.DEV && props.devMockOrder === true)
 const displayReadState = computed(() => mockJourneyOrder.value
   ? props.devMockOrderRead?.state === 'confirmed' ? 'succeeded'
-    : props.devMockOrderRead?.state === 'loading' ? 'loading' : 'failed_terminal'
+    : props.devMockOrderRead?.state === 'loading' ? 'loading'
+      : props.devMockOrderRead?.state === 'unavailable' ? 'failed_retryable' : 'failed_terminal'
   : browse.state)
 const displayReadError = computed(() => mockJourneyOrder.value
   ? props.devMockOrderRead?.state === 'blocked'
     ? '本机角色或订单归属核对失败，未展示订单。'
     : '暂未确认本机订单是否保存，请稍后再试。'
   : browse.errorMessage)
+const readFailed = computed(() => !isVisualSample.value
+  && (displayReadState.value === 'failed_retryable' || displayReadState.value === 'failed_terminal'))
+const canRetryRead = computed(() => displayReadState.value === 'failed_retryable')
+const readFailureGuidance = computed(() => canRetryRead.value
+  ? displayReadError.value || '可重新读取订单；本地草稿会保留。'
+  : `${displayReadError.value && !displayReadError.value.includes('重试') ? displayReadError.value : '当前读取已受阻。'}请核对登录、角色及工单归属，必要时联系支持。`)
+function retryRead(): void {
+  if (canRetryRead.value) refresh()
+}
 const sampleRecords = computed((): readonly QuotationOrderBrowseItem[] => [3500, 1200].map((amount, index) => ({
   id: `DEV-Q00-ORDER-${index + 1}`,
   displayNumber: `BJ2026080${index + 1}`,

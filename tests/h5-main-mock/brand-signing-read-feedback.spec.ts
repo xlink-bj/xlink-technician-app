@@ -17,7 +17,8 @@ test('signing read feedback distinguishes confirmed failure from processing unkn
   const failure=state==='contract-failed'||state==='exception'
   await expect(title).toHaveCSS('color',failure?error:brand==='yuhong'?'rgb(25, 27, 30)':'rgb(23, 36, 58)')
   if(brand==='yuhong'){
-   await expect(page.locator('.signing-read-phase')).toHaveCSS('color',failure?error:'rgb(85, 94, 100)')
+   if(state==='contract-failed')await expect(page.locator('.signing-read-phase')).toHaveCount(0)
+   else await expect(page.locator('.signing-read-phase')).toHaveCSS('color',failure?error:'rgb(85, 94, 100)')
    await expect(page.getByTestId('signing-review-next')).toHaveCSS('color',failure?error:'rgb(25, 27, 30)')
    if(state==='exception')await expect(page.locator('.signing-read-contract-state')).toHaveCSS('color',error)
   }

@@ -205,3 +205,10 @@
   .quotation-hub__order-actions { gap:7px; }
   .quotation-hub__order-actions .app-button { font-size:12px; }
 }
+
+/* A read failure never owns the local draft resume action. */
+.quotation-hub__read-error { display:flex; flex-direction:column; gap:12px; padding:16px; margin-bottom:16px; border:1px solid var(--app-color-danger); border-radius:var(--app-content-card-radius); background:var(--app-color-danger-soft); }
+.quotation-hub__read-error-heading { display:flex; align-items:center; gap:8px; }
+.quotation-hub__read-error-title { color:var(--app-color-danger); font-size:18px; line-height:26px; font-weight:700; }
+.quotation-hub__read-error-detail { color:var(--app-color-danger); font-size:15px; line-height:24px; }
+.quotation-hub__read-error-reason { color:var(--app-color-text-secondary); font-size:13px; line-height:20px; }

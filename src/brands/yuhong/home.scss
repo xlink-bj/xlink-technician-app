@@ -7,6 +7,7 @@
   font-weight: var(--yh-type-body-weight); line-height: var(--yh-type-body-line);
   padding-bottom: calc(var(--yh-space-16) + env(safe-area-inset-bottom));
 }
+.home-page { display: flex; flex-direction: column; }
 .home-page .home-hero { background: var(--yh-color-surface-card); padding: var(--yh-space-24) var(--yh-space-16); }
 .home-page .home-hero-circles { display: none; }
 .home-page .home-brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--yh-space-8); }
@@ -26,8 +27,9 @@
 .home-page .entry-icon { display: flex; flex: 0 0 var(--yh-size-touch); align-items: center; justify-content: center; height: var(--yh-size-touch); background: var(--yh-color-action-subtle); color: var(--yh-action-primary); border-radius: var(--yh-radius-control); }
 .home-page .entry-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .home-page .entry-arrow { color: var(--yh-link); font-size: var(--yh-type-title-size); }
-.home-page .home-footer { box-sizing: border-box; padding: var(--yh-space-8) var(--yh-space-16); text-align: center; }
-.home-page .home-footer .secondary { background: transparent; color: var(--yh-link); border: 0; border-radius: var(--yh-radius-control); min-height: var(--yh-size-touch); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); padding: var(--yh-space-8) var(--yh-space-16); }
+.home-page .home-footer { margin-top: auto; box-sizing: border-box; padding: var(--yh-space-8) var(--yh-space-16); text-align: center; }
+.home-page .home-footer .secondary { background: transparent; color: var(--yh-color-text-secondary); border: 0; border-radius: var(--yh-radius-control); min-height: var(--yh-size-touch); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); padding: var(--yh-space-8) var(--yh-space-16); }
+.home-page .home-account-label { display: block; color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
 .home-page .home-footer .secondary::after, .login-page button::after { border: 0; }
 .login-page { padding: var(--yh-space-16); padding-bottom: calc(var(--yh-space-16) + env(safe-area-inset-bottom)); }
 .login-page .login-stage { box-sizing: border-box; display: flex; flex-direction: column; width: 100%; min-width: 0; min-height: calc(100vh - var(--window-top, 0px) - var(--window-bottom, 0px) - var(--yh-space-32) - env(safe-area-inset-bottom)); }

@@ -36,7 +36,7 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   if (brand === 'yuhong') {
     await expect(page.locator('.home-greeting')).toHaveCSS('font-size', '20px')
     await expect(page.locator('.section-title')).toHaveCSS('font-size', '18px')
-    await expect(page.locator('.section-link')).toHaveCSS('color', 'rgb(23, 93, 166)')
+    await expect(page.locator('.section-link')).toHaveCount(0)
     await touch('.work-orders-entry-content')
     await touch('.home-footer .secondary')
   }
@@ -55,6 +55,8 @@ for (const width of [430, 375]) test(`build-selected ${brand} Home and Login at 
   await page.goBack()
   await expect(page.locator('.home-page')).toBeVisible()
   await page.locator('.home-footer .secondary').click()
+  await expect(page.locator('.uni-modal')).toBeVisible()
+  await page.locator('.uni-modal__btn').filter({ hasText: '退出登录' }).click()
   await expect(page.locator('.launch-stage')).toBeVisible()
   await expect(page.locator('.brand-name')).toHaveText(name)
   await expect(page.locator('.brand-tagline')).toHaveText('家装服务')

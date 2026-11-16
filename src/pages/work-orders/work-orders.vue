@@ -114,10 +114,11 @@
               </view>
               <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
               <view
-                v-if="item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
+                v-if="canOpenDetail(item) || item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
                 class="card-footer"
               >
                 <AppMetaTag v-if="item.communityOrderCount !== undefined" class="nearby-chip" tone="info" :label="`同小区 ${item.communityOrderCount}`" />
+                <text v-if="canOpenDetail(item)" class="card-detail-hint">查看详情 ›</text>
                 <view
                   v-if="listActionFor(item).contactAvailable"
                   class="card-phone-button"
@@ -135,6 +136,7 @@
                     :color="workOrderCardIconRoleFor(item.taskLabel)"
                     aria-hidden="true"
                   />
+                  <text class="card-phone-label">联系</text>
                 </view>
                 <view v-if="listActionFor(item).acceptOrder" class="card-accept-control" @tap.stop>
                   <AppButton

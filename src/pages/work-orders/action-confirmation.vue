@@ -31,13 +31,16 @@
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
     :lifecycle="workspace.lifecycle"
-    :draft-status="workspace.draftStatus"
+    :draft-status="'clean'"
     :transitioning="isNavigating"
     :can-submit="workspace.canSubmit"
     :business-feedback="isSuccess ? '' : feedback"
     submit-label="确认预约"
   >
     <view v-if="!isSuccess" class="confirmation-content">
+      <AppStatus v-if="appointmentUi.draftCopy" class="appointment-draft-note" data-testid="appointment-draft-note"
+        :message="appointmentUi.draftCopy" variant="strip" quiet
+        :tone="workspace.draftStatus === 'save_failed' ? 'warning' : 'neutral'" />
       <view class="confirmation-card app-surface app-surface--compact">
         <view class="confirmation-card-heading">
           <view class="confirmation-card-icon" aria-hidden="true"><AppIcon name="appointment" :size="20" color="var(--app-color-primary)" /></view>
@@ -88,11 +91,14 @@
     </view>
 
     <template #actions v-if="!isSuccess">
-      <view class="confirmation-actions">
-        <AppButton variant="secondary" class="confirmation-action" @tap="backToEdit">返回修改</AppButton>
-        <AppButton class="confirmation-action" :disabled="!workspace.canSubmit" :loading="workspace.lifecycle === 'submitting'" @tap="confirmAppointment">
-          {{ workspace.lifecycle === 'submitting' ? '提交中' : '确认预约' }}
-        </AppButton>
+      <view class="appointment-action-content">
+        <text v-if="appointmentUi.reason" class="appointment-gate-reason" data-testid="appointment-gate-reason" role="status">{{ appointmentUi.reason }}</text>
+        <view class="confirmation-actions">
+          <AppButton variant="secondary" class="confirmation-action" @tap="backToEdit">返回修改</AppButton>
+          <AppButton class="confirmation-action" :disabled="!appointmentUi.canContinue" :loading="workspace.lifecycle === 'submitting'" @tap="confirmAppointment">
+            {{ workspace.lifecycle === 'submitting' ? '提交中' : '确认预约' }}
+          </AppButton>
+        </view>
       </view>
     </template>
 
@@ -130,6 +136,9 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { appointmentPresentation } from './appointment-presentation'
+import { mockJourneyContext } from '@app/mock-journey'
+import AppStatus from '@shared/ui/AppStatus.vue'
 import { onLoad, onUnload } from '@dcloudio/uni-app'
 
 import { hasAuthenticatedSession } from '@features/home/access'
@@ -185,6 +194,12 @@ const postSuccessWarning = computed(() => {
   return ''
 })
 const feedback = computed(() => actionErrorCopy(workspace.error))
+const appointmentUi = computed(() => appointmentPresentation({
+  draftStatus: workspace.draftStatus, lifecycle: workspace.lifecycle,
+  canSubmit: workspace.canSubmit, inputsValid: true, transitioning: isNavigating.value,
+  executionEnabled: workspace.descriptor?.execution === 'enabled',
+  localPreview: mockJourneyContext(routeId.value)?.stage === 'appointment',
+}))
 
 function loadWorkspace(): void {
   if (!routeReady.value || session.status !== 'authenticated') return
@@ -262,4 +277,5 @@ function actionErrorCopy(error: OperationError | null): string {
 
 <style>
 @import "@brand-ui/action-confirmation.scss";
+@import "@brand-ui/appointment-feedback.scss";
 </style>

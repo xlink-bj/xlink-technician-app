@@ -29,9 +29,10 @@ const commercialViews = [
   'src/shared/ui/ActionWorkspaceShell.vue',
 ]
 
-const debugCopy = /体验数据|演示数据|测试数据|开发验收|开发核验|工程验收说明|模拟进入|未提交后台|本机订单示例|本机合同示例|DEV-SYNTHETIC|仅合成字典|生产服务器报价只读|后端已验证的报价单|Mock\s*[·：:]|DEV\s+Mock/g
+const debugCopy = /体验数据|演示数据|测试数据|开发验收|开发核验|工程验收说明|模拟进入|本机订单示例|本机合同示例|DEV-SYNTHETIC|仅合成字典|生产服务器报价只读|后端已验证的报价单|Mock\s*[·：:]|DEV\s+Mock/g
 const debugWidgets = /data-testid="(?:dev-review-tools|business-mode-provenance|signing-command-preflight|mock-commerce-handoff|mock-journey-workflow-state)"|<LocalDraftDiagnosticsPanel\b|<MockCommercialFlowLinks\b|<SyntheticOrderExtFieldReviewPanel\b/g
 
+// Non-submission is user-facing safety information, not developer provenance.
 for (const view of commercialViews) {
   const content = template(view)
   for (const [label, pattern] of [['technical prose', debugCopy], ['QA-only widget', debugWidgets]]) {

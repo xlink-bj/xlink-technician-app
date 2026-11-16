@@ -16,14 +16,11 @@
 }
 .signing-read-page .xl-craft__caption, .signing-read-page .xl-craft__meta,
 .signing-read-page .signing-read-meta, .signing-read-page .signing-read-help,
-.signing-read-page .signing-read-footer, .signing-read-page .signing-read-stage-index {
+.signing-read-page .signing-read-footer {
   font-size: var(--yh-type-meta-size); font-weight: var(--yh-type-meta-weight);
   line-height: var(--yh-type-meta-line); color: var(--yh-color-text-secondary);
 }
 .signing-read-page .xl-craft__progress-labels { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--yh-space-8); }
-.signing-read-page .xl-craft__progress-track { display: flex; gap: var(--yh-space-4); height: var(--yh-space-4); }
-.signing-read-page .xl-craft__progress-track > view { flex: 1; background: var(--yh-color-surface-skeleton); border-radius: var(--yh-radius-control); }
-.signing-read-page .xl-craft__progress-track > .is-active { background: var(--yh-action-primary); }
 .signing-read-page .signing-read-reconciled-inline { display: flex; flex-direction: column; gap: var(--yh-space-4); }
 .signing-read-page .signing-read-progress-title {
   display: block; font-size: var(--yh-type-title-size); font-weight: var(--yh-type-title-weight);

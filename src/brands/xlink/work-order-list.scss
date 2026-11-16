@@ -224,11 +224,13 @@
   border: 1px solid var(--app-outline-subtle);
   border-radius: 14px;
   display: flex;
-  flex: 0 0 44px;
+  flex: 0 0 auto;
   height: 44px;
   justify-content: center;
   margin-right: 2px;
-  width: 44px;
+  min-width: 44px;
+  gap: 4px;
+  padding: 0 8px;
   box-sizing: border-box;
   box-shadow: var(--app-elevation-flat);
 }
@@ -365,3 +367,6 @@
 button::after {
   border: 0;
 }
+
+.card-detail-hint, .card-phone-label { color: var(--app-color-primary); font-size: var(--app-font-meta); }
+.card-detail-hint { margin-right: auto; }

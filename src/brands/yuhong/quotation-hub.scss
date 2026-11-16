@@ -11,8 +11,7 @@
 .quotation-hub__order-number,
 .quotation-hub__empty-title,
 .quotation-hub__mode-title,
-.quotation-hub__detail-title,
-.quotation-hub__draft-checkpoint-title { display: block; color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); line-height: var(--yh-type-section-line); font-weight: var(--yh-type-section-weight); overflow-wrap: anywhere; }
+.quotation-hub__detail-title { display: block; color: var(--yh-color-text-primary); font-size: var(--yh-type-section-size); line-height: var(--yh-type-section-line); font-weight: var(--yh-type-section-weight); overflow-wrap: anywhere; }
 .quotation-hub__order-amount { color: var(--yh-color-text-primary); font-size: var(--yh-type-amount-size); line-height: var(--yh-type-amount-line); font-weight: var(--yh-type-amount-weight); }
 .quotation-hub__empty-detail,
 .quotation-hub__mode-caption,
@@ -22,8 +21,11 @@
 .quotation-hub__draft-checkpoint-count { display: block; margin-top: var(--yh-space-8); color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
 .quotation-hub__detail-warning,
 .quotation-hub__error { display: block; color: var(--yh-color-status-warning-fg); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.quotation-hub__draft-checkpoint-title { display: flex; align-items: center; flex-wrap: wrap; gap: var(--yh-space-8); justify-content: space-between; }
 .quotation-hub__empty-action { margin-top: var(--yh-space-16); }
-.quotation-hub__order-actions { margin-top: var(--yh-space-16); }
+.quotation-hub__order-actions { display: grid; grid-template-columns: minmax(0, 1fr); margin-top: var(--yh-space-16); padding-top: var(--yh-space-12); border-top: var(--yh-border-width) solid var(--yh-color-border-divider); }
+.quotation-hub__order-signing { display: flex; align-items: center; justify-content: space-between; gap: var(--yh-space-8); min-height: var(--yh-size-touch); color: var(--yh-link); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.quotation-hub__order-signing:focus-visible { outline: var(--yh-focus-width) solid var(--yh-focus-ring); outline-offset: var(--yh-focus-offset); }
 .quotation-hub__details { border-top: var(--yh-border-width) solid var(--yh-color-border-divider); margin-top: var(--yh-space-16); padding-top: var(--yh-space-16); }
 .quotation-hub__detail-group { padding: var(--yh-space-12) 0; }
 .quotation-hub__mode-option { box-sizing: border-box; display: flex; align-items: center; gap: var(--yh-space-12); width: 100%; min-height: var(--yh-size-touch); border: var(--yh-border-width) solid var(--yh-color-border-control); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); margin: var(--yh-space-16) 0 0; padding: var(--yh-space-16); text-align: left; }
@@ -45,3 +47,10 @@
 .quotation-hub__amount-block { display: flex; flex-direction: column; min-width: 0; gap: var(--yh-space-4); }
 .quotation-hub__amount-label,
 .quotation-hub__order-group-count { color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+
+/* Read failure and draft recovery have separate containers and actions. */
+.quotation-hub__read-error { display: flex; flex-direction: column; gap: var(--yh-space-12); margin-bottom: var(--yh-space-16); padding: var(--yh-space-16); border: var(--yh-border-width) solid var(--yh-color-status-error-fg); border-radius: var(--yh-radius-card); background: var(--yh-color-status-error-bg); }
+.quotation-hub__read-error-heading { display: flex; align-items: center; gap: var(--yh-space-8); }
+.quotation-hub__read-error-title { color: var(--yh-color-status-error-fg); font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
+.quotation-hub__read-error-detail { color: var(--yh-color-status-error-fg); font-size: var(--yh-type-body-size); line-height: var(--yh-type-body-line); }
+.quotation-hub__read-error-reason { color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }

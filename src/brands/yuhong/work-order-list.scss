@@ -35,9 +35,11 @@
 /* The distance text already conveys the value; no legacy decorative car. */
 .distance-vehicle-icon { display: none; }
 .card-customer { margin-top: var(--yh-space-8); font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); overflow-wrap: anywhere; }
-.card-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--yh-space-8); margin-top: var(--yh-space-12); min-height: var(--yh-size-touch); }
+.card-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--yh-space-8); margin-top: var(--yh-space-12); min-height: var(--yh-size-touch); }
 .nearby-chip { flex-shrink: 0; }
-.card-phone-button { box-sizing: border-box; display: flex; align-items: center; justify-content: center; width: var(--yh-size-touch); height: var(--yh-size-touch); margin-left: auto; flex-shrink: 0; border: 1px solid var(--yh-border-control); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); }
+.card-phone-button { box-sizing: border-box; display: flex; align-items: center; justify-content: center; min-width: var(--yh-size-touch); min-height: var(--yh-size-touch); padding: var(--yh-space-8); gap: var(--yh-space-4); margin-left: auto; flex-shrink: 0; border: 1px solid var(--yh-border-control); border-radius: var(--yh-radius-control); background: var(--yh-color-surface-card); }
+.card-detail-hint, .card-phone-label { color: var(--yh-link); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
+.card-detail-hint { margin-right: auto; }
 .card-phone-button--loading { opacity: .6; }
 .card-accept-control { margin-left: auto; flex-shrink: 0; }
 .card-accept-button { min-width: 80px; }
