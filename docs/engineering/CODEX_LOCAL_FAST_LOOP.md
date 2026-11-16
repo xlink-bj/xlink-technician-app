@@ -19,11 +19,11 @@ Read first: [AGENTS.md](../../AGENTS.md), [current quality/environment gates](./
 | Question | Fast evidence | Cannot establish |
 | --- | --- | --- |
 | Models, API mapping, roles, FormDefinition / Workflow identities | Focused contract / adapter tests; approved bounded Production read only if explicitly necessary | Actual mobile UX or write permission |
-| Login → Home → List → Detail → Action Workspace | **True uni-app main H5** in DEV synthetic Mock + Playwright | MP native or physical device acceptance |
+| Login → Home → List → Detail → Action Workspace | **True uni-app main H5** in DEV synthetic Mock + focused Playwright; `test:main-h5-smoke` for a local cross-flow check | MP native or physical device acceptance |
 | Quotation, SKU, signing, dynamic form / repeat state | Focused main-App test, then full H5 Mock and appropriate targeted contract gates | Real production write path |
 | Spacing, hit targets, commercial UI | Actual App screenshot at matched 320/375/390 and accepted DS02A Golden; inspect real rendered DOM | Owner commercial visual approval |
 | WeChat routing, WXSS, lifecycle, input, safe area | `build:mp-weixin`; native DevTools/device evidence in a separately authorized native window | H5 or a build alone cannot establish native behavior |
-| Final engineering ready-to-integrate gate | `verify:full`, browser gate, platform build and current GitHub Actions on exact HEAD | Unrun tests, skipped cases or pending Owner acceptance |
+| Final engineering ready-to-integrate gate | `verify:full`, affected browser checks, platform build and current GitHub Actions on exact HEAD; run the complete H5 workflow for the high-risk changes named in the current quality gates | Unrun tests, skipped cases or pending Owner acceptance |
 
 **Commercial UI invariant:** Mock and Real share the same user-facing components and information architecture at matching business states. DEV controls and synthetic provenance remain in the isolated QA surface, not on customer-facing pages. No unapproved Golden refresh, layout redesign or generic visual replacement.
 
@@ -41,6 +41,7 @@ From the repository root, after confirming the active runtime:
 pnpm run verify:quick
 pnpm run verify:full
 pnpm run test:main-h5-boot
+pnpm run test:main-h5-smoke
 pnpm run test:main-h5-mock
 pnpm run test:r1-main-repeat-ui
 pnpm run build:h5

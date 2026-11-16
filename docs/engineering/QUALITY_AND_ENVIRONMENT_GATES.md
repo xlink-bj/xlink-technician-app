@@ -34,16 +34,17 @@
 | 微信构建 | pnpm run build:mp-weixin | 包含 WXSS 检查；不代表真机 |
 | App 构建 | pnpm run build:app | 不代表双平台实体运行 |
 
-检查命令以当前提交的 package.json 为准。局部测试之后按影响选择真实 H5 Mock、三端构建或视觉检查；主干 push 的完整门禁由 [Validate](../../.github/workflows/validate.yml) 与 [Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 执行。`verify` 本身不构建三端，也不启动浏览器。
+检查命令以当前提交的 package.json 为准。局部测试之后按影响选择真实 H5 Mock、三端构建或视觉检查；主干 push 运行 [Validate](../../.github/workflows/validate.yml) 与独立命名的 [Validate Main H5 Smoke](../../.github/workflows/validate-main-h5-smoke.yml)。`verify` 本身不构建三端，也不启动浏览器。
 
-Stage1B 的 20 用例完整步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。该次 H5 workflow 随后因新 main push 被取消，故只能证明这一步的收益，不能作为整条 H5 验收通过或总耗时收益。离线草稿/媒体 10 用例步骤的两个 worker 目前只有本地同集合实测，仍以推送后完整 CI 为准。
+Stage1B 的 20 用例步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。离线草稿/媒体 10 用例步骤在对应 CI 中由 124 秒降至 97 秒；这只证明局部步骤收益，完整 H5 的耗时与结果仍以该次完整 run 为准。
 
 发布构建脚本会拒绝继承 `XLINK_DEV_QA` 编译标记；H5/MP 还检查当前 `scripts/check-c1-release-qa-pages.mjs` 所列 DEV-only 路由不进入发布产物。QA 路由清单以该脚本和 `src/pages.json` 为准，不以旧阶段的页面数为准。全量本机测试使用 `VITE_XLINK_ENVIRONMENT=test`；现行 Validate 的完整 checkout 用于仍依赖历史提交的检查。局部行为测试不要求每次拉取全历史；若完整验证因浅历史失败，应先核明缺失的 Git 证据，不把它解释为业务回归。
 
 ## 3. CI 层次与真实含义
 
 - **L1 / 开发回路**：受影响单测、类型、静态边界，必要时本机/云 H5 UI；工具不应承诺从 GitHub PR 获得即时 HMR。
-- **主干 CI / main push、手动**：Validate 运行 `verify` 与三端构建；Validate Main H5 UX 的 Stage1B、草稿/角色媒体/创建组运行完整的既定 H5 用例。`h5-ux` 专项只在定时或手动运行；本地局部冒烟不代表这些完整 job 通过。
+- **每次 main push**：Validate 运行 `verify` 与三端构建；Validate Main H5 Smoke 运行现有 16 条真实 App Mock 用例，覆盖 Save/Process 与报价回读、输入/搜索 DOM、媒体恢复及双品牌。两个 workflow 的实际结果分别记录；快检通过不代表完整 H5 矩阵通过。
+- **完整 H5**：[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 每日 19:15 UTC 定时运行，也可在 GitHub Actions 手动运行（`gh workflow run validate-main-h5.yml --ref main`）；既有标记 PR 入口继续可用。它保留 Stage1B、草稿、角色媒体、创建与 L3 专项的全部既定用例和失败汇总，普通 main push 不会取消完整验收。权限/角色数据隔离、金额、草稿异步与弱网、媒体、共享平台或跨端关键流程变更，由改动负责人在对应 main SHA 上手动运行完整 H5 并修复失败后，才报告该范围验收完成；定时失败由相关主干改动负责人排查修复。核对 run 的 `head_sha`，不借用旧 SHA 的 PASS。
 - **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。旧 Draft 分支专项 workflow 与历史阶段报告不构成当前 main push 门禁。
 - **Release/Owner**：同视口商业 UI 接受、微信开发者工具/物理设备、Android/iOS、Beta 真实写入分别记录。不能用 CI green 替代这些 Gate。
 
@@ -64,5 +65,5 @@ Stage1B 的 20 用例完整步骤使用两个 Playwright worker；[此前成功�
 
 ## 5. 文档-only 的门禁
 
-只改 docs/、README 的提交也要按当前 workflow 记录 exact-head CI 结果；现行 main push 仍会触发完整验证。文档局部审阅不必为了提交前反馈先重复运行所有构建和浏览器测试。没有商业 UI 变化时，视觉/真机记录 NOT_RUN。报告和日志输出到 `test-results/`，`.review/` 仅保留需要查看的系统截图，不承载运行脚本、数据库或构建工程。
+只改 docs/、README 的提交也按当前 main push workflow 记录 exact-head CI 结果；文档局部审阅不必为了提交前反馈先重复运行所有构建和浏览器测试。工作流、配置、测试数据或执行规范即使是文档形式，也按实际影响核对应跑的验证。没有商业 UI 变化时，视觉/真机记录 NOT_RUN。报告和日志输出到 `test-results/`，`.review/` 仅保留需要查看的系统截图，不承载运行脚本、数据库或构建工程。
 

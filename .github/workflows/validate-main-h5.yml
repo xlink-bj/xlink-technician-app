@@ -3,8 +3,6 @@ name: Validate Main H5 UX
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review, converted_to_draft, edited]
-  push:
-    branches: [main]
   schedule:
     - cron: '15 19 * * *'
   workflow_dispatch:
@@ -14,7 +12,7 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   r1-main-repeat-ui:
@@ -71,9 +69,8 @@ jobs:
           retention-days: 7
 
   stage1b-mock-h5:
-    # Stage 1B source-specific Process is an automatic main-HEAD browser gate,
-    # while the broader L3/Owner/device visual acceptance remains separate.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    # Complete browser acceptance runs nightly, manually, or for a marked PR.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
     # Official image: browsers and OS libraries match the locked Playwright version.
     container:
@@ -194,7 +191,7 @@ jobs:
   draft-lifecycle-h5:
     # Group the lifecycle and normal-form presentation cases on one runner, preserving
     # all commands and the original scoped job's 15-minute budget.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble@sha256:eff16c30e6f3f4af0a03fa4b706120d5e9b0891c344a27d64559aff5900a4a27
@@ -252,8 +249,8 @@ jobs:
 
   scoped-existing-media-h5:
     # Independent runner/workspace; suites remain serial within this job.
-    # Same automatic gate conditions, assertions and synthetic network fences.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    # Same complete acceptance conditions, assertions and synthetic network fences.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
     # Official image: browsers and OS libraries match the locked Playwright version.
     container:
@@ -390,8 +387,8 @@ jobs:
 
   scoped-create-lifecycle-h5:
     # Independent runner/workspace; suites remain serial within this job.
-    # Same automatic gate conditions, assertions and synthetic network fences.
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
+    # Same complete acceptance conditions, assertions and synthetic network fences.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]'))
     runs-on: ubuntu-latest
     # Official image: browsers and OS libraries match the locked Playwright version.
     container:
@@ -556,7 +553,7 @@ jobs:
   scoped-form-integrations-h5:
     # Keep the original required-check identity; neither failed nor skipped
     # child jobs may make this aggregate appear green.
-    if: always() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]')))
+    if: always() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && startsWith(github.event.pull_request.title, '[FORM-BATCH]')))
     needs: [scoped-existing-media-h5, scoped-create-lifecycle-h5]
     runs-on: ubuntu-latest
     timeout-minutes: 5
