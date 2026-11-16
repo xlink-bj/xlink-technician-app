@@ -32,3 +32,7 @@
 
 .special-forms__save-finish-option { margin-top: var(--yh-space-16); padding-top: var(--yh-space-12); border-top: var(--yh-border-width) solid var(--yh-color-border-divider); }
 .special-forms__completion-confirmation { flex-direction: column; align-items: stretch; gap: var(--yh-space-12); padding: 0; }
+
+.special-forms__attachment-label,.special-forms__attachment-state { display:block; overflow-wrap:anywhere; }
+.special-forms__attachment-label { font-weight:var(--yh-type-section-weight); }
+.special-forms__attachment-state { margin-top:var(--yh-space-4); color:var(--yh-color-text-secondary); font-size:var(--yh-type-meta-size); }

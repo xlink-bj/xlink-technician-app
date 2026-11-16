@@ -104,14 +104,14 @@
                 <view class="special-forms__media" :data-testid="`a-special-media-${field.valueKey}`">
                   <view v-for="(item,index) in mediaValues(field.valueKey)" :key="item.url"
                     class="special-forms__media-item">
-                    <text class="special-forms__media-name">{{ mediaDisplayName(item, index) }}</text>
+                    <text class="special-forms__media-name">{{ mediaDisplayName(item) }}</text>
                     <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
                       :data-testid="`a-special-media-remove-${field.valueKey}-${index}`"
-                      @tap="pendingMediaRemoval = { key: field.valueKey, url: item.url }">移除</AppButton>
+                      @tap="pendingMediaRemoval = { key: field.valueKey, url: item.url, label: mediaDisplayName(item) }">移除</AppButton>
                   </view>
                   <view v-if="pendingMediaRemoval?.key === field.valueKey" class="special-forms__confirmation"
                     :data-testid="`a-special-media-remove-confirm-${field.valueKey}`">
-                    <text>确认移除这份附件？保存修改后生效。</text>
+                    <text>确认移除“{{ pendingMediaRemoval.label }}”？其他附件和填写内容将保留。{{ pendingMediaRemoval.taskId ? '仅移除本机待处理任务。' : '保存修改后生效。' }}</text>
                     <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
                       :data-testid="`a-special-media-remove-accept-${field.valueKey}`" @tap="confirmMediaRemoval">确认移除</AppButton>
                     <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
@@ -119,13 +119,13 @@
                   </view>
                   <view v-for="task in tasksFor(field.fieldId).filter(task => task.state !== 'uploaded')"
                     :key="task.taskId" class="special-forms__media-item">
-                    <text class="special-forms__media-name">{{ mediaStatus(task) }}</text>
+                    <view class="special-forms__media-name" data-testid="a-special-media-task-description"><text class="special-forms__attachment-label">{{ attachmentLabels.label(task) }}</text><text class="special-forms__attachment-state">{{ attachmentTaskStatus(task) }}</text></view>
                     <AppButton v-if="task.state === 'failed_retryable'" variant="text" size="compact"
-                      :disabled="busy || restoringDraft || task.lastError?.code === 'ambiguous_postprocess'"
+                      :disabled="busy || restoringDraft || ['ambiguous_upload', 'ambiguous_postprocess'].includes(task.lastError?.code ?? '')"
                       :data-testid="`a-special-media-retry-${field.valueKey}`"
                       @tap="retryMediaTask(task.taskId)">重试</AppButton>
                     <AppButton variant="text" size="compact" :disabled="busy || restoringDraft"
-                      @tap="discardMediaTask(task.taskId)">删除</AppButton>
+                      @tap="pendingMediaRemoval = { key: field.valueKey, taskId: task.taskId, label: attachmentLabels.label(task) }">删除</AppButton>
                   </view>
                   <AppButton variant="secondary" size="compact" :disabled="busy || restoringDraft || mediaValues(field.valueKey).length + tasksFor(field.fieldId).filter(task => task.state !== 'uploaded').length >= 10"
                     :data-testid="`a-special-media-pick-${field.valueKey}`"
@@ -187,6 +187,7 @@
 </template>
 
 <script setup lang="ts">
+import { createAttachmentLabels, attachmentTaskStatus } from './attachment-presentation'
 import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
@@ -226,13 +227,14 @@ const cleanupPending = ref<{formId:string;recordId?:string;view:AStageDynamicFor
 const draftValues = ref<R1SpecialMockFields>({})
 const editableFieldTypes = r1SpecialMockWritableTypes
 const mediaTasks = ref<readonly MediaUploadTask[]>([])
-const pendingMediaRemoval = ref<{ key: string; url: string } | null>(null)
+const attachmentLabels = createAttachmentLabels()
+const pendingMediaRemoval = ref<{ key: string; url?: string; taskId?: MediaUploadTaskId; label: string } | null>(null)
 watch([draftValues, () => props.workOrderId], () => { pendingMediaRemoval.value = null })
 const hasPendingMedia = computed(() => mediaTasks.value.some(task => task.state !== 'uploaded'))
-function mediaDisplayName(file: R1FileWireValue, index: number): string {
-  const pickedName = mediaTasks.value.find(task => task.uploadedRef?.url === file.url)?.uploadedRef?.fileName
-  const name = pickedName || file.name
-  return name && !/[/:\\]/.test(name) ? name : `附件 ${index + 1} · ${file.extname.toUpperCase()}`
+function mediaDisplayName(file: R1FileWireValue): string {
+  const task = mediaTasks.value.find(task => task.uploadedRef?.url === file.url)
+  if (task) return attachmentLabels.label(task)
+  return attachmentLabels.retainedLabel(file.url, file.name)
 }
 const scalarValueFor = (key: string): import('./r1-local-form-fields').R1LocalFieldValue | undefined => {
   const value = draftValues.value[key]
@@ -245,17 +247,6 @@ const mediaValues = (key: string): readonly R1FileWireValue[] => {
 }
 const tasksFor = (fieldId: string): readonly MediaUploadTask[] =>
   mediaTasks.value.filter(task => task.scope.fieldId === fieldId)
-function mediaStatus(task: MediaUploadTask): string {
-  switch (task.state) {
-    case 'failed_retryable':
-      return task.lastError?.code === 'ambiguous_postprocess' ? '上传结果待核对' : '上传失败，可重试'
-    case 'failed_terminal': return '上传失败，请移除后重新添加'
-    case 'queued':
-    case 'ready_to_upload': return '等待上传'
-    case 'uploading': return '正在上传'
-    default: return '正在处理附件'
-  }
-}
 const selectedFormDefinitionId = ref('')
 const formChoices = computed(() => viewState.value?.definitions.map(item => ({ value: item.id, label: item.label })) ?? [])
 const selectedDefinition = computed(() => viewState.value?.definitions.find(
@@ -293,6 +284,7 @@ async function restoreMediaTasks(): Promise<void> {
     let changed = false
     for (const field of viewFields.value.filter(item => item.type === 'file' && item.supported)) {
       const currentValues = mediaValues(field.valueKey)
+      attachmentLabels.register(tasksFor(field.fieldId))
       const uploaded = tasks.filter(task => task.scope.fieldId === field.fieldId
         && task.state === 'uploaded' && task.uploadedRef)
         .flatMap(task => task.uploadedRef ? [r1FileWireFromUpload(task.uploadedRef)] : [])
@@ -341,8 +333,9 @@ async function discardMediaTask(taskId: MediaUploadTaskId): Promise<void> {
 async function confirmMediaRemoval(): Promise<void> {
   const pending = pendingMediaRemoval.value
   if (!pending || busy.value) return
-  const index = mediaValues(pending.key).findIndex(file => file.url === pending.url)
   pendingMediaRemoval.value = null
+  if (pending.taskId) { await discardMediaTask(pending.taskId); return }
+  const index = mediaValues(pending.key).findIndex(file => file.url === pending.url)
   if (index >= 0) await removeMediaValue(pending.key, index)
 }
 async function removeMediaValue(key: string, index: number): Promise<void> {

@@ -1,12 +1,14 @@
 import type { Ref } from 'vue'
-import type { R1FileWireValue } from '@shared/types'
+import type { R1FileWireValue, MediaUploadTask, MediaUploadTaskId, LocalMedia } from '@shared/types'
 import type { R1NodeFormsSnapshot } from './r1-node-forms-read'
 
 /** Queue view bound to a create or exact existing editor. Durable tasks never issue new receipt authority. */
 export interface R1NormalFormFileSessionView {
   readonly revision: Ref<number>
   busy(): boolean
-  message(): string
+  message(fieldId?: string): string
+  /** Display-only, exact owned tasks; no new receipt or command authority. */
+  items?(fieldId: string): readonly { task: MediaUploadTask; media: Pick<LocalMedia, 'name' | 'mimeType'>; ambiguous: boolean }[]
   values(fieldId: string, draft?: Readonly<Record<string, unknown>>): readonly R1FileWireValue[]
   canPick(fieldId: string, values: Readonly<Record<string, unknown>>): boolean
   /** Cached UI hint only. Saving still requires async queue verification. */
@@ -16,10 +18,10 @@ export interface R1NormalFormFileSessionView {
   /** Explicit same-session cancellation and confirmed local-only cleanup. */
   cancel(): Promise<boolean>
   pick(fieldId: string, values: Readonly<Record<string, unknown>>): Promise<readonly R1FileWireValue[] | null>
-  retry(fieldId: string, values: Readonly<Record<string, unknown>>): Promise<readonly R1FileWireValue[] | null>
+  retry(fieldId: string, values: Readonly<Record<string, unknown>>, taskId?: MediaUploadTaskId): Promise<readonly R1FileWireValue[] | null>
   remove(fieldId: string, index: number, values: Readonly<Record<string, unknown>>): Promise<readonly R1FileWireValue[] | null>
   /** Explicit local cleanup; does not retry or delete any remote upload. */
-  discardFailed(fieldId: string, values: Readonly<Record<string, unknown>>): Promise<readonly R1FileWireValue[] | null>
+  discardFailed(fieldId: string, values: Readonly<Record<string, unknown>>, taskId?: MediaUploadTaskId): Promise<readonly R1FileWireValue[] | null>
   dispose(): void
 }
 

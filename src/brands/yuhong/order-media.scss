@@ -10,3 +10,7 @@
 .order-media-message { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; }
 .order-media-confirm { border-color: var(--yh-color-border-divider); background: var(--yh-color-status-warning-bg); }
 .order-media-error { display: block; color: var(--yh-color-status-error-fg); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); overflow-wrap: anywhere; }
+
+.order-media-name, .order-media-state { display:block; overflow-wrap:anywhere; }
+.order-media-name { font-weight:var(--yh-type-section-weight); }
+.order-media-state { margin-top:var(--yh-space-4); color:var(--yh-color-text-secondary); font-size:var(--yh-type-meta-size); }

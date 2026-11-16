@@ -21,3 +21,7 @@
 }
 .r1-file-status--attention { color: var(--yh-color-status-warning-fg); }
 .r1-file-error { color: var(--yh-color-status-error-fg); }
+
+.r1-file-task { box-sizing:border-box; flex:1 1 100%; min-width:0; width:100%; padding:var(--yh-space-12); border:var(--yh-border-width) solid var(--yh-border-subtle); border-radius:var(--yh-radius-control); overflow-wrap:anywhere; }
+.r1-file-task-name { display:block; font-weight:var(--yh-type-section-weight); }
+.r1-file-task-actions { display:flex; flex-wrap:wrap; gap:var(--yh-space-8); margin-top:var(--yh-space-8); }

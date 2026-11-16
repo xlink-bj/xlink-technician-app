@@ -5,3 +5,8 @@
 .r1-file-field--commercial .r1-file-preview{width:100%;height:96px;border-radius:var(--app-radius-control)}
 .r1-file-field--commercial .r1-file-name{display:flex;align-items:center;min-height:64px;padding:var(--app-space-sm);background:var(--app-color-page);border-radius:var(--app-radius-control);font-size:var(--app-font-body);overflow-wrap:anywhere}
 .r1-file-field--commercial .r1-file-error{width:100%;font-size:var(--app-font-body);line-height:1.5}
+
+.r1-file-task { box-sizing:border-box; flex:1 1 100%; min-width:0; width:100%; padding:var(--app-space-sm); border:1px solid var(--app-color-border); border-radius:var(--app-radius-control); overflow-wrap:anywhere; }
+.r1-file-task-name,.r1-file-task .r1-file-status { display:block; }
+.r1-file-task-name { font-weight:600; }
+.r1-file-task-actions { display:flex; flex-wrap:wrap; gap:var(--app-space-sm); margin-top:var(--app-space-sm); }

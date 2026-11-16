@@ -31,3 +31,7 @@
 
 .special-forms__save-finish-option { margin-top: var(--app-space-lg); padding-top: var(--app-space-md); border-top: 1rpx solid var(--app-color-border); }
 .special-forms__completion-confirmation { flex-direction: column; align-items: stretch; gap: var(--app-space-md); padding: 0; }
+
+.special-forms__attachment-label,.special-forms__attachment-state { display:block; overflow-wrap:anywhere; }
+.special-forms__attachment-label { font-weight:600; }
+.special-forms__attachment-state { margin-top:var(--app-space-xs); color:var(--app-color-text-secondary); font-size:var(--app-font-meta); }

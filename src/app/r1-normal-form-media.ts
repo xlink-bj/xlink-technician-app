@@ -255,7 +255,17 @@ function createBoundFormFileSession(input: {
   const session: R1NormalFormFileSession = {
     revision,
     busy: () => inFlight || cancelling,
-    message: () => text,
+    message: fieldId => fieldId && !disposed && !uncertain && !queueBlocked && !cancelBlocked
+      && text.startsWith('附件尚未上传完成') && ![...owned.values()].some(entry => entry.task.scope.fieldId === fieldId && !receipt(entry)) ? '' : text,
+    items(fieldId) {
+      try {
+        if (disposed || finalized || cancelling) return []
+        guard()
+        return [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId).map(entry => ({
+          task: cloneTask(entry.task), media: { name: entry.media.name, mimeType: entry.media.mimeType }, ambiguous: entry.ambiguous,
+        }))
+      } catch { return [] }
+    },
     values(fieldId, values) { try { if (disposed || finalized || cancelling) return []; guard(); return currentValues(fieldId,values) } catch { return [] } },
     canPick(fieldId, values) {
       try {
@@ -365,8 +375,8 @@ function createBoundFormFileSession(input: {
         field(fieldId, values, expected)
       }
     }),
-    retry: (fieldId, values) => mutation(fieldId, values, async expected => {
-      const tasks = [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId && entry.task.state !== 'uploaded')
+    retry: (fieldId, values, taskId) => mutation(fieldId, values, async expected => {
+      const tasks = [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId && entry.task.state !== 'uploaded' && (!taskId || entry.task.taskId === taskId))
       if (!tasks.length || tasks.some(entry => entry.ambiguous || entry.task.state !== 'failed_retryable' || !entry.task.lastError?.retryable
         || ['ambiguous_upload', 'ambiguous_postprocess'].includes(entry.task.lastError.code ?? ''))) return deny('附件结果待核对或不可重试，禁止重发。')
       for (const entry of tasks) {
@@ -393,8 +403,8 @@ function createBoundFormFileSession(input: {
     })
       return result && removedIndex>=0 && removedIndex<retained.length ? result.filter((_file,i)=>i!==removedIndex) : result
     },
-    discardFailed: (fieldId, values) => mutation(fieldId, values, async expected => {
-      const tasks = [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId && !entry.ambiguous && entry.cleanup
+    discardFailed: (fieldId, values, taskId) => mutation(fieldId, values, async expected => {
+      const tasks = [...owned.values()].filter(entry => entry.task.scope.fieldId === fieldId && (!taskId || entry.task.taskId === taskId) && !entry.ambiguous && entry.cleanup
         && ['failed_retryable', 'failed_terminal'].includes(entry.task.state))
       if (!tasks.length) return deny('没有可核对移除的本会话失败附件。')
       for (const entry of tasks) {
