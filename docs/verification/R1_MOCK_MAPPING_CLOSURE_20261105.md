@@ -9,7 +9,7 @@
 - `pnpm check:r1-mock-mapping`：校验 21 域、8 场景、来源/测试路径、生产 HOLD 和缺口记录的一致性。索引合法 **不是测试通过**。
 - `pnpm verify:r1-mock-mapping`：执行去重后的关联 Vitest 测试，逐项检查实际 suite 与 assertion 结果；缺失或跳过不计 PASS。生成忽略的 `.review/r1-mock-mapping/result.json` 和 `vitest.json`；浏览器在该报告中保持 NOT_RUN。
 - `pnpm verify:full`：完整工程检查与测试；映射完整性负例也纳入常规 Vitest，防止删除域、丢失浏览器场景或自行升级 live gate。
-- `pnpm test:main-h5-mock`：默认真实 App 全量 H5。opt-in 表单/深级联/媒体等场景由 main 的 stage1b-mock-h5 CI 分别开启并运行；默认跳过不能算通过。
+- `pnpm test:main-h5-mock`：默认真实 App 全量 H5。opt-in 表单/深级联/媒体等场景由现行完整 H5 workflow 的 `main-app-flows-h5` job 分别开启并运行；默认跳过不能算通过。
 
 ## 数据域的映射边界
 

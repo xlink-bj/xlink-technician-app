@@ -38,7 +38,7 @@
 
 历史 G4F Phase1A/1B 的源码字符串自证已退役；报价的目录桥接、身份、草稿、金额和只读边界由现行行为测试、`check:critical` 与受影响 H5 流程验证。旧阶段报告中的命令记录不再是当前入口。
 
-Stage1B 的 20 用例步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。离线草稿/媒体 10 用例步骤在对应 CI 中由 124 秒降至 97 秒；这只证明局部步骤收益，完整 H5 的耗时与结果仍以该次完整 run 为准。
+表单保存/流程推进的 20 用例步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。离线草稿/媒体 10 用例步骤在对应 CI 中由 124 秒降至 97 秒；这只证明局部步骤收益，完整 H5 的耗时与结果仍以该次完整 run 为准。
 
 发布构建脚本会拒绝继承 `XLINK_DEV_QA` 编译标记；H5/MP 还检查当前 `scripts/check-c1-release-qa-pages.mjs` 所列 DEV-only 路由不进入发布产物。QA 路由清单以该脚本和 `src/pages.json` 为准，不以旧阶段的页面数为准。全量本机测试使用 `VITE_XLINK_ENVIRONMENT=test`；现行 Validate 的完整 checkout 用于仍依赖历史提交的检查。局部行为测试不要求每次拉取全历史；若完整验证因浅历史失败，应先核明缺失的 Git 证据，不把它解释为业务回归。
 

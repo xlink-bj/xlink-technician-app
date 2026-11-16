@@ -355,7 +355,7 @@ describe('A main-App source-only multi-form/repeat controller', () => {
     expect((await ui.recoverCompleted(fields('现场完成', 'safe', '错误的备注'))).state).toBe('uncertain')
   })
 
-  it('Stage 1B forms Save→full EXTS→Process re-reads FormData and workflow before clearing the receipt', async () => {
+  it('R1 forms Save→full EXTS→Process re-reads FormData and workflow before clearing the receipt', async () => {
     const dispatched: string[] = []
     const original = r1SpecialTransport.tryMockR1SpecialCommand
     vi.spyOn(r1SpecialTransport, 'tryMockR1SpecialCommand').mockImplementation(async (...args) => {

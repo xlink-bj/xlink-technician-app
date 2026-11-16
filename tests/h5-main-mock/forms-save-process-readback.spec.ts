@@ -2,9 +2,9 @@ import { enterDevMockDynamicFormWorkspace } from '../support/dev-mock-dynamic-fo
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 import { expect, test, type Page } from '@playwright/test'
 
-/** Stage 1B: real uni-app H5 composition, Mock 020 only. Browser traffic to
+/** Real uni-app H5 forms Save/Process composition, Mock 020 only. Browser traffic to
  * anything other than the local dev server is an immediate failure. */
-test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
+test.describe('R1 forms Save→EXTS→Process / durable readback', () => {
   test.skip(process.env.VITE_XLINK_R1_MP_UX_FIXTURES !== 'true',
     'The isolated 020/021 synthetic fixtures must be explicitly enabled.')
 
@@ -52,7 +52,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
     await page.getByTestId('a-special-field-inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()
     await page.getByTestId('a-special-save-finish-request').click()
     await expect(page.getByTestId('a-special-save-finish-confirm')).toBeVisible()
-    await info.attach('stage1b-forms-confirm-before-process-430x932', {
+    await info.attach('forms-confirm-before-process-430x932', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
     await page.getByTestId('a-special-save-finish-confirm').click()
@@ -111,7 +111,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
     await expect(page.getByTestId('a-special-recover')).toBeVisible()
     await expect(page.getByTestId('a-special-row-mock-special-form-data-forms-1'))
       .toContainText(savedText)
-    await info.attach('stage1b-forms-recoverable-receipt-430x932', {
+    await info.attach('forms-recoverable-receipt-430x932', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
 
@@ -183,7 +183,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
     const row = page.getByTestId('a-special-row-mock-special-form-data-forms-1')
     await expect(row).toContainText('Process 结果不明，保留防重回执')
     await expect(row).toHaveCount(1)
-    await info.attach('stage1b-forms-process-outcome-unknown-430x932', {
+    await info.attach('forms-process-outcome-unknown-430x932', {
       body: await page.screenshot({ fullPage: true }), contentType: 'image/png',
     })
     await page.reload({ waitUntil: 'domcontentloaded' })
@@ -229,7 +229,7 @@ test.describe('Stage 1B forms Save→EXTS→Process / durable readback', () => {
       .toContainText('较新的编辑器保存内容')
     await expect(staleEditor.getByTestId(`a-special-row-${rowId}`))
       .not.toContainText('过期编辑器不得覆盖')
-    await info.attach('stage1b-forms-stale-editor-conflict-430x932', {
+    await info.attach('forms-stale-editor-conflict-430x932', {
       body: await staleEditor.screenshot({ fullPage: true }), contentType: 'image/png',
     })
     expect(external, 'Zero attempted external requests').toEqual([])

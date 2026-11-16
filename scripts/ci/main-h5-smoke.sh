@@ -16,7 +16,7 @@ playwright=./node_modules/.bin/playwright
 test -x "$playwright"
 
 "$playwright" test --config config/playwright/main-h5-mock.config.ts \
-  tests/h5-main-mock/stage1b-r1-forms-after-save.spec.ts \
+  tests/h5-main-mock/forms-save-process-readback.spec.ts \
   tests/h5-main-mock/a-stage-p1-acceptance.spec.ts \
   tests/h5-main-mock/order-fields-flow.spec.ts \
   tests/h5-main-mock/package-price-source.spec.ts \
