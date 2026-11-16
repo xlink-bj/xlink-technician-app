@@ -4,7 +4,7 @@
     :h5-navigation-fit="true"
     :compact-quote-entry="firstStepActive"
     class="quotation-workspace-shell"
-    :class="{ 'quotation-workspace-shell--review': productReviewOnly, 'quotation-workspace-shell--draft-boundary': contentState === 'ready' && composition.draft }"
+    :class="{ 'quotation-workspace-shell--review': productReviewOnly }"
     :scroll-into-view="scrollIntoView"
     :customer-name="workspace.detail?.customerName"
     :display-number="workspace.detail?.displayNumber"
@@ -27,6 +27,7 @@
     <QuotationActionContent
       ref="quotationContentRef"
       :state="contentState"
+      :draft-boundary-provided="contentState === 'ready' && Boolean(composition.draft)"
       :order-fields-validate-selection="props.orderFieldsValidateSelection"
       :synthetic-fields-review="syntheticReviewEnabled"
       :product-review-only="productReviewOnly"

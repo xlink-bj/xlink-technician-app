@@ -28,9 +28,3 @@
 .quotation-workspace-handoff__hint { display: block; color: var(--yh-color-text-muted); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
 .quotation-workspace-draft-boundary { display: flex; flex-direction: column; gap: var(--yh-space-4); margin: var(--yh-space-16) 0; color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
 .quotation-workspace-draft-boundary__title { color: var(--yh-color-text-primary); font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); }
-/* One persistent page-owned draft explanation replaces static duplicates only.
-   Save failures, edit restrictions and engine/submit feedback stay visible. */
-.quotation-workspace-shell--draft-boundary :deep(.quotation-content__initial-draft-notice),
-.quotation-workspace-shell--draft-boundary :deep(.q01-screen__provenance),
-.quotation-workspace-shell--draft-boundary :deep(.q01-screen__disclosure),
-.quotation-workspace-shell--draft-boundary :deep(.quotation-content__order-explainer) { display: none; }

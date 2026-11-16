@@ -127,7 +127,7 @@
       <view class="q01-screen__cost-row"><text>优惠金额</text><text class="q01-screen__cost-value">报价规则待核验</text></view>
       <text class="q01-screen__cost-hint">折扣、优惠及增减项应以已验证的业务规则和服务端金额为准。</text>
     </view>
-    <view class="q01-screen__disclosure">
+    <view v-if="!props.draftBoundaryProvided" class="q01-screen__disclosure">
       <text class="q01-screen__disclosure-line">订单说明</text>
       <text class="q01-screen__disclosure-line">完成业务校验并主动确认提交后才会创建正式订单，草稿不会自动提交。</text>
     </view>
@@ -176,6 +176,8 @@ const props = defineProps<{
   readonly canEdit: boolean
   readonly isInputCurrent?: () => boolean
   readonly showDraftNotice: boolean
+  /** The parent workspace renders the same static draft explanation. */
+  readonly draftBoundaryProvided?: boolean
   readonly productReviewOnly?: boolean
   readonly repairPartsLabel: string
   readonly errors: Readonly<{

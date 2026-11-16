@@ -146,7 +146,7 @@
       </view>
       <view v-else>
         <view v-if="composition.groups.length === 0 && isInitialEmptyWorkbench" class="quotation-content__initial-empty" data-testid="quotation-initial-empty-workbench">
-          <view class="quotation-content__initial-draft-notice" data-testid="quotation-draft-notice" role="status">
+          <view v-if="!props.draftBoundaryProvided" class="quotation-content__initial-draft-notice" data-testid="quotation-draft-notice" role="status">
             <text class="quotation-content__initial-draft-notice-mark" aria-hidden="true">i</text>
             <text class="quotation-content__initial-draft-notice-copy">当前为报价草稿；通过校验并确认提交后才会创建正式订单。</text>
           </view>
@@ -200,7 +200,7 @@
             <view class="quotation-content__initial-cost-row"><text>折扣</text><text class="quotation-content__fee-value">不打折 <text aria-hidden="true">›</text></text></view>
             <view class="quotation-content__initial-cost-row quotation-content__initial-cost-row--last"><text>优惠金额（元）</text><text class="quotation-content__initial-cost-unavailable">完成选品后按业务规则填写</text></view>
           </view>
-          <view class="quotation-content__order-explainer">
+          <view v-if="!props.draftBoundaryProvided" class="quotation-content__order-explainer">
             <text class="quotation-content__order-explainer-title">ⓘ 订单说明</text>
             <text>确认提交后才会产生正式订单；草稿不等于正式订单。</text>
             <text>正式下单需满足现有字段、金额及权限校验。</text>
@@ -226,7 +226,8 @@
             :group="firstRepairPartGroup"
             :options="composition.repairPartOptions"
             :can-edit="canEdit"
-            :show-draft-notice="!hasSharedDraftStatus"
+            :show-draft-notice="!hasSharedDraftStatus && !props.draftBoundaryProvided"
+            :draft-boundary-provided="props.draftBoundaryProvided"
             :product-review-only="props.productReviewOnly"
             :repair-parts-label="repairPartPathLabel(firstRepairPartGroup.repairParts)"
             :errors="{
@@ -1095,6 +1096,8 @@ import {
 
 const props = defineProps<{
   readonly state: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
+  /** Presentation only: the workspace already explains the draft boundary. */
+  readonly draftBoundaryProvided?: boolean
   readonly syntheticFieldsReview?: boolean
   readonly productReviewOnly?: boolean
   readonly aStageMockOrder?: boolean
