@@ -1,12 +1,12 @@
 # XLink 工匠 App — 文档导航
 
-> **Status: ACTIVE documentation index (effective on main merge)** · Owner approved 2026-10-30 · 历史盘点基线 main@17ba7211040df887be28665564414cb037b6acef
+> **Status: ACTIVE documentation index** · 历史盘点基线 main@17ba7211040df887be28665564414cb037b6acef
 > **Owner:** ChatGPT Lead (maintainer); Product Owner approved the documentation authority model and three standards on 2026-10-30.
 > **Scope:** Architecture/documentation only. No business, backend, production, CI or release authorization changes.
 >
-> **本索引及三份新规范经 Owner 审核批准，在合入 main 时正式生效。** 本页是文档入口，不是另一套架构决策。**当前实施事实看代码和 CI，架构决策看现有权威规范，历史验收看对应 exact-HEAD 证据。**
+> 本页是文档入口，不是另一套架构决策。**当前实施事实看代码和 CI，架构决策看现有权威规范，历史验收看对应 exact-HEAD 证据。**
 >
-> **主干更新提示（2026-10-30）：**本索引中的 G0-A/B/C 和 C1 审计数字均固定在旧 `main@17ba721`，不是最新主干状态。C1-FIX 已通过 [PR #238](https://github.com/xlink-bj/xlink-technician-app/pull/238) 合入 `57cde73`；四个内部 QA 页面已从 H5/MP 发布包排除。C2-A [PR #242](https://github.com/xlink-bj/xlink-technician-app/pull/242) 随后合入 `main@ded94abc`，减少四条 DEV Mock 反向依赖，但同样不属于本历史快照。原生 APP 最终打包/真机验证仍在 [#240](https://github.com/xlink-bj/xlink-technician-app/issues/240)。
+> **历史快照提示：**本索引中的 G0-A/B/C 和 C1 审计数字均固定在旧 `main@17ba721`，不是最新主干状态。当时的 QA 页面数量、PR 与提交只属于历史证据；当前 DEV-only 路由及发布排除规则看 `scripts/check-c1-release-qa-pages.mjs` 与 `src/pages.json`。原生 APP 最终打包/真机验证仍是独立事项。
 
 ## 当前日常开发入口
 

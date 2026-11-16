@@ -2,7 +2,7 @@
 
 **Current mainline guidance · 2026-10-29.** This file salvages the durable operating guidance from historical Draft PR #210, while replacing its 2026-10-23 Stage 1 test counts and stacked-PR assumptions. Historical counts and failures remain evidence in [Issue #209](https://github.com/xlink-bj/xlink-technician-app/issues/209), **not current acceptance status**.
 
-Read first: [AGENTS.md](../../AGENTS.md), [EQ03 test lanes](./EQ03_TEST_LANES_AND_METRICS.md), [cloud / visual verification](./CLOUD_EXECUTION_AND_VISUAL_VERIFICATION_20261026.md), and [commercial visual contract](../design-system/DS02A_H5_VISUAL_CONTRACT.md). If a document disagrees with live source, a newer approved Lead decision or a signed Golden, stop and resolve the conflict.
+Read first: [AGENTS.md](../../AGENTS.md), [current quality/environment gates](./QUALITY_AND_ENVIRONMENT_GATES.md), [EQ03 test lanes](./EQ03_TEST_LANES_AND_METRICS.md), and [commercial visual contract](../design-system/DS02A_H5_VISUAL_CONTRACT.md). This file supplies local Mac/visual execution details; its older branch and native-stage examples are historical where they conflict with AGENTS.md.
 
 ## 1. First 60 seconds — exact evidence boundary
 
@@ -22,16 +22,16 @@ Read first: [AGENTS.md](../../AGENTS.md), [EQ03 test lanes](./EQ03_TEST_LANES_AN
 | Login → Home → List → Detail → Action Workspace | **True uni-app main H5** in DEV synthetic Mock + Playwright | MP native or physical device acceptance |
 | Quotation, SKU, signing, dynamic form / repeat state | Focused main-App test, then full H5 Mock and appropriate targeted contract gates | Real production write path |
 | Spacing, hit targets, commercial UI | Actual App screenshot at matched 320/375/390 and accepted DS02A Golden; inspect real rendered DOM | Owner commercial visual approval |
-| WeChat routing, WXSS, lifecycle, input, safe area | `build:mp-weixin`, native DevTools simulator and relevant device | Equivalent H5 or production business behavior |
+| WeChat routing, WXSS, lifecycle, input, safe area | `build:mp-weixin`; native DevTools/device evidence in a separately authorized native window | H5 or a build alone cannot establish native behavior |
 | Final engineering ready-to-integrate gate | `verify:full`, browser gate, platform build and current GitHub Actions on exact HEAD | Unrun tests, skipped cases or pending Owner acceptance |
 
 **Commercial UI invariant:** Mock and Real share the same user-facing components and information architecture at matching business states. DEV controls and synthetic provenance remain in the isolated QA surface, not on customer-facing pages. No unapproved Golden refresh, layout redesign or generic visual replacement.
 
 ### Cross-platform style changes: targeted checks, not another gate
 
-Keep unit tests and related H5 flows as the fast feedback loop. When a shared component or brand stylesheet changes, additionally exercise the affected controls in the real WeChat runtime: component host/style isolation, spacing, click bubbling, disabled behavior and footer scrolling where relevant. H5 success or a successful MP build alone does not establish native visual correctness.
+Keep unit tests and related H5 flows as the fast feedback loop. When a shared component or brand stylesheet changes, identify affected native controls for the later native gate: component host/style isolation, spacing, click bubbling, disabled behavior and footer scrolling where relevant. During the current Stage B, AGENTS.md defers WeChat DevTools, simulator and device execution. H5 success or a successful MP build alone does not establish native visual correctness.
 
-Use the official SDK for repeatable navigation, measurements and screenshots; visually inspect representative affected states. Record automated checks, visual observations and unverified items separately. Script input is not evidence that a software keyboard opened; keyboard occlusion, dismissal recovery and physical-device safe areas need their own observation. Match coverage to the change rather than introducing stage-specific quotas or a mandatory full-page matrix.
+In a later authorized native window, use the official SDK for repeatable navigation, measurements and screenshots; visually inspect representative affected states. Record automated checks, visual observations and unverified items separately. Script input is not evidence that a software keyboard opened; keyboard occlusion, dismissal recovery and physical-device safe areas need their own observation. Match coverage to the change rather than introducing stage-specific quotas or a mandatory full-page matrix.
 
 ## 3. Reuse the existing commands
 
@@ -53,12 +53,12 @@ Focused H5 regression uses the **existing** `playwright.main-h5-mock.config.ts` 
 The opt-in MOCK-021 repeat main-App case needs `VITE_XLINK_R1_MP_UX_FIXTURES=true`; when not enabled, report SKIP separately. A targeted PASS does not prove the full `test:main-h5-mock` suite, an MP build does not prove device UX, and old PR screenshots do not rebaseline current visuals.
 
 
-## 3A. Local Mac single-root / stable WeChat DevTools (2026-11-02)
+## 3A. Local Mac single-root / stable WeChat DevTools (native execution deferred during Stage B)
 
 - Operational repo: `/Users/yesun/Code/xlink-technician-app` (the only local App checkout). Every task first verifies `pwd -P`, `git rev-parse --show-toplevel`, `git branch --show-current`, `git rev-parse HEAD`, and `git status --short`. Do not create a task worktree or source copy under `/private/tmp` or Codex worktrees.
-- Run `pnpm run dev:mp-weixin:mock-ux` **inside this root**, with DEV synthetic network/write fences. Reuse the resulting root-local output (normally `dist/dev/mp-weixin`, subject to the UniApp CLI output log). Open that exact absolute directory in WeChat DevTools; if the existing imported project path points elsewhere, close and re-import it. Do not point DevTools at review-only or old temporary builds.
+- In a later authorized native window, run `pnpm run dev:mp-weixin:mock-ux` **inside this root**, with DEV synthetic network/write fences. Reuse the resulting root-local output (normally `dist/dev/mp-weixin`, subject to the UniApp CLI output log). Open that exact absolute directory in WeChat DevTools; if the existing imported project path points elsewhere, close and re-import it. Do not point DevTools at review-only or old temporary builds.
 - Maintain one active watcher and one canonical DevTools project. Confirm current source/build timestamp and simulator at the approved 430×932 viewport; record root/path, branch, HEAD, mode and screenshot evidence together. H5/mock/release compilers are different gates and do not substitute for native MP.
-- A short-lived review branch, if necessary, is checked out in this **same stable directory** after preserving/committing work safely; no separate worktree. Once reviewed/approved, integrate into `main` and return the same checkout to `main`. Never merge or deploy merely because the local build passes.
+- Current ordinary development stays on `main` in the same stable directory. Coordinate a busy checkout and preserve its changes before switching anything; do not create a short-lived review branch for routine work. A successful local build does not authorize deploy or real business operations.
 - Do not delete existing worktrees or evidence as part of migration; list them and request a separate precise cleanup decision. Tests may write ignored artifacts under this root without turning them into new App projects.
 
 ## 4. Verification, ownership and handoff
