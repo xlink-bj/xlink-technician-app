@@ -1,5 +1,7 @@
 # EQ-04 — Bounded Quotation Catalog/Package Admission Bridge
 
+> 历史 Draft 阶段记录；其验收清单与旧源码字符串检查不再是当前门禁。现行入口见 [Quality & Environment Gates](./QUALITY_AND_ENVIRONMENT_GATES.md)。
+
 **Parent:** [EQ-03 #171](https://github.com/xlink-bj/xlink-technician-app/pull/171), pinned HEAD `df9ffa72a7fcd45c3e08760f7eb049d417130559`. Separate **Draft**, no merge/Production requests.
 
 ## Change

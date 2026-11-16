@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | 局部开发反馈 | `pnpm exec vitest run <受影响的测试文件>`；按改动运行 `pnpm run typecheck` 或对应 `check:*` | 先测实际受影响行为，不必每次跑整套 |
 | 较广的本地回归 | `pnpm run verify:quick` | 固定关键样本、边界、类型检查；不能替代全量测试 |
-| 主干完整工程验证 | `VITE_XLINK_ENVIRONMENT=test pnpm run verify` | 现行 17 个串行步骤：静态检查、类型与全部 Vitest；`verify:full` 只是其兼容别名 |
+| 主干完整工程验证 | `VITE_XLINK_ENVIRONMENT=test pnpm run verify` | 静态检查、类型与全部 Vitest；`verify:full` 只是其兼容别名 |
 | 可选规模盘点 | `pnpm run audit:quality` | 独立 census，不在 `verify` / `verify:full` 内，也不是覆盖率或尺寸门禁 |
 | 架构与业务 owner | pnpm run check:boundaries、pnpm run check:engineering-ownership | 禁止直接平台/API Wire/价目越界 |
 | 关键业务负例 | pnpm run check:critical / pnpm run verify:critical | 检查 manifest 和执行对应 suites |
@@ -35,6 +35,8 @@
 | App 构建 | pnpm run build:app | 不代表双平台实体运行 |
 
 检查命令以当前提交的 package.json 为准。局部测试之后按影响选择真实 H5 Mock、三端构建或视觉检查；主干 push 运行 [Validate](../../.github/workflows/validate.yml) 与独立命名的 [Validate Main H5 Smoke](../../.github/workflows/validate-main-h5-smoke.yml)。`verify` 本身不构建三端，也不启动浏览器。
+
+历史 G4F Phase1A/1B 的源码字符串自证已退役；报价的目录桥接、身份、草稿、金额和只读边界由现行行为测试、`check:critical` 与受影响 H5 流程验证。旧阶段报告中的命令记录不再是当前入口。
 
 Stage1B 的 20 用例步骤使用两个 Playwright worker；[此前成功基线](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43854995902) 用时 203 秒，[同集合并行运行](https://github.com/xlink-bj/xlink-technician-app/actions/runs/43862851020) 用时 119 秒。离线草稿/媒体 10 用例步骤在对应 CI 中由 124 秒降至 97 秒；这只证明局部步骤收益，完整 H5 的耗时与结果仍以该次完整 run 为准。
 
