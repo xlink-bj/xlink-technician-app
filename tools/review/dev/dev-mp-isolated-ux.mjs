@@ -22,6 +22,11 @@ export function isolatedMpUxEnvironment(parent = process.env) {
     VITE_XLINK_MOCK: 'true',
     VITE_XLINK_ENABLE_REAL_WRITES: 'false',
     VITE_XLINK_ENABLE_R1_SPECIAL_WRITES: 'false',
+    VITE_XLINK_AUTH_ONLY_MOCK_BUSINESS: 'false',
+    VITE_XLINK_R1_FORMS_ACTIONS: 'false',
+    VITE_XLINK_R1_REPEAT_ACTIONS: 'false',
+    VITE_XLINK_R1_FORMS_GRANT: '',
+    VITE_XLINK_R1_REPEAT_GRANT: '',
     VITE_XLINK_QUICK_LOGIN_PHONE: '',
     VITE_XLINK_QUICK_LOGIN_CODE: '',
   }
@@ -32,6 +37,11 @@ export function launchIsolatedMpUx(platform = 'mp-weixin') {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
   const executable = resolve(root, 'node_modules/.bin/uni')
   const env = isolatedMpUxEnvironment()
+  if(platform==='mp-weixin'&&process.env.VITE_XLINK_NATIVE_APPOINTMENT_MOCK==='true'){
+    env.VITE_XLINK_NATIVE_APPOINTMENT_MOCK='true'
+    env.VITE_XLINK_R1_MP_UX_FIXTURES='true'
+    env.VITE_XLINK_R1_APPOINTMENT_ARCHIVE_FIXTURE='true'
+  }else{env.VITE_XLINK_NATIVE_APPOINTMENT_MOCK='false'}
   // H5 reuses this same inert fixture; no additional test server/framework.
   if (platform === 'h5') {
     env.UNI_CUSTOM_CONTEXT = '{"XLINK_DEV_QA":true}'

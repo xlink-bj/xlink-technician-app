@@ -1,4 +1,5 @@
 import { createSelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
+import {nativeAppointmentMockEnabled} from '@shared/config/native-appointment-mock'
 import { isR1RetainedFileArray } from '@shared/form/r1-retained-file-values'
 import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {bindR1ConfiguredFileReadDisplay} from '@shared/form/r1-configured-file-read-evidence'
@@ -36,7 +37,7 @@ type Row = Record<string, unknown>
 /** The established offline Mock profile may exercise the same read parser.
  * Exact actor, role-list ownership and source joins are still checked below;
  * no write flag or localhost-backed environment is impersonated. */
-function normalMockReadEnabled(env: Record<string, unknown>, origin: string): boolean {
+export function normalMockReadEnabled(env: Record<string, unknown>, origin: string): boolean {
   return env.DEV === true && env.VITE_XLINK_ENVIRONMENT === 'dev'
     && env.VITE_XLINK_H5_MOCK_E2E === 'true' && env.VITE_XLINK_R1_MP_UX_FIXTURES === 'true'
     && env.VITE_XLINK_MOCK === 'true' && env.VITE_XLINK_ENABLE_REAL_WRITES === 'false'
@@ -95,6 +96,7 @@ export function assertSurveyReadExtsValues(definition: FormDefinitionRead, origi
 
 /** Existing local reader plus the isolated offline Mock read profile. Production stays closed. */
 export function normalNodeFormsReadEnabled(env: Record<string, unknown>, origin: string): boolean {
+  if(nativeAppointmentMockEnabled(env,origin))return true
   if (normalMockReadEnabled(env, origin)) return true
   const readonlyMode = env.VITE_XLINK_ENABLE_REAL_WRITES === 'false' && env.VITE_XLINK_ENABLE_R1_SPECIAL_WRITES === 'false'
   const scopedWriteMode = env.VITE_XLINK_R1_REPEAT_ACTIONS === 'true'
@@ -125,7 +127,7 @@ export function createNormalNodeFormsReader(input: {
 }): R1NodeFormsReader {
   const transport = input.transport ?? createUniApiReadTransport({
     apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
-    blockRealRequests: normalMockReadEnabled(input.env, input.origin),
+    blockRealRequests: normalMockReadEnabled(input.env, input.origin)||nativeAppointmentMockEnabled(input.env,input.origin),
     getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null,
   })
   let generation = 0
@@ -194,7 +196,7 @@ export function createNormalNodeFormsReader(input: {
     return current
   }
   const enabled = () => normalNodeFormsReadEnabled(input.env, input.origin)
-    && (!normalMockReadEnabled(input.env, input.origin)
+    && (!(normalMockReadEnabled(input.env, input.origin)||nativeAppointmentMockEnabled(input.env,input.origin))
       || input.auth.getCurrentSession()?.user.id === 'synthetic-user'
         && input.auth.getCurrentSession()?.currentRole?.id === 'synthetic-role')
   const fingerprint = () => {

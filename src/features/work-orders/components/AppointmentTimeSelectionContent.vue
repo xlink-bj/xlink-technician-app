@@ -47,6 +47,9 @@
             <AppIcon v-if="selectedOptionKey === option.key" class="time-slot-check" name="complete" :size="14" color="var(--app-color-surface)" aria-hidden="true" />
           </button>
         </view>
+        <picker v-if="allowMinuteSelection" mode="time" :value="minuteTime || '09:00'" :disabled="disabled" @change="handleMinuteChange" data-testid="appointment-minute-picker">
+          <view class="time-slot" :class="{'time-slot--selected': Boolean(minuteTime)}">{{ minuteTime ? `已选 ${minuteTime} · 调整时间` : '选择其他时间（到分钟）' }}</view>
+        </picker>
         <text v-if="timeError" class="time-selection-error">{{ timeError }}</text>
       </view>
     </view>
@@ -54,9 +57,10 @@
 <script setup lang="ts">
 import AppIcon from '@shared/ui/AppIcon.vue'
 import {dateLabelFor,type AppointmentDateShortcut,type AppointmentTimeOption} from '../appointment-time'
-defineProps<{selectedDate:string;selectedOptionKey:string;dateShortcuts:readonly AppointmentDateShortcut[];timeOptions:readonly AppointmentTimeOption[];timeError?:string;disabled?:boolean}>()
-const emit=defineEmits<{(e:'select-date',value:string):void;(e:'select-option',value:string):void}>()
+defineProps<{selectedDate:string;selectedOptionKey:string;dateShortcuts:readonly AppointmentDateShortcut[];timeOptions:readonly AppointmentTimeOption[];timeError?:string;disabled?:boolean;allowMinuteSelection?:boolean;minuteTime?:string}>()
+const emit=defineEmits<{(e:'select-date',value:string):void;(e:'select-option',value:string):void;(e:'select-minute',value:string):void}>()
 function handleDateChange(event:unknown){const value=(event as {detail?:{value?:unknown}})?.detail?.value;if(typeof value==='string'&&value)emit('select-date',value)}
+function handleMinuteChange(event:unknown){const value=(event as {detail?:{value?:unknown}})?.detail?.value;if(typeof value==='string'&&value)emit('select-minute',value)}
 </script>
 <style>
 @import "@brand-ui/appointment-time.scss";

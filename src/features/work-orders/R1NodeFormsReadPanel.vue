@@ -1,5 +1,48 @@
 <template>
   <view data-testid="r1-normal-form-read" :class="{'form-read--commercial':commercial}">
+    <template v-if="appointmentArchive">
+      <view class="archive-heading"><text class="archive-title">预约信息</text>
+        <navigator v-if="visibleSnapshot?.records.length && !editing && !busy" class="archive-link" data-testid="appointment-archive-open"
+          :url="appointmentArchive.route(appointmentArchive.summary && visibleSnapshot.records.length === 1 ? String(visibleSnapshot.records[0]!.id) : undefined)">
+          {{ appointmentArchive.summary ? (visibleSnapshot.records.length === 1 ? '查看详情' : `查看全部 ${visibleSnapshot.records.length} 条`) : '全部预约' }} ›
+        </navigator>
+      </view>
+      <text v-if="loading" class="archive-hint" data-testid="appointment-archive-loading">正在读取预约记录…</text>
+      <view v-else-if="!visibleSnapshot" class="archive-failure" data-testid="appointment-archive-error">
+        <text class="archive-hint">{{ displayMessage || '预约记录尚未读取' }}</text>
+        <AppButton variant="text" size="compact" :disabled="busy" @tap="load">重新读取</AppButton>
+      </view>
+      <template v-else>
+        <text v-if="!visibleSnapshot.records.length" class="archive-hint" data-testid="appointment-archive-empty">暂无预约记录</text>
+        <text v-else-if="appointmentArchive.summary && visibleSnapshot.records.length > 1" class="archive-copy">共 {{ visibleSnapshot.records.length }} 条预约，请选择记录查看</text>
+        <view v-else-if="appointmentArchive.summary" class="archive-copy" data-testid="appointment-archive-summary">
+          <text v-for="field in appointmentPreview(visibleSnapshot.records[0]!)" :key="field.fieldId" class="archive-copy">{{ field.label }}：{{ field.text }}</text>
+        </view>
+        <template v-else>
+          <text v-if="displayMessage && feedback.tone !== 'neutral'" class="archive-hint" role="status" data-testid="r1-normal-form-read-message">{{ displayMessage }}</text>
+          <text v-if="appointmentArchive.recordId && !archiveRecords.length" class="archive-hint" data-testid="appointment-record-unavailable">这条预约暂不可查看，请返回全部预约重新选择。</text>
+          <navigator v-for="(record,index) in !appointmentArchive.recordId ? visibleSnapshot.records : []" :key="String(record.id)"
+            :url="appointmentArchive.route(String(record.id))" class="archive-entry archive-navigator" :data-testid="`appointment-record-${record.id}`">
+            <view class="archive-heading"><text class="archive-entry-title">预约记录 {{ index + 1 }}</text><text class="archive-link">查看详情 ›</text></view>
+            <text v-for="field in appointmentPreview(record)" :key="field.fieldId" class="archive-copy">{{ field.label }}：{{ field.text }}</text>
+          </navigator>
+          <view v-for="record in archiveRecords" :key="String(record.id)" data-testid="appointment-record-detail">
+            <template v-if="!editing">
+              <AppInformationRow v-for="field in appointmentReadFields(record)" :key="field.fieldId" :data-testid="`r1-normal-value-${field.valueKey}`">
+                <template #label>{{ field.label }}</template><template #value>{{ field.text }}</template>
+              </AppInformationRow>
+              <AppButton v-if="canEditAppointment(String(record.id))" data-testid="appointment-modify" @tap="edit(String(record.id))">修改预约</AppButton>
+              <text v-else class="archive-hint" data-testid="appointment-read-only">此预约当前仅可查看，不能修改。</text>
+            </template>
+            <template v-else>
+              <slot v-if="editPresentation" name="edit-experience" :context="editPresentation" />
+              <AppButton variant="text" :disabled="busy" data-testid="appointment-edit-cancel" @tap="cancelEdit">取消修改</AppButton>
+            </template>
+          </view>
+        </template>
+      </template>
+    </template>
+    <template v-else>
     <text v-if="!commercial" class="form-read__hint">读取当前工单节点已保存的记录。查看不会保存或推进流程。</text>
     <AppButton variant="secondary" size="compact" :disabled="loading || busy || fileBusy || fileCancelling || draftWorking" @tap="load">
       {{ loading ? '正在读取…' : '读取已保存表单' }}
@@ -90,15 +133,17 @@
         </view>
       </template>
     </template>
+    </template>
   </view>
 </template>
 
 <script lang="ts">
-import { shallowRef as readerOwnerRef } from 'vue'
+import { shallowRef as readerOwnerRef, toRaw as rawReader } from 'vue'
 import type { R1NodeFormsReader as ReaderPort } from './r1-node-forms-read'
 // View ownership is separate from the reader's private source/command proofs.
 const normalReaderViews = new WeakMap<ReaderPort, ReturnType<typeof readerOwnerRef<object | null>>>()
 function claimNormalReader(reader: ReaderPort) {
+  reader=rawReader(reader)
   let current = normalReaderViews.get(reader)
   if (!current) { current=readerOwnerRef<object|null>(null);normalReaderViews.set(reader,current) }
   const state=current, owner={}
@@ -121,6 +166,8 @@ import { r1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-rea
 import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
+import AppInformationRow from '@shared/ui/AppInformationRow.vue'
+import { appointmentDisplayFor } from './appointment-time'
 import AppTaskSectionHeading from '@shared/ui/AppTaskSectionHeading.vue'
 import {r1FormFieldGroups,type R1FormWorkspaceFooter,type R1FormFooterAction} from './r1-form-workspace-presentation'
 import R1FormFieldControl from './R1FormFieldControl.vue'
@@ -137,6 +184,8 @@ import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-rea
 
 const props = defineProps<{ readonly reader: R1NodeFormsReader; readonly workOrderId: string;
   readonly runtimeNodeId: string; readonly commercial?:boolean; readonly actorScope?: string | null;
+  readonly readRevision?: number;
+  readonly appointmentArchive?: { readonly summary: boolean; readonly recordId?: string; route(recordId?: string): string };
   readonly editExperienceOverride?: (snapshot: R1NodeFormsSnapshot, recordId: string) => boolean;
   readonly readFieldOverride?: (snapshot: R1NodeFormsSnapshot, record: FormDataRead, field: R1RecordReadField) => boolean }>()
 let readerView = claimNormalReader(props.reader)
@@ -166,6 +215,23 @@ const draftBlocked = computed(() => !editingId.value && Boolean(draftRead.value 
 const emit = defineEmits<{ (event: 'changed'): void;
   (event: 'snapshot-change', value: { readonly actorScope: string; readonly snapshot: R1NodeFormsSnapshot } | null): void }>()
 const actions = computed(() => visibleSnapshot.value ? actionProvider?.forSnapshot(visibleSnapshot.value) ?? null : null)
+const archiveRecords = computed(() => props.appointmentArchive?.recordId
+  ? visibleSnapshot.value?.records.filter(record => String(record.id) === props.appointmentArchive!.recordId) ?? [] : [])
+function appointmentReadFields(record: FormDataRead) {
+  const source = visibleSnapshot.value
+  return source ? projectR1RecordReadFields(source.definition, record).map(field =>
+    !field.unavailable && source.definition.fields?.find(f => f.fieldId === field.fieldId)?.type === 'datetime'
+      ? { ...field, text: appointmentMinuteText(record.values?.[field.valueKey]) } : field) : []
+}
+function appointmentMinuteText(value: unknown): string {
+  const parsed = appointmentDisplayFor(value)
+  return parsed ? `${parsed.date} ${parsed.timeLabel}` : typeof value === 'string' && value ? value : '—'
+}
+function appointmentPreview(record: FormDataRead) { return appointmentReadFields(record).filter(field => ['need','datetime'].includes(field.valueKey)) }
+function canEditAppointment(id: string): boolean {
+  return Boolean(visibleSnapshot.value && props.editExperienceOverride?.(visibleSnapshot.value,id)
+    && actions.value?.canEdit?.(id) && !actions.value.locked())
+}
 const fileBusy=computed(()=>{void actions.value?.fileMedia?.revision.value;return actions.value?.fileMedia?.busy()??false})
 const editableFields = computed(() => visibleSnapshot.value ? actions.value?.projectFields?.(values.value,editingId.value)
   ?? projectR1RepeatFields(visibleSnapshot.value, values.value) : [])
@@ -206,7 +272,7 @@ const editPresentation = computed(() => {
   const owns=()=>version===ticket&&visibleSnapshot.value===source&&editingId.value===id&&editorIdentity===identity
     &&identity.isSameActor()&&actions.value===action&&!action.locked()&&action.canEdit?.(id)===true
     &&!busy.value&&!loading.value&&!draftBlocked.value&&!draftWorking.value&&!fileCancelling.value
-  return {snapshot:source,recordId:id,fields:editableFields.value,values:Object.freeze({...values.value}),
+  return {snapshot:source,recordId:id,fields:editableFields.value,values:Object.freeze({...values.value}),originalValues:Object.freeze({...action.initialValues?.(id)}),
     disabled:busy.value||loading.value||draftBlocked.value||draftWorking.value||fileCancelling.value,valid:validDraft.value,
     updateValue:(key:string,value:R1LocalFieldValue)=>{if(owns())setValue(key,value)},
     saveOnly:async()=>{if(owns())await save(false)}}
@@ -220,6 +286,13 @@ function clear() { lastLocalWrite=null;draftSession=null; draftRead.value=null; 
 watch(() => [props.workOrderId, props.runtimeNodeId, props.actorScope], clear)
 onBeforeUnmount(()=>{clear();readerView.drop()})
 watch(()=>props.reader,next=>{clear();readerView.drop();readerView=claimNormalReader(next);viewReader=readerView.reader})
+// MP may retain a custom component despite a changed Vue key. A visible
+// archive page explicitly renews its reader ownership before reading again.
+watch(()=>props.readRevision,()=>{
+  clear();readerView.drop();readerView=claimNormalReader(props.reader);viewReader=readerView.reader;void load()
+})
+watch(() => props.appointmentArchive ? [props.workOrderId,props.runtimeNodeId,props.actorScope] : null,
+  value => { if(value)void load() }, { immediate: true })
 async function load() {
   if (loading.value || busy.value || fileBusy.value || fileCancelling.value || draftWorking.value || !props.actorScope) return
   const ticket = ++version, actorScope = props.actorScope
@@ -501,4 +574,5 @@ async function complete() {
 
 <style scoped lang="scss">
 @import "@brand-ui/node-forms-read.scss";
+@import "@brand-ui/detail-archives.scss";
 </style>

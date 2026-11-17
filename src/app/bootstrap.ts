@@ -105,7 +105,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
     tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), env: import.meta.env,
     origin: typeof window === 'undefined' ? '' : window.location.origin })
   app.provide(r1NodeFormsReaderKey, normalNodeFormsReader)
-  app.provide(historicalFormsReaderKey, () => createHistoricalFormsReader({ auth: authSession, read: apiRead,
+  app.provide(historicalFormsReaderKey, options => createHistoricalFormsReader({ auth: authSession, read: apiRead, appointmentArchive: options?.appointmentArchive, appointmentNodeId: options?.nodeId,
     tenantId: String(import.meta.env.VITE_XLINK_AUTH_TENANT ?? ''), env: import.meta.env,
     origin: typeof window === 'undefined' ? '' : window.location.origin }))
   const apiCommand = dependencies.apiCommand ?? createDefaultTechnicianApiCommandPort(authSession, apiRead)

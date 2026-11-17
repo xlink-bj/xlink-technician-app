@@ -3,7 +3,7 @@ import type { FormDataRead, FormDefinitionRead } from '@shared/ports'
 
 /** Derived from fresh node references, never a log ID, route or write lease. */
 export interface HistoricalFormTarget {
-  readonly kind: 'completed-forms-reference'
+  readonly kind: 'completed-forms-reference' | 'completed-appointment-repeat'
   readonly workOrderId: string
   readonly workflowRunId: string
   readonly runtimeNodeId: string
@@ -24,4 +24,4 @@ export interface HistoricalFormsReader {
   isCurrent(value: HistoricalFormTarget | HistoricalFormRead): boolean
   clear(): void
 }
-export const historicalFormsReaderKey: InjectionKey<() => HistoricalFormsReader> = Symbol('historical-forms-reader')
+export const historicalFormsReaderKey: InjectionKey<(options?: {readonly appointmentArchive: true; readonly nodeId: string}) => HistoricalFormsReader> = Symbol('historical-forms-reader')

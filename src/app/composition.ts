@@ -1,3 +1,4 @@
+import {nativeAppointmentMockEnabled} from '@shared/config/native-appointment-mock'
 import { localSessionAuthorityPolicy } from './local-session-authority'
 import { BrowserDurableMediaStore } from '@adapters/storage/browser-durable-media-store'
 import type {
@@ -115,7 +116,7 @@ export function createDefaultTechnicianApiReadPort(authSession: AuthSessionPort)
   let technicianReadPort: TechnicianApiReadPort | null = null
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
-    blockRealRequests: config.value.authOnlyMockBusiness,
+    blockRealRequests: config.value.authOnlyMockBusiness || nativeAppointmentMockEnabled(import.meta.env,typeof window==='undefined'?'':window.location.origin),
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     isChildWorkflowParentListedForCurrentSession: (nodeId) =>
       technicianReadPort?.isChildWorkflowParentListedForCurrentSession?.(nodeId) === true,
@@ -196,7 +197,7 @@ export function createDefaultQuotationCatalogReadPort(
   let catalogReadPort: AuthorizedQuotationCatalogReadPort | null = null
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
-    blockRealRequests: config.value.authOnlyMockBusiness,
+    blockRealRequests: config.value.authOnlyMockBusiness || nativeAppointmentMockEnabled(import.meta.env,typeof window==='undefined'?'':window.location.origin),
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     isProductionQuotationCatalogReadAuthorized: request =>
       catalogReadPort?.isProductionReadRequestAuthorized(request) === true,
@@ -241,7 +242,7 @@ export function createDefaultSurveyLeakageCauseProvider(authSession: AuthSession
   }
   return createSurveyLeakageCauseProvider(createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
-    blockRealRequests: config.value.authOnlyMockBusiness,
+    blockRealRequests: config.value.authOnlyMockBusiness || nativeAppointmentMockEnabled(import.meta.env,typeof window==='undefined'?'':window.location.origin),
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     getMockActor: () => {
       const session = authSession.getCurrentSession()
@@ -276,7 +277,7 @@ export function createDefaultTechnicianApiCommandPort(
 
   const transport = createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
-    blockRealRequests: config.value.authOnlyMockBusiness,
+    blockRealRequests: config.value.authOnlyMockBusiness || nativeAppointmentMockEnabled(import.meta.env,typeof window==='undefined'?'':window.location.origin),
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createTechnicianApiCommandAdapter(transport, apiRead)
@@ -291,7 +292,7 @@ export function createDefaultQuotationOrderCommandPort(authSession: AuthSessionP
   }
   const transport = createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
-    blockRealRequests: config.value.authOnlyMockBusiness,
+    blockRealRequests: config.value.authOnlyMockBusiness || nativeAppointmentMockEnabled(import.meta.env,typeof window==='undefined'?'':window.location.origin),
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   })
   return createQuotationOrderCommandAdapter(transport)
@@ -319,7 +320,7 @@ export function createDefaultQuotationOrderReadPort(
   }
   const transport = createUniApiReadTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
-    blockRealRequests: config.value.authOnlyMockBusiness,
+    blockRealRequests: config.value.authOnlyMockBusiness || nativeAppointmentMockEnabled(import.meta.env,typeof window==='undefined'?'':window.location.origin),
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
     isOrderWorkOrderListedForCurrentSession: isWorkOrderListedForCurrentSession,
     getOrderReadAuthorizationIdentity: authorizationIdentity,
@@ -363,7 +364,7 @@ export function createDefaultUploadPort(authSession: AuthSessionPort): UploadPor
   }
   const upload = createUniUploadPort(createUniApiCommandTransport({
     apiBaseUrl: config.value.environment.apiBaseUrl,
-    blockRealRequests: config.value.authOnlyMockBusiness,
+    blockRealRequests: config.value.authOnlyMockBusiness || nativeAppointmentMockEnabled(import.meta.env,typeof window==='undefined'?'':window.location.origin),
     getSessionRef: () => authSession.getCurrentSession()?.sessionRef ?? null,
   }))
   if (!isDevSyntheticH5MediaQa()) return upload

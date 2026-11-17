@@ -1,4 +1,7 @@
 import type { AuthSessionPort } from '@shared/ports'
+import {nativeAppointmentMockEnabled} from '@shared/config/native-appointment-mock'
+import {nativeAppointmentIds} from '@adapters/api/mock/native-appointment'
+import {createNativeAppointmentMockLock} from '@adapters/storage/native-appointment-mock-lock'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RepeatAppointmentRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-actions-port'
 import { appointmentEditDraft, normalizeRepeatAppointmentEdit, projectRepeatAppointmentEdit } from '@features/work-orders/r1-repeat-appointment-edit'
@@ -16,11 +19,13 @@ export function createRepeatAppointmentPageActions(input:{snapshot:R1NodeFormsSn
  env:Record<string,unknown>;origin:string;getGrant:()=>{readonly version:1|2;readonly scope:R1RepeatScope;readonly recordIds?:readonly string[]}|null;schemaMatches:(s:R1NodeFormsSnapshot)=>boolean;transport:ApiCommandTransport}):R1RepeatPageActions|null{
  const grant=input.getGrant();if(!grant||grant.version!==2||!grant.recordIds?.length)return null
  const scope=Object.freeze({...grant.scope}),initialSchema=signature(input.snapshot),grantBytes=JSON.stringify(grant)
+ const nativeMock=()=>nativeAppointmentMockEnabled(input.env,input.origin)&&Object.entries(scope).every(([key,value])=>nativeAppointmentIds[key as keyof typeof nativeAppointmentIds]===value)
+   &&grant.recordIds?.length===1&&grant.recordIds[0]===nativeAppointmentIds.recordId
  let lease=input.snapshot
  const fingerprint=()=>{const s=input.auth.getCurrentSession();return s?sessionAuthorizationFingerprint({sessionRef:s.sessionRef,userId:s.user.id,roleId:s.currentRole?.id,roleVersion:s.roleVersion}):null}
  const identity=fingerprint()
  const authorized=()=>{const s=input.auth.getCurrentSession();return Boolean(identity&&fingerprint()===identity&&s?.user.id===scope.userId&&s.currentRole?.id===scope.roleId
-   &&r1RepeatActionsEnabled(input.env,input.origin)&&input.env.VITE_XLINK_AUTH_TENANT===scope.tenantId&&JSON.stringify(input.getGrant())===grantBytes)}
+   &&(r1RepeatActionsEnabled(input.env,input.origin)||nativeMock())&&input.env.VITE_XLINK_AUTH_TENANT===scope.tenantId&&JSON.stringify(input.getGrant())===grantBytes)}
  const valid=(s:R1NodeFormsSnapshot)=>{
   const actor={userId:asOpaqueId<'UserId'>(scope.userId),roleIds:[asOpaqueId<'RoleId'>(scope.roleId)],organizationRoles:[]}
   return input.schemaMatches(s)&&signature(s)===initialSchema&&s.node.lifecycle==='active'&&s.node.nodeTypeEvidence==='runtime_node_def'
@@ -37,7 +42,7 @@ export function createRepeatAppointmentPageActions(input:{snapshot:R1NodeFormsSn
  for(const id of grant.recordIds){try{initial.set(id,evidence(lease,id))}catch{/* Unsupported or absent records remain read-only. */}}
  if(!initial.size)return null
  const lock=(id:string)=>{if(!grant.recordIds!.includes(id))return deny();return locks.get(id)!}
- const locks=new Map(grant.recordIds.map(id=>[id,createLocalFixtureMutationLock('xlink:r1-repeat-appointment-edit:'+JSON.stringify([scope.tenantId,scope.userId,scope.roleId,scope.workOrderId,scope.workflowRunId,scope.runtimeNodeId,scope.formDefinitionId,id]))]))
+ const locks=new Map(grant.recordIds.map(id=>[id,(nativeMock()?createNativeAppointmentMockLock:createLocalFixtureMutationLock)('xlink:r1-repeat-appointment-edit:'+JSON.stringify([scope.tenantId,scope.userId,scope.roleId,scope.workOrderId,scope.workflowRunId,scope.runtimeNodeId,scope.formDefinitionId,id]))]))
  const locked=()=>!owns()||[...locks.values()].some(l=>l.locked)
  const selected=(id:string)=>{if(!owns()||!initial.has(id))return deny();const e=initial.get(id)!
   if(!input.reader.isCurrentRepeatAppointment?.(lease,id,e))return deny();return e}

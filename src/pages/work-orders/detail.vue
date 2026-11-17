@@ -131,8 +131,21 @@
         :work-order-id="String(detail.id)" :activities="activities"
         :follow-up-message="followUpReadMessage(detail)" :follow-up-read-failed="detail.activityReadState === 'failed'" :has-history="canShowHistoricalForms"
         :customer-summary="detail.informationFields === undefined ? (detail.customerName || '查看本次服务资料') : `${informationRows.length} 项可查看资料`"
-        :archives="[orderArchiveSummary(quotationBrowse.page)]" :order-state="quotationBrowse.state"
-        :order-error="quotationBrowse.errorMessage" @retry-orders="retryQuotationRead" />
+        :archives="hasOrderArchive ? [orderArchiveSummary(quotationBrowse.page)] : []" :order-state="quotationBrowse.state"
+        :order-error="quotationBrowse.errorMessage" @retry-orders="retryQuotationRead">
+        <template #appointment>
+          <AppointmentArchive v-if="appointmentNodes.length" :key="appointmentReadVersion" :work-order-id="String(detail.id)" :nodes="appointmentNodes"
+            :read-revision="appointmentReadVersion"
+            :actor-scope="workOrderReadScopeKey(session.session)" :summary="true" />
+        </template>
+      </WorkOrderArchiveCards>
+
+      <view v-else-if="readView === 'appointment'">
+        <text class="archive-detail-context" data-testid="detail-read-context">{{ detail.customerName }}{{ detail.displayNumber ? ` · ${workOrderNumberDisplay(detail.displayNumber)}` : '' }}</text>
+        <AppointmentArchive :key="appointmentReadVersion" :work-order-id="String(detail.id)" :nodes="appointmentNodes"
+          :read-revision="appointmentReadVersion"
+          :actor-scope="workOrderReadScopeKey(session.session)" :summary="false" :node-id="selectedAppointmentNodeId" :record-id="selectedAppointmentRecordId" />
+      </view>
 
       <view v-else class="app-record-card information-card">
         <view class="archive-detail-heading"><text class="tab-empty-title">{{ readView === 'follow-up' ? '全部跟进记录' : readView === 'customer' ? '客户资料' : '正式订单 · 只读' }}</text></view>
@@ -325,6 +338,8 @@ import { detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, 
 import { constructionMockEnabled } from '@app/dev-construction-read'
 // #endif
 import WorkOrderArchiveCards from '@features/work-orders/WorkOrderArchiveCards.vue'
+import AppointmentArchive from '@features/work-orders/AppointmentArchive.vue'
+import {appointmentArchiveNodes} from '@features/work-orders/appointment-archive'
 import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { selectActionWorkspaceLoadTarget } from '@features/work-orders/action-workspace-load-target'
 import { useLocalUnitDisplay } from '@features/work-orders/quotation/local-unit-display'
@@ -361,6 +376,11 @@ const routeValue = ref<unknown>(undefined)
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const detail = computed(() => workOrder.detail)
+const appointmentNodes = computed(() => appointmentArchiveNodes(detail.value?.workflowNodes))
+const hasOrderArchive = computed(() => detail.value?.workflowNodes?.some(node => node.nodeTypeEvidence === 'runtime_node_def' && node.sourceNodeType === 'placeOrder')
+  || quotationBrowse.page?.items.some(order => order.serviceAppointmentId === String(detail.value?.id)))
+const appointmentReadVersion = ref(0)
+const selectedAppointmentNodeId = ref(''), selectedAppointmentRecordId = ref('')
 const informationRoleRevision = ref(0)
 watch(() => detail.value?.informationFields, (rows, _, onCleanup) => {
   const contexts = new Set(rows?.filter(row => row.field.visibility?.kind === 'role').map(row => row.field.roleVisibilityContext))
@@ -580,6 +600,8 @@ onLoad((options) => {
   routeValue.value = options?.id
   readView.value = detailReadView(options?.read)
   selectedOrderId.value = typeof options?.order === 'string' ? options.order : ''
+  selectedAppointmentNodeId.value = typeof options?.node === 'string' ? options.node : ''
+  selectedAppointmentRecordId.value = typeof options?.record === 'string' ? options.record : ''
   routeReady.value = true
   updateDetailPageTitle()
 })
@@ -588,7 +610,7 @@ function updateDetailPageTitle(): void {
   if (routeReady.value) setDetailPageTitle(detailReadTitle(readView.value, Boolean(selectedOrderId.value)))
 }
 // Retained parent pages must restore their own title after a read-only child.
-onShow(updateDetailPageTitle)
+onShow(() => {updateDetailPageTitle(); if(readView.value === 'home'||readView.value === 'appointment')appointmentReadVersion.value++})
 
 watch([() => workOrder.loadState, () => detail.value?.id], ([state, id]) => {
   if (state === 'succeeded' && id && readView.value === 'quotation') void loadQuotationRead()

@@ -1,11 +1,12 @@
 import type { QuotationOrderBrowseItem, ReadPage, WorkOrderDetail } from '@shared/ports'
 
-export type DetailReadView = 'home' | 'follow-up' | 'customer' | 'quotation'
+export type DetailReadView = 'home' | 'follow-up' | 'customer' | 'quotation' | 'appointment'
 export function detailReadView(value: unknown): DetailReadView {
-  return value === 'follow-up' || value === 'customer' || value === 'quotation' ? value : 'home'
+  return value === 'follow-up' || value === 'customer' || value === 'quotation' || value === 'appointment' ? value : 'home'
 }
 
 export function detailReadTitle(view: DetailReadView, selectedOrder = false): string {
+  if (view === 'appointment') return '预约信息'
   if (view === 'quotation') return selectedOrder ? '订单详情' : '订单'
   if (view === 'customer') return '客户资料'
   if (view === 'follow-up') return '跟进记录'

@@ -23,12 +23,8 @@ test('brand detail preserves archive state, unknown documents and read navigatio
     await page.screenshot({ path: `${directory}/${name}.png`, animations: 'disabled', caret: 'hide' })
   }
   await snapshot('01-工单详情-未读取')
-  for (const kind of ['contract', 'warranty']) {
-    const card = page.getByTestId(`${kind}-archive-unverified`)
-    await expect(card).toContainText('状态待确认')
-    await expect(card.locator('uni-navigator,uni-button,a,button')).toHaveCount(0)
-    await expect(card).not.toContainText(/暂无|已签|已生效/)
-  }
+  await expect(page.getByTestId('contract-archive-unverified')).toHaveCount(0)
+  await expect(page.getByTestId('warranty-archive-unverified')).toHaveCount(0)
   for (const mode of ['zero', 'one', 'many', 'partial', 'failed', 'denied', 'loading']) {
     await page.evaluate(async mode => {
       const modulePath = '/tests/h5-main-mock/fixtures/detail-archive-harness.ts'
@@ -50,7 +46,7 @@ test('brand detail preserves archive state, unknown documents and read navigatio
     else await expect(page.getByTestId('order-archive-error')).toBeVisible()
     await page.evaluate(() => window.scrollTo(0, 0))
     await snapshot(`02-订单-${mode}-顶部`)
-    await page.getByTestId('warranty-archive-unverified').scrollIntoViewIfNeeded()
+    await page.getByTestId('order-archive-summary').scrollIntoViewIfNeeded()
     await snapshot(`03-档案-${mode}-底部`)
   }
   await page.evaluate(async () => {

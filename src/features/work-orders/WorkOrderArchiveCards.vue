@@ -26,6 +26,7 @@
       </view>
     </view>
 
+    <slot name="appointment" />
     <navigator :url="route('customer')" class="archive-navigator" data-testid="customer-summary">
       <view class="app-record-card archive-card">
         <view class="archive-heading"><text class="archive-title">客户资料</text><text class="archive-link">查看详情 ›</text></view>
@@ -73,16 +74,8 @@
       </view>
     </view>
 
-    <!-- Neither category has a verified detail-page read port. A separate
-         signing read route does not prove document access or applicability. -->
-    <view class="app-record-card archive-card" data-testid="contract-archive-unverified">
-      <view class="archive-heading"><text class="archive-title">合同</text></view>
-      <text class="archive-hint">合同状态待确认</text>
-    </view>
-    <view class="app-record-card archive-card" data-testid="warranty-archive-unverified">
-      <view class="archive-heading"><text class="archive-title">质保</text></view>
-      <text class="archive-hint">质保状态待确认</text>
-    </view>
+    <!-- Other business archives need a verified node/record/read capability.
+         A fixed unknown-status placeholder does not establish applicability. -->
   </view>
 </template>
 

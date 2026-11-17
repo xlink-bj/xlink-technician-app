@@ -1,4 +1,5 @@
 import type { AuthSessionPort, TechnicianApiReadPort, FormDefinitionRead } from '@shared/ports'
+import {nativeAppointmentMockEnabled} from '@shared/config/native-appointment-mock'
 import type { ApiReadRequest, ApiReadTransport } from '@adapters/api/technician-api'
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createR1ScopedFormReader } from '@adapters/api/r1-scoped-form-read'
@@ -10,9 +11,9 @@ import { isFieldApplicable } from '@runtimes/dynamic-form'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import type { HistoricalFormsReader, HistoricalFormRead, HistoricalFormTarget } from '@features/work-orders/r1-historical-forms-read'
-import { assertSurveyReadExtsValues } from './r1-node-forms-read'
+import { assertSurveyReadExtsValues, normalMockReadEnabled } from './r1-node-forms-read'
 import { historicalFormsReadEnabled, ordinaryWriteHistoricalReadEnabled } from './local-history-read-policy'
-import { historicalTargets, historyDenied as deny, historyId as id, historyRow as row } from './r1-historical-forms-policy'
+import { historicalTargets, historicalAppointmentSources, historyDenied as deny, historyId as id, historyRow as row } from './r1-historical-forms-policy'
 
 /** Independent read-only history rollout. No mutation originals, grant, draft,
  * receipt, action policy, or terminal verification lease is exposed. */
@@ -23,8 +24,11 @@ export function createHistoricalFormsReader(input: {
   readonly env: Record<string, unknown>
   readonly origin: string
   readonly transport?: ApiReadTransport
+  readonly appointmentArchive?: true
+  readonly appointmentNodeId?: string
 }): HistoricalFormsReader {
   const transport = input.transport ?? createUniApiReadTransport({ apiBaseUrl: String(input.env.VITE_XLINK_API_BASE_URL),
+    blockRealRequests: input.appointmentArchive === true,
     getSessionRef: () => input.auth.getCurrentSession()?.sessionRef ?? null })
   let generation = 0
   let lease: { generation: number; identity: string; workOrderId: string; targets: readonly HistoricalFormTarget[];
@@ -39,7 +43,8 @@ export function createHistoricalFormsReader(input: {
       generation++; lease = null; results = new WeakSet<object>(); ordinaryWriteGeneration = null
     }
   }
-  const enabled = () => { observeOrdinarySource(); return historicalFormsReadEnabled(input.env, input.origin, input.tenantId) }
+  const enabled = () => { observeOrdinarySource(); return input.appointmentArchive === true
+    ? normalMockReadEnabled(input.env,input.origin)||nativeAppointmentMockEnabled(input.env,input.origin) : historicalFormsReadEnabled(input.env, input.origin, input.tenantId) }
   const fingerprint = () => {
     const actor = input.auth.getCurrentSession()
     return enabled() && actor?.currentRole ? sessionAuthorizationFingerprint({ sessionRef: actor.sessionRef,
@@ -54,6 +59,25 @@ export function createHistoricalFormsReader(input: {
   }
   const detailRequest = (workOrderId: string): ApiReadRequest => ({ method: 'POST',
     path: `basic/serviceAppointment/queryById/${encodeURIComponent(workOrderId)}`, body: {} })
+  async function collect(raw:unknown, scope:{tenantId:string;workOrderId:string;userId:string;roleId:string},execute:ApiReadTransport['execute']) {
+    if(!input.appointmentArchive)return historicalTargets(raw,scope)
+    const targets:HistoricalFormTarget[]=[],bindings=new Map<HistoricalFormTarget,string>()
+    const sources=historicalAppointmentSources(raw,scope).filter(source=>source.runtimeNodeId===input.appointmentNodeId)
+    if(sources.length!==1)return deny()
+    for(const source of sources){
+      const records=source.sourceNodeType==='repeat'?await createR1ScopedFormReader({transport:{execute},scope:{tenantId:scope.tenantId,
+        workOrderId:source.workOrderId,runtimeNodeId:source.runtimeNodeId,workflowRunId:source.workflowRunId,
+        formDefinitionId:source.formDefinitionId,sourceNodeType:'repeat'},isCurrent:()=>true}).discover():null
+      for(const recordId of source.ids??records!.map(record=>String(record.data.id))){
+        const target:HistoricalFormTarget=Object.freeze({kind:source.sourceNodeType==='repeat'?'completed-appointment-repeat':'completed-forms-reference',
+          workOrderId:source.workOrderId,workflowRunId:source.workflowRunId,runtimeNodeId:source.runtimeNodeId,
+          formDefinitionId:source.formDefinitionId,recordId,title:'预约记录'})
+        targets.push(target);bindings.set(target,source.binding)
+      }
+    }
+    if(targets.length>200)return deny()
+    return{targets:Object.freeze(targets),bindings}
+  }
   return {
     enabled, isCurrent: current,
     clear() { generation++; lease = null; if (ordinaryWriteGeneration !== null) results = new WeakSet<object>(); ordinaryWriteGeneration = null },
@@ -82,7 +106,9 @@ export function createHistoricalFormsReader(input: {
       if (input.read.isWorkOrderListedForCurrentSession?.(workOrderId) !== true) return deny()
       const raw = await transport.execute(detailRequest(workOrderId)); check()
       if (input.read.isWorkOrderListedForCurrentSession?.(workOrderId) !== true) return deny()
-      const found = historicalTargets(raw, { tenantId: input.tenantId, workOrderId, userId: String(actor.user.id), roleId: String(actor.currentRole.id) })
+      const execute:ApiReadTransport['execute']=async request=>{check();const response=await transport.execute(request);check();if(input.read.isWorkOrderListedForCurrentSession?.(workOrderId)!==true)return deny();return response}
+      const found = await collect(raw, { tenantId: input.tenantId, workOrderId, userId: String(actor.user.id), roleId: String(actor.currentRole.id) },execute)
+      check()
       lease = { generation: ticket, identity, workOrderId, ...found }
       return found.targets
     },
@@ -92,8 +118,8 @@ export function createHistoricalFormsReader(input: {
       const check = () => { if (lease !== savedLease || !current(target)) deny() }
       const execute = async (request: ApiReadRequest) => { check(); const raw = await transport.execute(request); check(); return raw }
       const verify = async () => {
-        const fresh = historicalTargets(await execute(detailRequest(target.workOrderId)), { tenantId: input.tenantId,
-          workOrderId: target.workOrderId, userId: String(actor.user.id), roleId: String(actor.currentRole!.id) })
+        const fresh = await collect(await execute(detailRequest(target.workOrderId)), { tenantId: input.tenantId,
+          workOrderId: target.workOrderId, userId: String(actor.user.id), roleId: String(actor.currentRole!.id) },execute)
         const match = fresh.targets.find(t => t.runtimeNodeId === target.runtimeNodeId && t.recordId === target.recordId
           && t.formDefinitionId === target.formDefinitionId && t.workflowRunId === target.workflowRunId)
         if (!match || fresh.bindings.get(match) !== savedLease.bindings.get(target)) return deny()
@@ -103,6 +129,7 @@ export function createHistoricalFormsReader(input: {
         const ext = row(await execute({ method: 'POST', path: 'biz/ext/queryById.do', body: { id: target.formDefinitionId } }))
         if (ext._id !== target.formDefinitionId || ext.tenantId !== input.tenantId || ext.state !== 1
           || !['0', '1'].includes(String(ext.type)) || typeof ext.colName !== 'string' || !ext.colName) return deny()
+        if(input.appointmentArchive && ext.colName!=='appointment')return deny()
         const fields: Record<string, unknown>[] = []; let total: number | undefined
         for (let page = 1; page <= 4; page++) {
           const raw = row(await execute({ method: 'POST', path: 'biz/extField/query', body: {
@@ -131,7 +158,7 @@ export function createHistoricalFormsReader(input: {
         }
         const reader = createR1ScopedFormReader({ transport: { execute }, readOnlySurveyMedia: createSurveyReadOnlyMediaCodec(definition, ext.colName, fields), isCurrent: () => { check(); return true },
           scope: { tenantId: input.tenantId, workOrderId: target.workOrderId, runtimeNodeId: target.runtimeNodeId,
-            workflowRunId: target.workflowRunId, formDefinitionId: target.formDefinitionId, sourceNodeType: 'forms' },
+            workflowRunId: target.workflowRunId, formDefinitionId: target.formDefinitionId, sourceNodeType: target.kind==='completed-appointment-repeat'?'repeat':'forms' },
           formList: { source: 'exts.formList', evidence: 'available', truncated: false, entries: [{
             id: asOpaqueId<'FormDataId'>(target.recordId), formDefinitionId: asOpaqueId<'FormDefinitionId'>(target.formDefinitionId), state: 'active' }] } })
         await reader.discover()

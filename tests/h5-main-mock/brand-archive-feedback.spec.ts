@@ -32,8 +32,7 @@ test('only explicit archive read failures receive the selected brand error treat
       await page.evaluate(() => window.scrollTo(0, 0))
       await page.screenshot({ path: `${directory}/订单-failed-顶部.png`, animations: 'disabled', caret: 'hide' })
     }
-    await page.getByTestId('warranty-archive-unverified').scrollIntoViewIfNeeded()
-    for (const kind of ['contract', 'warranty']) await expect(page.getByTestId(`${kind}-archive-unverified`).locator('.archive-hint')).toHaveCSS('color', neutral)
+    await page.getByTestId('order-archive-summary').scrollIntoViewIfNeeded()
     await page.screenshot({ path: `${directory}/订单-${mode}.png`, animations: 'disabled', caret: 'hide' })
   }
   for (const state of ['failed', 'denied', 'unavailable', 'succeeded', 'unknown']) {

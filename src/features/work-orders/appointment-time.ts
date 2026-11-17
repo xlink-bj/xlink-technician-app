@@ -1,4 +1,4 @@
-import { validLocalDateTime } from '@shared/form/local-temporal'
+import { validLocalDate, validLocalDateTime, validLocalTime } from '@shared/form/local-temporal'
 
 export interface AppointmentTimeOption {
   readonly key: string
@@ -83,10 +83,23 @@ export function parseAppointmentDateTime(value: unknown): AppointmentDisplay | u
     date: match[1],
     dateLabel: dateLabelFor(match[1]),
     time,
-    timeLabel: time,
+    timeLabel: time.slice(0,5),
   }
 }
 
 export function appointmentDisplayFor(value: unknown): AppointmentDisplay | undefined {
   return parseAppointmentDateTime(value)
+}
+
+/** UI edits minutes; the source's literal seconds precision remains intact.
+ * An untouched value is never normalized simply by opening the picker. */
+export function appointmentDateTimeForSelection(original: unknown, date: string, minute: string): string | undefined {
+  if(!validLocalDate(date)||!validLocalTime(minute))return undefined
+  const parsed=parseAppointmentDateTime(original)
+  const seconds=parsed?.time.length===8?parsed.time.slice(5):''
+  return `${date} ${minute}${seconds}`
+}
+export function appointmentDateForSelection(value: unknown): string | undefined {
+  if(typeof value !== 'string')return undefined
+  return parseAppointmentDateTime(value)?.date ?? (validLocalDate(value)?value:undefined)
 }

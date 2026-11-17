@@ -14,7 +14,7 @@
     :placeholder-class="placeholderClass"
     :placeholder-style="placeholderStyle"
     :disabled="nativeDisabled"
-    :maxlength="maxlength"
+    :maxlength="nativeMaxlength"
     :aria-invalid="error"
     @input="handleInput"
     @focus="handleFocus"
@@ -61,6 +61,9 @@ const props = withDefaults(
 const reportInputValidity = useFormInputValidityReporter()
 const focused = ref(false)
 const nativeDisabled = computed(() => props.disabled || props.readOnly)
+// An omitted Number prop becomes 0 in MP. Native uni input uses -1 for no
+// configured limit; H5 retains its existing omitted maxlength behavior.
+const nativeMaxlength = computed(() => props.maxlength ?? (process.env.UNI_PLATFORM === 'h5' ? undefined : -1))
 const inputRoot = ref<unknown>(null)
 let nativeDeliveryAttached = false
 let disposed = false

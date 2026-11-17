@@ -7,6 +7,8 @@ import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1GenericMapRouteRead } fr
 import type { R1RepeatActionProvider } from '@features/work-orders/r1-repeat-actions-port'
 import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-transport'
 import { createNormalRepeatActionProvider } from './r1-repeat-authorization'
+import {nativeAppointmentMockEnabled} from '@shared/config/native-appointment-mock'
+import {createNativeAppointmentMockActionProvider} from './native-appointment-mock-actions'
 import { r1RepeatActionsEnabled as localFormWritesEnabled, type R1RepeatScope } from './r1-repeat-actions'
 import { normalizeR1FormsEditValues,projectR1FormsEditValues } from '@features/work-orders/r1-forms-edit-values'
 import { normalizeR1RepeatValues } from '@features/work-orders/r1-repeat-form'
@@ -238,6 +240,7 @@ export function createNormalFormsActionProvider(input:{readonly auth:Pick<AuthSe
 }
 /** Normal App entry dispatches on the server's source type; never relabels nodes. */
 export function createNormalNodeFormActionProvider(input:Parameters<typeof createNormalFormsActionProvider>[0]):R1RepeatActionProvider {
+  if(nativeAppointmentMockEnabled(input.env,input.origin))return createNativeAppointmentMockActionProvider(input)
   const forms=createNormalFormsActionProvider(input),repeat=createNormalRepeatActionProvider(input)
   return {forSnapshot:s=>s.node.sourceNodeType==='forms'?forms.forSnapshot(s):repeat.forSnapshot(s)}
 }

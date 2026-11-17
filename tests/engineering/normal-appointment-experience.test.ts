@@ -8,13 +8,13 @@ import {r1NodeFormsReaderKey} from '@features/work-orders/r1-node-forms-read'
 import {installLocalFixtureBrowser} from './local-fixture-lock-test-support'
 beforeEach(()=>{setActivePinia(createPinia());installLocalFixtureBrowser()});afterEach(()=>vi.unstubAllGlobals())
 async function mounted(host=true,multiple=false){const f=appointmentFixture();if(multiple){const grant=JSON.parse(f.env.VITE_XLINK_R1_REPEAT_GRANT);grant.recordIds=['a','b'];f.env.VITE_XLINK_R1_REPEAT_GRANT=JSON.stringify(grant)}const s=await f.load(),root=node('root'),Panel=component('R1NodeFormsReadPanel'),Content=host?component('R1NodeFormsActionContent',Panel):Panel
- const props=Vue.reactive({reader:f.reader,workOrderId:'s',runtimeNodeId:'n',actorScope:'actor-A',node:s.node,visible:true})
+ const props=Vue.reactive({reader:f.reader,workOrderId:'s',runtimeNodeId:'n',readRevision:0,actorScope:'actor-A',node:s.node,visible:true})
  const app=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Content,props)}));app.component('picker',Vue.defineComponent({inheritAttrs:false,setup:(_,ctx)=>()=>Vue.h('picker',ctx.attrs,ctx.slots.default?.())}));app.provide(r1NodeFormsReaderKey,f.reader);app.provide(r1RepeatActionsKey,f.provider());app.mount(root);await settle()
  const get=(id:string)=>find(root,n=>n.props['data-testid']===id),tap=async(id:string)=>{const n=get(id);expect(n,id).toBeDefined();expect(n!.props.disabled).not.toBe(true);await n!.props.onTap();await settle()}
  const read=async()=>{find(root,n=>n.type==='button'&&text(n).includes('读取已保存表单'))!.props.onTap();await settle()}
  const fill=async(key:string,value:string)=>{const n=find(root,n=>n.props['data-key']===key);expect(n,key).toBeDefined();n!.props.onInput(value);await settle()}
  const time=async()=>{await tap('normal-appointment-time-open');const b=all(root,n=>n.type==='button'&&text(n)==='14:00')[0];expect(b).toBeDefined();b.props.onTap();await settle()}
- return{f,app,root,props,get,tap,read,fill,time}}
+ return{f,app,root,props,get,tap,read,fill,time,Panel}}
 it('host consumes pure appointment time and confirmation through Panel exact-ID save-only',async()=>{
  const h=await mounted();try{await h.read();await h.tap('r1-normal-edit-a');expect(h.get('normal-appointment-experience')).toBeDefined()
  await h.fill('modifyReason','confirmed change');await h.time();await h.tap('normal-appointment-time-cancel');expect(text(h.get('normal-appointment-time-open')!)).toContain('10:30');expect(h.f.writes).toHaveLength(0)
@@ -37,4 +37,9 @@ it('Panel without the optional consumer retains the original generic editor',asy
 
 it('record-keyed presentation rejects A confirmation after an authorized switch to B',async()=>{
  const h=await mounted(true,true);try{await h.read();await h.tap('r1-normal-edit-a');await h.fill('modifyReason','A confirmed');await h.tap('normal-appointment-review');const old=h.get('normal-appointment-save')!.props.onTap;await h.tap('r1-normal-edit-b');expect(h.get('normal-appointment-review')).toBeDefined();await h.fill('modifyReason','B edit');old();await settle();expect(h.f.writes).toHaveLength(0);expect(find(h.root,n=>n.props['data-key']==='note')!.props.value).toBe('other')}finally{h.app.unmount()}
+})
+
+it('a retained visible panel renews reader ownership and an old child unmount cannot revoke it',async()=>{
+ const h=await mounted(false);const Panel=h.Panel,otherRoot=node('other'),other=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Panel,{reader:h.f.reader,workOrderId:'s',runtimeNodeId:'n',actorScope:'actor-A'})}));other.provide(r1RepeatActionsKey,h.f.provider())
+ try{await h.read();expect(h.get('r1-normal-form-record')).toBeDefined();other.mount(otherRoot);await settle();find(otherRoot,n=>n.type==='button'&&text(n).includes('读取已保存表单'))!.props.onTap();await settle();expect(h.get('r1-normal-form-record')).toBeUndefined();h.props.readRevision++;await settle();expect(h.get('r1-normal-form-record')).toBeDefined();other.unmount();await settle();expect(h.get('r1-normal-form-record')).toBeDefined();expect(h.f.writes).toHaveLength(0)}finally{other.unmount();h.app.unmount()}
 })

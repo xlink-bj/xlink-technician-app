@@ -1,4 +1,5 @@
 import type { FormDataRead, FormValueCodec, R1NodeFormListRead } from '@shared/ports'
+import {clonePlainData} from '../common/clone-plain-data'
 import { asOpaqueId } from '@shared/types'
 import type { ApiReadTransport } from './technician-api'
 import { formData } from './read-models/form'
@@ -78,10 +79,10 @@ export function createR1ScopedFormReader(input: {
     // Do not clone or expose the mapper's identity-signed edit provenance.
     const data = { id: mapped.id, definitionId: mapped.definitionId,
       ...(mapped.workflowRunId ? { workflowRunId: mapped.workflowRunId } : {}),
-      ...(mapped.values ? { values: input.readOnlySurveyMedia?.cloneValues(mapped.values) ?? structuredClone(mapped.values) } : {}),
+      ...(mapped.values ? { values: input.readOnlySurveyMedia?.cloneValues(mapped.values) ?? clonePlainData(mapped.values) } : {}),
     }
     const result = freeze({ ownership: scope, data })
-    originals.set(result, freeze(structuredClone(row)))
+    originals.set(result, freeze(clonePlainData(row)))
     return result
   }
   async function page(pageNumber: number, exactId?: string) {
@@ -122,7 +123,7 @@ export function createR1ScopedFormReader(input: {
     originalFor(record: R1ScopedFormRecord): Readonly<Record<string, unknown>> | null {
       current()
       const original = exactReads.has(record) ? originals.get(record) : undefined
-      return original ? structuredClone(original) : null
+      return original ? clonePlainData(original) : null
     },
     async discover(): Promise<readonly R1ScopedFormRecord[]> {
       discovered = new Set()

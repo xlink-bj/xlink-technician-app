@@ -52,4 +52,12 @@ defineEmits<{
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* #ifdef MP-WEIXIN */
+/* Native component scopes do not inherit the page's workspace selectors. */
+.app-choice-group { display:flex; gap:var(--app-control-gap); }
+.app-choice { box-sizing:border-box; margin:0; border:1px solid var(--app-color-border); border-radius:var(--app-radius-control); background:var(--app-color-surface); color:var(--app-color-text-primary); font-size:var(--app-font-body); }
+.app-choice::after { border:0; }
+.app-choice--selected { border-color:var(--app-color-primary); background:var(--app-color-primary-soft); color:var(--app-color-primary); }
+/* #endif */
 </style>
