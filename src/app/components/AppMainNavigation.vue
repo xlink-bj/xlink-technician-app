@@ -18,7 +18,7 @@ defineProps<{ active: MainRoute }>()
 const items: { key: MainRoute; label: string; icon: AppIconName }[] = [
   { key: 'home', label: '工作台', icon: 'home' },
   { key: 'workOrders', label: '工单', icon: 'task' },
-  { key: 'notices', label: '通知', icon: 'warning' },
+  { key: 'notices', label: '通知', icon: 'notification' },
   { key: 'me', label: '我的', icon: 'contact' },
 ]
 </script>

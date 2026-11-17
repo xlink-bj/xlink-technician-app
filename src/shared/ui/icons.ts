@@ -12,6 +12,7 @@ export type AppIconName =
   | 'complete'
   | 'restore'
   | 'warning'
+  | 'notification'
   | 'unavailable'
   | 'chevron-right'
 
@@ -29,6 +30,7 @@ const appIconTypeByName: Readonly<Record<AppIconName, string>> = {
   complete: 'checkmarkempty',
   restore: 'undo',
   warning: 'info-filled',
+  notification: 'notification',
   unavailable: 'minus',
   'chevron-right': 'forward',
 }

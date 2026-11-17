@@ -5,7 +5,7 @@
       <button class="main-secondary-action" @tap="openMainRoute('home')">返回登录</button></view>
     <view v-else-if="!notice" class="main-state"><text class="main-state-title">无法查看这条通知</text>
       <text class="main-state-copy">通知不存在或当前环境未提供通知数据。</text></view>
-    <template v-else><view class="main-page-intro"><text class="main-eyebrow">{{ notice.time }}</text>
+    <template v-else><view class="main-page-intro"><text class="main-eyebrow">{{ notice.day }} {{ notice.time }}</text>
       <text class="main-title">{{ notice.title }}</text><text class="main-subtitle">{{ notice.body }}</text></view>
       <view v-if="notice.workOrderId" class="main-state notice-action">
         <text class="main-state-title">关联工单</text>
@@ -75,6 +75,8 @@ async function openWorkOrder(): Promise<void> {
       feedback.value = '当前账号无法查看关联工单。'; return
     }
     await workOrders.navigateTo(workOrderDetailRouteFor(row.id))
+  } catch {
+    if (scope === workOrderReadScopeKey(session.session)) feedback.value = '工单暂时无法打开，请稍后重试。'
   } finally { opening.value = false }
 }
 </script>

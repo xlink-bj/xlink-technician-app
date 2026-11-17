@@ -1,16 +1,11 @@
-.main-page { min-height: 100vh; box-sizing: border-box; padding: 28px 16px calc(96px + env(safe-area-inset-bottom)); background: var(--app-color-page); color: var(--app-craft-ink); font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif; }
-.main-page-intro { display: flex; flex-direction: column; gap: 6px; padding: 10px 4px 24px; }
-.main-eyebrow { color: var(--app-color-primary); font-size: var(--app-font-meta); font-weight: 700; letter-spacing: 1px; }
-.main-title { font-size: var(--app-font-major-title); line-height: 38px; font-weight: 750; }
-.main-subtitle, .main-row-summary, .main-state-copy { color: var(--app-craft-caption); font-size: var(--app-font-body); line-height: 21px; }
-.main-list, .main-state { background: var(--app-color-surface); border: 1px solid var(--app-color-border); border-radius: var(--app-craft-surface-radius); overflow: hidden; }
-.main-list-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 74px; box-sizing: border-box; margin: 0; padding: 14px 16px; background: var(--app-color-surface); color: inherit; border: 0; border-bottom: 1px solid var(--app-color-divider); text-align: left; border-radius: var(--app-radius-control); }
-.main-list-row:last-child { border-bottom: 0; }.main-list-row::after { display: none; }
-.main-list-copy { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.main-row-title, .main-state-title { display: block; color: var(--app-craft-ink); font-size: var(--app-font-section-title); line-height: 23px; font-weight: 650; }
-.main-row-time { color: var(--app-color-text-secondary); font-size: var(--app-font-meta); white-space: nowrap; align-self: flex-start; }
-.main-row-arrow { color: var(--app-color-text-secondary); font-size: var(--app-font-major-title); }.notice-indicator { flex: none; width: 8px; height: 8px; border-radius: var(--app-radius-round, 50%); background: var(--app-color-primary); }.notice-indicator--read { background: var(--app-color-border); }
-.main-state { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 24px 18px; }
-.main-primary-action, .main-secondary-action, .main-logout { min-height: 46px; box-sizing: border-box; margin: 8px 0 0; padding: 10px 22px; border-radius: var(--app-craft-control-radius); font-size: var(--app-font-body); }
-.main-primary-action { background: var(--app-color-primary); color: var(--app-color-surface); }.main-secondary-action { color: var(--app-color-primary); background: var(--app-color-primary-soft); }.main-logout { width: 100%; margin-top: 24px; background: var(--app-color-surface); color: var(--app-craft-danger); border: 1px solid var(--app-color-border); }
-.main-error { display: block; color: var(--app-craft-danger); font-size: var(--app-font-meta); line-height: 20px; }.main-guard { padding: 40px 20px; }
+.main-page {
+  --shell-page: var(--app-color-page); --shell-card: var(--app-color-surface);
+  --shell-ink: var(--app-craft-ink); --shell-muted: var(--app-craft-caption);
+  --shell-primary: var(--app-color-primary); --shell-on-primary: var(--app-color-surface);
+  --shell-soft: var(--app-color-primary-soft); --shell-border: var(--app-color-border);
+  --shell-danger: var(--app-craft-danger); --shell-warning: var(--app-feedback-warning-ink);
+  --shell-warning-bg: var(--app-color-warning-soft); --shell-info: var(--app-tag-info-ink);
+  --shell-info-bg: var(--app-tag-info-surface); --shell-radius: var(--app-craft-surface-radius);
+  --shell-shadow: var(--app-craft-surface-shadow); --shell-font: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+}
+@import '../../app/styles/main-pages.scss';
