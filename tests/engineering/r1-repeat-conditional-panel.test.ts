@@ -1,3 +1,4 @@
+import * as appointmentTime from '@features/work-orders/appointment-time'
 import * as workspacePresentation from '@features/work-orders/r1-form-workspace-presentation'
 import * as inputValidity from '@shared/ui/form-input-validity'
 import * as retainedFileValues from '@shared/form/r1-retained-file-values'
@@ -39,7 +40,7 @@ function panel() {
   const { descriptor } = parse(fs.readFileSync(filename, 'utf8'), { filename })
   const source = compileScript(descriptor, { id: 'repeat-conditional-unit', inlineTemplate: true }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
-  const modules: Record<string, unknown> = {'./r1-form-workspace-presentation':workspacePresentation, vue: Vue, '@shared/ui/form-input-validity': inputValidity, './r1-normal-form-drafts': normalDraftPort, './r1-repeat-form': repeatForm, '@shared/form/r1-retained-file-values':retainedFileValues,'@shared/form/r1-configured-file-read-evidence':configuredFileRead,'./r1-normal-file-values': normalFileValues, '@shared/types': sharedTypes, './R1NormalFileField.vue': { __esModule: true, default: Vue.defineComponent({ render: () => Vue.h('file-field') }) }, './r1-record-read-fields': recordReadFields, './r1-repeat-actions-port': actionPort,
+  const modules: Record<string, unknown> = {'./appointment-time':appointmentTime,'@shared/ui/AppInformationRow.vue':{__esModule:true,default:Field},'./r1-form-workspace-presentation':workspacePresentation, vue: Vue, '@shared/ui/form-input-validity': inputValidity, './r1-normal-form-drafts': normalDraftPort, './r1-repeat-form': repeatForm, '@shared/form/r1-retained-file-values':retainedFileValues,'@shared/form/r1-configured-file-read-evidence':configuredFileRead,'./r1-normal-file-values': normalFileValues, '@shared/types': sharedTypes, './R1NormalFileField.vue': { __esModule: true, default: Vue.defineComponent({ render: () => Vue.h('file-field') }) }, './r1-record-read-fields': recordReadFields, './r1-repeat-actions-port': actionPort,
     '@shared/ui/AppButton.vue': { __esModule: true, default: Button }, '@shared/ui/AppTaskSectionHeading.vue':{__esModule:true,default:Field},'@shared/ui/AppField.vue': { __esModule: true, default: Field }, './R1FormFieldControl.vue': { __esModule: true, default: Control } }
   const module = { exports: {} as { default: Vue.Component } }
   new Function('require', 'module', 'exports', js)((key: string) => { if (!(key in modules)) throw Error(`Unstubbed component import: ${key}`); return modules[key] }, module, module.exports)

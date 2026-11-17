@@ -21,7 +21,7 @@ describe('Appointment recovered local-clock display and literal wire boundaries'
     'shows a runtime-valid R1 second-precision value without changing its clock: %s', datetime => {
       expect(validLocalDateTime(datetime)).toBe(true)
       expect(appointmentDisplayFor(datetime)).toMatchObject({
-        date: datetime.slice(0, 10), time: datetime.slice(11), timeLabel: datetime.slice(11),
+        date: datetime.slice(0, 10), time: datetime.slice(11), timeLabel: datetime.slice(11, 16),
       })
       for (const need of ['1', '0']) {
         const current = form(datetime, need)
@@ -49,7 +49,7 @@ describe('Appointment recovered local-clock display and literal wire boundaries'
       date: '2026-11-09', time: '09:00', timeLabel: '09:00',
     })
     expect(appointmentDisplayFor(' 2026-11-09 09:00:00 ')).toMatchObject({
-      date: '2026-11-09', time: '09:00:00', timeLabel: '09:00:00',
+      date: '2026-11-09', time: '09:00:00', timeLabel: '09:00',
     })
   })
 })
