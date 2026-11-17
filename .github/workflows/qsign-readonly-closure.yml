@@ -37,7 +37,7 @@ jobs:
       - name: Type check and scope/authority unit gates
         run: |
           pnpm run typecheck
-          pnpm exec vitest run tests/g4f/quotation-order-signing-read-boundary.test.ts tests/g4f/signing-review-workspace.test.ts tests/g4f/signing-review-read-store.test.ts tests/g4f/quotation-order-browse-handoff.test.ts tests/g4f/quotation-local-review-closure.test.ts
+          pnpm exec vitest run tests/signing/quotation-order-signing-read-boundary.test.ts tests/signing/signing-review-workspace.test.ts tests/signing/signing-review-read-store.test.ts tests/orders/quotation-order-browse-handoff.test.ts tests/quotation/quotation-local-review-closure.test.ts
       - name: Install browser and Chinese fonts
         run: |
           pnpm exec playwright install --with-deps chromium

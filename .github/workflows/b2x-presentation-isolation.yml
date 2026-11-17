@@ -59,7 +59,7 @@ jobs:
           pnpm run typecheck
 
       - name: Source-neutral presentation regression
-        run: pnpm exec vitest run tests/g4ux/work-order-number-display.test.ts tests/g4ux/mock-runtime.test.ts
+        run: pnpm exec vitest run tests/app-integration/work-order-number-display.test.ts tests/app-integration/mock-runtime.test.ts
 
       - name: Install Playwright Chromium and Chinese font
         run: |

@@ -16,7 +16,7 @@ import {
   appendQuotationGroup, appendQuotationSelection, createEmptyQuotationDraft,
   createQuotationGroup, upsertLocalQuotationMaterialSkuChoice,
 } from '@features/work-orders/quotation/model'
-import { reachMockQuotationForTest } from '../g4ux/mock-journey-test-fixture'
+import { reachMockQuotationForTest } from '../app-integration/mock-journey-test-fixture'
 import type { StoragePort, StorageKey } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
 

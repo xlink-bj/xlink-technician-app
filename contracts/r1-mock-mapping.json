@@ -10,7 +10,7 @@
       "domain": "登录角色",
       "sourceEvidence": "docs/verification/R1_ORDER_CONTRACT_READ_RECONCILIATION_20261104.md",
       "unitTests": [
-        "tests/g4a/login-session.test.ts",
+        "tests/auth/login-session.test.ts",
         "tests/engineering/session-authorization-fingerprint.test.ts"
       ],
       "unresolved": "仅正常预配置技师；无切角色或负向 ACL 探测",
@@ -21,7 +21,7 @@
       "domain": "工单列表",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/m1-i7-work-order-read-scope.test.ts",
+        "tests/read-boundaries/work-order-read-scope.test.ts",
         "tests/engineering/mock-current-api-parity.test.ts"
       ],
       "unresolved": "既有 121 行完整快照；本轮为分次有界观察，不能跨捕获去重",
@@ -45,7 +45,7 @@
       "unitTests": [
         "tests/engineering/r1-forms-add-options-read-contract.test.ts",
         "tests/engineering/r1-model-contract-parity.test.ts",
-        "tests/g4f/r1-current-formdef-read.test.ts",
+        "tests/read-boundaries/r1-current-formdef-read.test.ts",
         "tests/engineering/r1-current-formdef-structure.test.ts"
       ],
       "unresolved": "当前 repeat 已有同次采集完整 59 字段结构；用途 UNKNOWN，2 未知类型、6 字段配置缺项、25 字段原键未保留、3 provider 未读，不能推导完整规则、Survey 或写权限",
@@ -56,8 +56,8 @@
       "domain": "字典/provider",
       "sourceEvidence": "docs/verification/G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/mock-order-field-wire.test.ts",
-        "tests/g4f/r1-production-evidence-fixture.test.ts"
+        "tests/orders/mock-order-field-wire.test.ts",
+        "tests/read-boundaries/r1-production-evidence-fixture.test.ts"
       ],
       "unresolved": "仅有效字段精确 Code/Cascade；非活动字段 provider 未读；字面值已合成",
       "liveParity": "NOT_VERIFIED"
@@ -93,8 +93,8 @@
       "domain": "通用媒体值",
       "sourceEvidence": "docs/verification/G4F_ORDER_MEDIA_SUBMIT_FIELDS_MOCK_20261105.md",
       "unitTests": [
-        "tests/g4e/media-queue.test.ts",
-        "tests/g4f/mock-order-media-session.test.ts"
+        "tests/media/media-queue.test.ts",
+        "tests/media/mock-order-media-session.test.ts"
       ],
       "unresolved": "只有固定源码与 Mock 队列/codec；真实上传禁止，未取远程文件",
       "liveParity": "NOT_VERIFIED"
@@ -105,8 +105,8 @@
       "sourceEvidence": "docs/verification/G4E_SURVEY_DOMAIN_TRUTH.md",
       "unitTests": [
         "tests/engineering/mock-exact-form-query-parity.test.ts",
-        "tests/g4e/inspection-contract.test.ts",
-        "tests/g4e/survey-media-contract.test.ts",
+        "tests/survey/inspection-contract.test.ts",
+        "tests/survey/survey-media-contract.test.ts",
         "tests/engineering/survey-59-mock-fields.test.ts",
         "tests/engineering/survey-59-read-projection.test.ts",
         "tests/engineering/survey-59-storage-wire.test.ts",
@@ -122,9 +122,9 @@
       "domain": "Order 动态字段",
       "sourceEvidence": "docs/verification/G4F_EFFECTIVE_ORDER_EXTFIELD_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/order-extfield-effective-plan.test.ts",
-        "tests/g4f/order-extfield-wire.test.ts",
-        "tests/g4f/mock-order-field-session.test.ts"
+        "tests/orders/order-extfield-effective-plan.test.ts",
+        "tests/orders/order-extfield-wire.test.ts",
+        "tests/orders/mock-order-field-session.test.ts"
       ],
       "unresolved": "一当前上下文；32 tenant 配置、9 有效；3 普通字段额外配置未留存，button/area 与其他上下文未闭合，类型分类不等于完整规则等价",
       "liveParity": "NOT_VERIFIED"
@@ -134,10 +134,10 @@
       "domain": "套餐列表",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/quotation-catalog-read.test.ts",
-        "tests/g4f/catalog-price-presentation.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts",
-        "tests/g4f/mock-catalog-scale-router.test.ts"
+        "tests/catalog-pricing/quotation-catalog-read.test.ts",
+        "tests/catalog-pricing/catalog-price-presentation.test.ts",
+        "tests/catalog-pricing/r1-catalog-scale-mapping.test.ts",
+        "tests/catalog-pricing/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "四上下文历史有界目录证据；本轮未重复商品/价格读取",
       "liveParity": "NOT_VERIFIED"
@@ -147,9 +147,9 @@
       "domain": "套餐详情组件",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/package-configuration.test.ts",
-        "tests/g4f/r1-package-layer-equivalence.test.ts",
-        "tests/g4f/mock-catalog-scale-router.test.ts"
+        "tests/catalog-pricing/package-configuration.test.ts",
+        "tests/catalog-pricing/r1-package-layer-equivalence.test.ts",
+        "tests/catalog-pricing/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有套餐详情；本轮未重复，包内材料不等于直购 SKU",
       "liveParity": "NOT_VERIFIED"
@@ -159,9 +159,9 @@
       "domain": "工序",
       "sourceEvidence": "docs/verification/G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/g4f-order-provider-price-comparison.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts",
-        "tests/g4f/mock-catalog-scale-router.test.ts"
+        "tests/catalog-pricing/order-provider-price-comparison.test.ts",
+        "tests/catalog-pricing/r1-catalog-scale-mapping.test.ts",
+        "tests/catalog-pricing/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有有效价与少数历史快照对照，不是全量价格或新鲜度验证",
       "liveParity": "NOT_VERIFIED"
@@ -171,10 +171,10 @@
       "domain": "材料 SPU",
       "sourceEvidence": "docs/verification/G4F_ORDER_MATERIAL_PRICE_SNAPSHOT_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/material-sku-contract.test.ts",
-        "tests/g4f/g4f-order-material-price-comparison.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts",
-        "tests/g4f/mock-catalog-scale-router.test.ts"
+        "tests/catalog-sku/material-sku-contract.test.ts",
+        "tests/catalog-pricing/order-material-price-comparison.test.ts",
+        "tests/catalog-pricing/r1-catalog-scale-mapping.test.ts",
+        "tests/catalog-pricing/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有 SPU/价格对照；不能制造 SKU 或覆盖快照",
       "liveParity": "NOT_VERIFIED"
@@ -184,9 +184,9 @@
       "domain": "机措",
       "sourceEvidence": "docs/verification/G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/g4f-order-provider-price-comparison.test.ts",
-        "tests/g4f/r1-catalog-scale-mapping.test.ts",
-        "tests/g4f/mock-catalog-scale-router.test.ts"
+        "tests/catalog-pricing/order-provider-price-comparison.test.ts",
+        "tests/catalog-pricing/r1-catalog-scale-mapping.test.ts",
+        "tests/catalog-pricing/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "既有机措 provider/快照对照，本轮未重复",
       "liveParity": "NOT_VERIFIED"
@@ -196,7 +196,7 @@
       "domain": "销售属性",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/package-material-sku-contract.test.ts"
+        "tests/catalog-sku/package-material-sku-contract.test.ts"
       ],
       "unresolved": "既有 1 销售字段/66 选项结构，不能推出活动 SKU",
       "liveParity": "NOT_VERIFIED"
@@ -206,8 +206,8 @@
       "domain": "SKU",
       "sourceEvidence": "docs/verification/G4F_SELECTABLE_CATALOG_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/quotation-sku-same-catalog.test.ts",
-        "tests/g4f/mock-catalog-scale-router.test.ts"
+        "tests/catalog-sku/quotation-sku-same-catalog.test.ts",
+        "tests/catalog-pricing/mock-catalog-scale-router.test.ts"
       ],
       "unresolved": "当前角色既有四上下文有效 SKU 空；不再普查，不等于完整 SKU 记录模型已实读",
       "liveParity": "NOT_VERIFIED"
@@ -217,8 +217,8 @@
       "domain": "报价/正式 Order 列表",
       "sourceEvidence": "docs/verification/R1_ORDER_CONTRACT_READ_RECONCILIATION_20261104.md",
       "unitTests": [
-        "tests/g4f/mock-journey-order-protocol.test.ts",
-        "tests/g4f/quotation-order-read.test.ts",
+        "tests/orders/mock-journey-order-protocol.test.ts",
+        "tests/orders/quotation-order-read.test.ts",
         "tests/engineering/mock-current-api-parity.test.ts"
       ],
       "unresolved": "只准 type=1 page1 rows3；type=0 与后续页未读",
@@ -229,8 +229,8 @@
       "domain": "Order 快照",
       "sourceEvidence": "docs/verification/G4F_ORDER_PROVIDER_PRICE_SNAPSHOT_PROD_READ_20261105.md",
       "unitTests": [
-        "tests/g4f/quotation-order-read.test.ts",
-        "tests/g4f/g4f-order-package-price-comparison.test.ts",
+        "tests/orders/quotation-order-read.test.ts",
+        "tests/catalog-pricing/order-package-price-comparison.test.ts",
         "tests/engineering/mock-current-api-parity.test.ts"
       ],
       "unresolved": "本轮样本 3/3 行 unsupported、0 captured price；仅有列表内快照投影和既有历史对照。通用 queryById 仍关闭，不宣称原始 wire 全量或金额正确",
@@ -241,8 +241,8 @@
       "domain": "合同只读",
       "sourceEvidence": "docs/verification/R1_ORDER_CONTRACT_READ_RECONCILIATION_20261104.md",
       "unitTests": [
-        "tests/g4f/r1-contract-read-boundary.test.ts",
-        "tests/g4f/r1-order-contract-read-guard.test.ts",
+        "tests/signing/r1-contract-read-boundary.test.ts",
+        "tests/signing/r1-order-contract-read-guard.test.ts",
         "tests/engineering/r1-contract-mock-anomalies.test.ts"
       ],
       "unresolved": "一次 page1 rows3 固定 R1 OR 过滤；精确一条关联，不是全量状态与完整性",
@@ -253,8 +253,8 @@
       "domain": "签约资格",
       "sourceEvidence": "docs/verification/M1_I6_CANONICAL_TECHNICIAN_CONTRACT_QUERY.md",
       "unitTests": [
-        "tests/g4f/signing-order-read-policy.test.ts",
-        "tests/g4f/r1-signing-action-parity.test.ts",
+        "tests/signing/signing-order-read-policy.test.ts",
+        "tests/signing/r1-signing-action-parity.test.ts",
         "tests/engineering/r1-contract-mock-anomalies.test.ts"
       ],
       "unresolved": "只读状态可观察；服务器签约资格与写权限未实测，#201 HOLD",

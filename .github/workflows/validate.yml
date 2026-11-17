@@ -76,13 +76,13 @@ jobs:
           }
           appendFileSync(process.env.GITHUB_OUTPUT, `ci_workflow_changed=${changes.some(c => [c.previous, c.path].some(p => p?.startsWith('.github/workflows/')))}\n`)
           const baseline = [
-            'tests/g4f/production-read-only.test.ts',
-            'tests/g4f/quotation-order-read.test.ts',
-            'tests/g4f/quotation-order-reconstruction.test.ts',
-            'tests/g4f/quotation-order-signing-read-boundary.test.ts',
+            'tests/read-boundaries/production-read-only.test.ts',
+            'tests/orders/quotation-order-read.test.ts',
+            'tests/orders/quotation-order-reconstruction.test.ts',
+            'tests/signing/quotation-order-signing-read-boundary.test.ts',
             'tests/engineering/r1-action-workspace-foundation.test.ts',
             'tests/engineering/action-command-revision-consistency.test.ts',
-            'tests/g4d/action-workspace.test.ts',
+            'tests/action-workspace/action-workspace.test.ts',
           ]
           for (const path of baseline) if (!existsSync(path)) throw new Error(`Missing critical baseline: ${path}`)
           const isTest = p => p.startsWith('tests/') && p.endsWith('.test.ts')

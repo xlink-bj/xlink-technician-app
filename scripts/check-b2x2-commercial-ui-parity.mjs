@@ -47,7 +47,7 @@ const detail = read('src/pages/work-orders/detail.vue')
 const qa = read('src/pages/dev/qa-console.vue')
 const pages = read('src/pages.json')
 const formatter = read('src/shared/ui/work-order-number-display.ts')
-const numberTest = read('tests/g4ux/work-order-number-display.test.ts')
+const numberTest = read('tests/app-integration/work-order-number-display.test.ts')
 const mockSession = read('src/adapters/auth/dev-mock-ux-session.ts')
 
 // Fixture-provided identity also renders on commercial surfaces. A clean page

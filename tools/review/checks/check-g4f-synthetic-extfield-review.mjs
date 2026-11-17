@@ -18,7 +18,7 @@ const [pages, workspace, content, panel, feature, reviewMain, reviewScenarios, r
   read('tools/review/quotation-demo/quotation-scenarios.ts'),
   read('tools/review/quotation-demo/pages/quotation/index.vue'),
   read('src/features/work-orders/quotation/draft-codec.ts'),
-  read('tests/g4f/synthetic-order-extfield-review.test.ts'),
+  read('tests/orders/synthetic-order-extfield-review.test.ts'),
   read('tests/h5-review/g4f-quotation-synthetic-fields.spec.ts'),
 ])
 

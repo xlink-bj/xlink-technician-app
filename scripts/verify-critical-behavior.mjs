@@ -12,17 +12,17 @@ import { spawnSync } from 'node:child_process'
 
 const suites = Object.freeze({
   'quotation-financial-sku': [
-    'tests/g4f/quotation-engine.test.ts',
-    'tests/g4f/quotation-order-submission.test.ts',
-    'tests/g4f/quotation-sku-identity-review.test.ts',
-    'tests/g4f/quotation-order-signing-read-boundary.test.ts',
+    'tests/quotation/quotation-engine.test.ts',
+    'tests/orders/quotation-order-submission.test.ts',
+    'tests/catalog-sku/quotation-sku-identity-review.test.ts',
+    'tests/signing/quotation-order-signing-read-boundary.test.ts',
   ],
   'authorization-transport': [
-    'tests/g4f/production-read-only.test.ts',
-    'tests/g4f/p0-order-raw-transport-fence.test.ts',
+    'tests/read-boundaries/production-read-only.test.ts',
+    'tests/read-boundaries/order-raw-transport-fence.test.ts',
   ],
   'action-draft-catalog': [
-    'tests/g4d/action-workspace.test.ts',
+    'tests/action-workspace/action-workspace.test.ts',
     'tests/engineering/action-draft-identity-helpers.test.ts',
     'tests/engineering/quotation-current-action-catalog-bridge.test.ts',
   ],
@@ -40,8 +40,8 @@ const suites = Object.freeze({
   // Actor isolation and durable Order replay fences are business-critical.
   'actor-price-and-order-isolation': [
     'tests/engineering/r1-catalog-price-identity-fence.test.ts',
-    'tests/g4f/p0-role-order-tenant-negative.test.ts',
-    'tests/g4f/quotation-order-browse-handoff.test.ts',
+    'tests/read-boundaries/role-order-tenant-negative.test.ts',
+    'tests/orders/quotation-order-browse-handoff.test.ts',
   ],
 })
 const required = ['quotation-financial-sku','authorization-transport','action-draft-catalog','mock-isolation-failure','async-form-workflow-p0','actor-price-and-order-isolation']
