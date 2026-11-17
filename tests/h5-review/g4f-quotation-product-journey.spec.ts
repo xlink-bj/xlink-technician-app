@@ -191,7 +191,9 @@ for (const viewport of viewports) {
       const hit = document.elementFromPoint(button.left + button.width / 2, button.top + button.height / 2)
       return {
         footerPresent: footer !== undefined,
-        aboveFooter: footer !== undefined && button.bottom <= footer.top,
+        // Fractional CSS pixels can straddle the fixed edge by less than one
+        // CSS pixel while the action remains fully visible and tappable.
+        aboveFooter: footer !== undefined && button.bottom <= footer.top + 1,
         insideViewport: button.top >= 0 && button.bottom <= window.innerHeight
           && button.left >= 0 && button.right <= window.innerWidth,
         minimumTouchSize: button.height >= 44 && button.width >= 44,
