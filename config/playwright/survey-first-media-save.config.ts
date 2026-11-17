@@ -4,7 +4,9 @@ import {rootPath} from '../paths'
 import {selectBrand} from '../vite/brand-profile'
 const origin='http://127.0.0.1:5189'
 const brand=selectBrand(process.env.VITE_XLINK_BRAND).id
-export default defineConfig({...base,testMatch:'survey-first-media-save.spec.ts',workers:1,retries:0,
+// P08 uses the same actor, node, two file fields and intercepted upload/readback profile.
+// Keep the existing five-case CI selection unless explicitly reviewing field targets.
+export default defineConfig({...base,testMatch:process.env.XLINK_H5_MEDIA_TARGETS==='true'?'p08-normal-file-targets.spec.ts':'survey-first-media-save.spec.ts',workers:1,retries:0,
  outputDir:rootPath(`test-results/survey-first-media-save/${brand}/attachments`),reporter:[['list'],['json',{outputFile:rootPath(`test-results/survey-first-media-save/${brand}/results.json`)}]],
  use:{...base.use,baseURL:origin,viewport:{width:430,height:932},serviceWorkers:'block',trace:'on',...(process.env.XLINK_SURVEY_FIRST_MEDIA_CHROMIUM?{launchOptions:{executablePath:process.env.XLINK_SURVEY_FIRST_MEDIA_CHROMIUM}}:{})},
  webServer:{command:'./node_modules/.bin/uni -p h5 --host 127.0.0.1 --port 5189 --strictPort',url:origin,cwd:rootPath(),reuseExistingServer:false,timeout:120000,

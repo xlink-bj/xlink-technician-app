@@ -646,7 +646,7 @@ jobs:
       - name: Verify real main App H5 mounts Login without auth or external API
         run: pnpm run test:main-h5-boot
 
-      - name: Verify REAL main App quotation using credential-free isolated DEV Mock
+      - name: Verify default Home, work orders, quotation and signing-read business collection
         run: pnpm run test:main-h5-mock
 
       # Must run even if browser startup, assertions or the network guard fail.
