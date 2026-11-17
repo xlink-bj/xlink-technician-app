@@ -144,7 +144,7 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
     }
     void storage.write(
       { namespace: 'draft', key: actionDraftStorageKey(identity) },
-      quotationDraftRecordFor(identity, draft, '2026-10-09T00:00:00.000Z'),
+      quotationDraftRecordFor(identity, draft, '2026-10-09T00:00:00.000Z', 'new'),
     )
     return
   }
@@ -169,7 +169,7 @@ export function seedG4fReviewDraft(storage: StoragePort, scenario: G4fReviewScen
         measures: [{ selectionId: 'review-measure', kind: 'measure', catalogId: 'mock-catalog-measure-inspection', label: '高处作业防护（示例）', unit: '次', quantity: 1 }],
       }],
     }
-    void storage.write({ namespace: 'draft', key: actionDraftStorageKey(identity) }, quotationDraftRecordFor(identity, draft, '2026-09-23T00:00:00.000Z'))
+    void storage.write({ namespace: 'draft', key: actionDraftStorageKey(identity) }, quotationDraftRecordFor(identity, draft, '2026-09-23T00:00:00.000Z', 'new'))
     if (scenario === 'readback-pending') {
       const receiptKey = `quotation-order-receipt:v1:${encodeURIComponent(String(identity.userId))}:${encodeURIComponent(String(identity.workOrderId))}:${encodeURIComponent(String(identity.workflowNodeId))}`
       void storage.write({ namespace: 'draft', key: receiptKey }, {
