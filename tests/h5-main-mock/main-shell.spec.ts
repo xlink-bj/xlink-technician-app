@@ -34,6 +34,14 @@ test('four roots, scoped notice handoff, return, and logout', async ({ page, bas
   await expect(page.locator('.notice-card')).toHaveCount(3)
   await page.getByTestId('notice-filter-all').click()
   await page.screenshot({ path: `${output}/03-notices-430x932.png`, animations: 'disabled' })
+  await expect(page.getByTestId('notice-mock-notice-work-1')).toContainText('查看详情')
+  await expect(page.getByTestId('notice-mock-notice-work-1')).not.toContainText('查看工单')
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  const lastNotice = await page.locator('.notice-card').last().boundingBox()
+  const noticeNav = await page.locator('.main-navigation').boundingBox()
+  expect(lastNotice && noticeNav && lastNotice.y + lastNotice.height <= noticeNav.y).toBe(true)
+  await page.screenshot({ path: `${output}/03d-notices-bottom-430x932.png`, animations: 'disabled' })
+  await page.evaluate(() => window.scrollTo(0, 0))
 
   await page.locator('.main-list-row').filter({ hasText: '有工单等待查看' }).click()
   await expect(page.locator('.notice-detail-page')).toBeVisible()
@@ -69,6 +77,11 @@ test('four roots, scoped notice handoff, return, and logout', async ({ page, bas
   await expect(page.locator('.me-role')).toHaveText(identity.role)
   await expect(page.locator('.me-info-row').filter({ hasText: '当前版本' })).toContainText('0.1.0')
   await page.screenshot({ path: `${output}/04-me-430x932.png`, animations: 'disabled' })
+  await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+  const footer = await page.locator('.me-footer').boundingBox()
+  const meNav = await page.locator('.main-navigation').boundingBox()
+  expect(footer && meNav && footer.y + footer.height <= meNav.y).toBe(true)
+  await page.screenshot({ path: `${output}/04a-me-bottom-430x932.png`, animations: 'disabled' })
   await page.locator('.main-logout').click()
   await expect(page.locator('.uni-modal')).toBeVisible()
   await page.locator('.uni-modal__btn').filter({ hasText: '退出登录' }).click()
@@ -126,6 +139,38 @@ test('notice navigation failure is visible and can be retried', async ({ page })
   await page.getByTestId('notice-mock-notice-work-1').click()
   await expect(page.getByText('通知暂时无法打开，请稍后重试')).toBeVisible()
   await expect(page.locator('.notices-page')).toBeVisible()
+  await page.getByTestId('notice-mock-notice-work-1').click()
+  await expect(page.locator('.notice-detail-page')).toBeVisible()
+})
+
+test('late notice failure cannot write feedback after identity changes', async ({ page }) => {
+  await page.goto('/#/pages/index/index')
+  await page.getByTestId('main-tab-notices').click()
+  await page.evaluate(async () => {
+    const modulePath = '/src/features/work-orders/list.ts'
+    const { useWorkOrderListStore } = await import(modulePath)
+    const list = useWorkOrderListStore()
+    const original = list.navigateTo.bind(list)
+    list.navigateTo = async (_url: string) => {
+      list.navigateTo = original
+      await new Promise<void>((_resolve, reject) => {
+        ;(window as any).__rejectNoticeNavigation = reject
+      })
+    }
+  })
+  await page.getByTestId('notice-filter-unread').click()
+  await page.getByTestId('notice-mock-notice-work-1').click()
+  await expect.poll(() => page.evaluate(() => typeof (window as any).__rejectNoticeNavigation)).toBe('function')
+  await page.evaluate(async () => {
+    const modulePath = '/src/shared/state/index.ts'
+    const { useSessionStore } = await import(modulePath)
+    const store = useSessionStore()
+    if (!store.session) throw new Error('Missing synthetic session')
+    store.session = { ...store.session, sessionRef: 'synthetic-next-session' as any }
+    ;(window as any).__rejectNoticeNavigation(new Error('late synthetic failure'))
+  })
+  await expect(page.getByTestId('notice-filter-all')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByText('通知暂时无法打开，请稍后重试')).toHaveCount(0)
   await page.getByTestId('notice-mock-notice-work-1').click()
   await expect(page.locator('.notice-detail-page')).toBeVisible()
 })

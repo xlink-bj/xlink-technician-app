@@ -35,7 +35,7 @@
                 <text class="main-row-time">{{ item.time }}</text></view>
               <text class="main-row-summary">{{ item.summary }}</text>
               <view v-if="item.workOrderId" class="notice-order"><text>{{ item.body }}</text></view>
-              <text class="notice-link">{{ item.workOrderId ? '查看工单' : '查看详情' }} ›</text>
+              <text class="notice-link">查看详情 ›</text>
             </view>
           </button>
         </view>
@@ -52,13 +52,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { onHide, onShow } from '@dcloudio/uni-app'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { openMainRoute } from '@app/main-navigation'
 import { homeBrand } from '@brand-ui/home-brand'
 import { localNotices, localNoticesAvailable, useLocalNoticeStore } from '@app/notices/local-notices'
 import { useSessionStore } from '@shared/state'
 import { useWorkOrderListStore } from '@features/work-orders/list'
+import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import AppMainNavigation from '@app/components/AppMainNavigation.vue'
 import AppLoadingState from '@shared/ui/AppLoadingState.vue'
 import AppIcon from '@shared/ui/AppIcon.vue'
@@ -72,19 +74,38 @@ type NoticeFilter = typeof filters[number]['key']
 const filter = ref<NoticeFilter>('all')
 const openingId = ref('')
 const feedback = ref('')
+let active = true
+let navigationVersion = 0
+function invalidateNavigation(): void {
+  navigationVersion += 1
+  openingId.value = ''
+  feedback.value = ''
+  filter.value = 'all'
+}
 const visibleNotices = computed(() => !available ? [] : localNotices.filter(item =>
   filter.value === 'all' || (notices.readIds.includes(item.id) === (filter.value === 'read'))))
 const groups = computed(() => (['今天', '昨天'] as const).map(day => ({
   day, items: visibleNotices.value.filter(item => item.day === day),
 })).filter(group => group.items.length))
-watch(() => session.session, value => notices.ensureScope(value), { immediate: true })
+watch([() => session.status, () => workOrderReadScopeKey(session.session)], () => {
+  notices.ensureScope(session.session)
+  invalidateNavigation()
+}, { immediate: true, flush: 'sync' })
+onShow(() => { active = true })
+onHide(() => { active = false; invalidateNavigation() })
+onBeforeUnmount(() => { active = false; invalidateNavigation() })
 async function open(id: string): Promise<void> {
   if (openingId.value || !canAccess.value || !available || !localNotices.some(item => item.id === id)) return
+  const scope = workOrderReadScopeKey(session.session)
+  if (!scope) return
+  const version = ++navigationVersion
+  const isCurrent = () => active && canAccess.value && version === navigationVersion
+    && scope === workOrderReadScopeKey(session.session)
   openingId.value = id
   feedback.value = ''
   try { await workOrders.navigateTo(`/pages/notices/detail?id=${encodeURIComponent(id)}`) }
-  catch { feedback.value = '通知暂时无法打开，请稍后重试' }
-  finally { openingId.value = '' }
+  catch { if (isCurrent()) feedback.value = '通知暂时无法打开，请稍后重试' }
+  finally { if (isCurrent()) openingId.value = '' }
 }
 </script>
 <style lang="scss">@import '@brand-ui/main-pages.scss';</style>
