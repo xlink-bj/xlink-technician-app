@@ -79,6 +79,39 @@ business contract / R1 evidence
 A business page should not become the first place where a reusable shared
 control state is visually reviewed.
 
+### Existing-page polish
+
+Define the affected surface before editing. Preserve business behavior,
+permissions and information architecture; describe any necessary structural
+change separately. For an approved concept, follow its visual direction while
+using the confirmed tokens and design system for exact values and semantic
+roles (see [Yuhong visual source](YUHONG_BRAND_INTEGRATION_V2.md#更正后的视觉来源2026-11-15)).
+Preserve geometry when claiming a paint-only change; a stated layout fix may
+change it.
+
+For native WeChat page polish, compare screenshots of the actual compiled app
+in WeChat DevTools or on a device, before and after, with the same data, state
+and viewport. Review information hierarchy, geometry and interaction semantics,
+and keep the change recoverable. Dynamic native inputs need verification in the
+compiled component: runtime style injection alone does not establish stable
+geometry. H5 replay is not WeChat evidence; mark native results `NOT_TESTED`
+until checked. Review one coherent batch of edits, then run the smallest
+relevant checks and inspect the actual result; full E2E and a new screenshot
+after each pixel adjustment are not defaults.
+
+The one lightweight detail-page trial showed only a small visual gain; it did
+not establish that third-party skills improve quality. The following candidate
+skills have only been read as references, not installed or run for that trial.
+Select one only after reviewing its relevance: [Impeccable](https://github.com/pbakaus/impeccable)
+Operate/critique when overall hierarchy is unclear (skip it when an approved
+concept already settles that); [make-interfaces-feel-better](https://github.com/jakubkrehel/make-interfaces-feel-better)
+for local details; [Vercel agent-skills](https://github.com/vercel-labs/agent-skills)
+for changed, platform-applicable items only; [Emil Kowalski's skills](https://github.com/emilkowalski/skills)
+for a dedicated motion task without duplicating another review. Project rules
+and platform constraints take precedence. Do not turn fixed scaling or shadow
+preferences into universal rules, stack all skills globally, or attach them
+to an automated gate.
+
 ## 5. Required evidence
 
 For a new or materially changed shared primitive/pattern:
