@@ -91,7 +91,7 @@
   min-height: 46px; padding: 8px 2px; border-top: 1px solid var(--shell-border);
   font-size: 15px; line-height: 22px;
 }
-.me-info-row > :last-child { color: var(--shell-muted); text-align: right; overflow-wrap: anywhere; }
+.me-info-value { color: var(--shell-muted); text-align: right; overflow-wrap: anywhere; }
 .me-link { color: var(--shell-ink); }
 .main-logout {
   width: 100%; margin-top: 25px; border: 1px solid var(--shell-primary);

@@ -14,15 +14,15 @@
           <text class="me-role">{{ roleName }}</text><text class="me-service">{{ homeBrand.name }}服务</text></view>
       </view>
       <view class="main-panel me-section"><text class="me-section-title">账户信息</text>
-        <view class="me-info-row"><text>姓名</text><text>{{ displayName }}</text></view>
-        <view class="me-info-row"><text>岗位</text><text>{{ roleName }}</text></view>
-        <view class="me-info-row"><text>所属服务</text><text>{{ homeBrand.name }}服务</text></view>
+        <view class="me-info-row"><text>姓名</text><text class="me-info-value">{{ displayName }}</text></view>
+        <view class="me-info-row"><text>岗位</text><text class="me-info-value">{{ roleName }}</text></view>
+        <view class="me-info-row"><text>所属服务</text><text class="me-info-value">{{ homeBrand.name }}服务</text></view>
       </view>
       <view class="main-panel me-section"><text class="me-section-title">应用信息</text>
-        <view class="me-info-row"><text>当前版本</text><text>{{ manifest.versionName || '版本未提供' }}</text></view>
-        <view class="me-info-row"><text>品牌</text><text>{{ homeBrand.name }}服务</text></view>
-        <navigator v-if="policies.agreementUrl" class="me-info-row me-link" url="/pages/legal/legal?kind=agreement"><text>用户协议</text><text>›</text></navigator>
-        <navigator v-if="policies.privacyUrl" class="me-info-row me-link" url="/pages/legal/legal?kind=privacy"><text>隐私政策</text><text>›</text></navigator>
+        <view class="me-info-row"><text>当前版本</text><text class="me-info-value">{{ manifest.versionName || '版本未提供' }}</text></view>
+        <view class="me-info-row"><text>品牌</text><text class="me-info-value">{{ homeBrand.name }}服务</text></view>
+        <navigator v-if="policies.agreementUrl" class="me-info-row me-link" url="/pages/legal/legal?kind=agreement"><text>用户协议</text><text class="me-info-value">›</text></navigator>
+        <navigator v-if="policies.privacyUrl" class="me-info-row me-link" url="/pages/legal/legal?kind=privacy"><text>隐私政策</text><text class="me-info-value">›</text></navigator>
       </view>
       <button class="main-logout" :disabled="loggingOut" @tap="logout">
         {{ loggingOut ? '退出中…' : '退出登录' }}</button>
