@@ -24,7 +24,7 @@ test.describe('R1 source-backed checkbox and cascade FormDef round-trip', () => 
     await page.goto('/#/pages/index/index?devReview=1', { waitUntil: 'domcontentloaded' })
     await page.locator('.work-orders-entry').click()
     await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
-    await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
     const field = (key: string) => page.getByTestId('a-special-field-' + key)
     // These are completed-save reload checks. Starting a save is not its ACK
     // or local cleanup; interrupting either intentionally leaves a fence.

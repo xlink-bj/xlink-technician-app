@@ -1,4 +1,4 @@
-import { parseOrderExtFieldPage } from './g4f-order-extfield-shape.mjs'
+import { parseOrderExtFieldPage } from './quotation-order-extfield-shape.mjs'
 export function currentFormDefRequestBody(extId, page = 1, stableOrder = false) {
   if (typeof extId !== 'string' || !/^[A-Za-z0-9_-]{1,100}$/.test(extId)) throw new Error('INVALID_FORMDEF_ID')
   if (page !== 1 && !(page === 2 && stableOrder)) throw new Error('INVALID_FORMDEF_PAGE')

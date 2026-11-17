@@ -11,7 +11,7 @@ async function open(page: Page, kind: 'forms' | 'repeat') {
   await page.locator('.work-orders-entry').click()
   await (await searchMockWorkOrder(page, kind === 'forms' ? '020' : '021')).click()
   await enterDevMockDynamicFormWorkspace(page)
-  await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
+  await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
 }
 async function fill(page: Page, value: string) {
   await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill(value)

@@ -32,13 +32,13 @@
     "scripts/**/*.mjs",
     "scripts/**/*.d.ts",
     "playwright.config.ts",
-    "playwright.uni-h5-g4f-review.config.ts",
-    "vite.uni-h5-g4f-review.config.ts",
+    "config/playwright/quotation-review.config.ts",
+    "config/vite/quotation-review.config.ts",
     "tools/review/quotation-demo/**/*.ts",
     "tools/review/quotation-demo/**/*.vue",
     "tools/review/harness/**/*.ts",
     "tools/review/harness/**/*.vue",
-    "vite.review.config.ts"
+    "config/vite/review.config.ts"
   ],
   "exclude": ["node_modules", "dist", "unpackage"]
 }

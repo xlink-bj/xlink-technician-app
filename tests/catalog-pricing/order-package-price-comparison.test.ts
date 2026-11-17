@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { PackagePriceLine, PackagePriceOrder } from '../../scripts/g4f-order-package-price-comparison.mjs'
-import { summarizePackagePriceSnapshots } from '../../scripts/g4f-order-package-price-comparison.mjs'
+import type { PackagePriceLine, PackagePriceOrder } from '../../scripts/quotation-order-package-price-comparison.mjs'
+import { summarizePackagePriceSnapshots } from '../../scripts/quotation-order-package-price-comparison.mjs'
 
 const packageLine = (overrides: Partial<PackagePriceLine> = {}): PackagePriceLine => ({
   kind: 'package', quantity: 2,

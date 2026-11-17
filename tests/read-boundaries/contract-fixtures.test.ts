@@ -82,12 +82,12 @@ function issueCodes(draft: QuotationDraft): readonly string[] {
 describe('G4-F P0 contract evidence fixtures (synthetic only)', () => {
   describe('Production-shape audit execution gate', () => {
     it('exits before Vite/network setup by default and rejects conflicting flags', () => {
-      const defaultRun = spawnSync(process.execPath, ['scripts/audit-g4f-r1-prod-shape.mjs'], { encoding: 'utf8' })
+      const defaultRun = spawnSync(process.execPath, ['scripts/audit-quotation-r1-prod-shape.mjs'], { encoding: 'utf8' })
       expect(defaultRun.status).toBe(0)
       expect(JSON.parse(defaultRun.stdout)).toMatchObject({ status: 'NO_NETWORK_DEFAULT', requests: 0 })
 
       const conflictingRun = spawnSync(process.execPath, [
-        'scripts/audit-g4f-r1-prod-shape.mjs',
+        'scripts/audit-quotation-r1-prod-shape.mjs',
         '--preflight-only',
         '--authorize-bounded-prod-read',
       ], { encoding: 'utf8' })

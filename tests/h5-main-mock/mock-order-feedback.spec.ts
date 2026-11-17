@@ -55,7 +55,7 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
   await page.getByTestId('mock-journey-advance').click()
   await page.locator('.primary-task-action').click()
   await page.getByTestId('quotation-hub-create-unverified').click()
-  await expect(page.getByTestId('a-stage-mock-order-panel')).toBeVisible()
+  await expect(page.getByTestId('dev-mock-order-panel')).toBeVisible()
   await page.getByTestId('quotation-add-group').click()
   await page.getByTestId('quotation-first-step-repair-parts-trigger').click()
   await page.getByTestId('quotation-repair-part-picker').locator('.app-cascade-selector__parent').filter({ hasText: '屋面' }).click()
@@ -80,7 +80,7 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
   await page.getByTestId('order-field-mock-order-note').locator('textarea').fill('维修范围和材料用量已与客户核对')
   await page.getByTestId('order-field-mock-order-number').locator('input').fill('0')
   await expect(editor).toHaveAttribute('data-draft-status', 'saved_local')
-  await expect(page.getByTestId('a-stage-order-create')).toHaveAttribute('aria-disabled','false')
+  await expect(page.getByTestId('dev-mock-order-create')).toHaveAttribute('aria-disabled','false')
   if(brand==='yuhong'){
     const layout=await page.locator('.quotation-content__selection .quotation-content__line-heading').evaluateAll(nodes=>nodes.map(el=>{
       const title=el.querySelector('.quotation-content__line-title')!,subtotal=el.querySelector('.quotation-content__line-money')!
@@ -93,17 +93,17 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
       expect(line.subtotalTop).toBeGreaterThanOrEqual(line.titleBottom-1)
     }
   }
-  await page.getByTestId('a-stage-order-create').scrollIntoViewIfNeeded()
+  await page.getByTestId('dev-mock-order-create').scrollIntoViewIfNeeded()
   await shot('02-quote-fields-filled')
-  await page.getByTestId('a-stage-order-create').click()
-  await page.getByTestId('a-stage-order-confirm').scrollIntoViewIfNeeded()
-  await shot('03-quote-confirmation','a-stage-order-confirm')
-  await page.getByTestId('a-stage-mock-order-panel').locator('.app-button').filter({ hasText: '返回检查' }).click()
+  await page.getByTestId('dev-mock-order-create').click()
+  await page.getByTestId('dev-mock-order-confirm').scrollIntoViewIfNeeded()
+  await shot('03-quote-confirmation','dev-mock-order-confirm')
+  await page.getByTestId('dev-mock-order-panel').locator('.app-button').filter({ hasText: '返回检查' }).click()
   await expect(page.getByTestId('order-field-mock-order-note').locator('textarea')).toHaveValue('维修范围和材料用量已与客户核对')
-  await page.getByTestId('a-stage-order-create').click()
-  await page.getByTestId('a-stage-order-confirm').click()
-  await expect(page.getByTestId('a-stage-quote-readback')).toBeVisible()
-  await page.getByTestId('a-stage-quote-readback').scrollIntoViewIfNeeded()
+  await page.getByTestId('dev-mock-order-create').click()
+  await page.getByTestId('dev-mock-order-confirm').click()
+  await expect(page.getByTestId('dev-mock-quote-readback')).toBeVisible()
+  await page.getByTestId('dev-mock-quote-readback').scrollIntoViewIfNeeded()
   await shot('04-quote-saved')
   await page.getByTestId('order-field-mock-order-person').getByText('客户', { exact: true }).click()
   await page.getByTestId('order-field-mock-order-submit-note').locator('textarea').fill('施工范围、费用与客户类型已确认')
@@ -114,9 +114,9 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
   await page.reload()
   await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page.getByTestId('order-field-mock-order-submit-note').locator('textarea')).toHaveValue('施工范围、费用与客户类型已确认')
-  await page.getByTestId('a-stage-order-convert').click()
-  await page.getByTestId('a-stage-order-convert-confirm').scrollIntoViewIfNeeded()
-  await shot('06-order-confirmation','a-stage-order-convert-confirm')
+  await page.getByTestId('dev-mock-order-convert').click()
+  await page.getByTestId('dev-mock-order-convert-confirm').scrollIntoViewIfNeeded()
+  await shot('06-order-confirmation','dev-mock-order-convert-confirm')
   // Existing storage-ack fault pattern; no API or external upload is involved.
   if(fault)await page.evaluate(() => {
     const runtime = (window as any).uni, write = runtime.setStorageSync.bind(runtime)
@@ -128,36 +128,36 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
       }
     }
   })
-  await page.getByTestId('a-stage-order-convert-confirm').click()
+  await page.getByTestId('dev-mock-order-convert-confirm').click()
   if(fault){
-    await expect(page.getByTestId('a-stage-order-uncertain')).toBeVisible()
-    await page.getByTestId('a-stage-order-verify').scrollIntoViewIfNeeded()
+    await expect(page.getByTestId('dev-mock-order-uncertain')).toBeVisible()
+    await page.getByTestId('dev-mock-order-verify').scrollIntoViewIfNeeded()
     await shot('07-order-uncertain')
-    await expect(page.getByTestId('a-stage-order-convert')).toHaveCount(0)
+    await expect(page.getByTestId('dev-mock-order-convert')).toHaveCount(0)
     await page.evaluate(()=>{
       const runtime=(window as any).uni, original=runtime.getStorageSync.bind(runtime)
       ;(window as any).__restoreOrderRead=()=>{runtime.getStorageSync=original}
       runtime.getStorageSync=(key:string)=>key==='xlink.dev.mock.journey.019.official-order.v1'?null:original(key)
     })
-    await page.getByTestId('a-stage-order-verify').click()
-    await expect(page.getByTestId('a-stage-order-verify-result')).toContainText('暂未确认匹配订单')
-    await expect(page.getByTestId('a-stage-order-uncertain')).toBeVisible()
-    await expect(page.getByTestId('a-stage-order-convert')).toHaveCount(0)
+    await page.getByTestId('dev-mock-order-verify').click()
+    await expect(page.getByTestId('dev-mock-order-verify-result')).toContainText('暂未确认匹配订单')
+    await expect(page.getByTestId('dev-mock-order-uncertain')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-order-convert')).toHaveCount(0)
     await shot('07b-order-not-found')
     await page.evaluate(()=>(window as any).__restoreOrderRead())
-    await page.getByTestId('a-stage-order-verify').click()
+    await page.getByTestId('dev-mock-order-verify').click()
   }
-  await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
-  await page.getByTestId('a-stage-order-open-records').scrollIntoViewIfNeeded()
+  await expect(page.getByTestId('dev-mock-order-readback')).toBeVisible()
+  await page.getByTestId('dev-mock-order-open-records').scrollIntoViewIfNeeded()
   if(fault){
     await expect(page.locator('.mock-quote-order__feedback')).toContainText('已按返回的订单编号核对订单及金额')
-    await expect(page.getByTestId('a-stage-mock-order-panel')).not.toContainText('订单保存结果尚未确认')
-    await expect(page.getByTestId('a-stage-mock-order-panel')).not.toContainText('暂未确认匹配订单')
+    await expect(page.getByTestId('dev-mock-order-panel')).not.toContainText('订单保存结果尚未确认')
+    await expect(page.getByTestId('dev-mock-order-panel')).not.toContainText('暂未确认匹配订单')
     expect(await page.evaluate(()=>(window as any).__orderReviewWrites)).toBe(1)
   }
   await shot('08-order-verified-readonly')
   await expect(page.getByTestId('order-field-mock-order-submit-note').locator('textarea')).toBeDisabled()
-  await page.getByTestId('a-stage-order-open-records').click()
+  await page.getByTestId('dev-mock-order-open-records').click()
   await expect(page.getByTestId('quotation-hub-records')).toBeVisible()
   await shot('09-order-records',undefined,true)
   if(fault){
@@ -170,7 +170,7 @@ for (const {width, fault} of [{width:430,fault:false},{width:375,fault:false},{w
     await expect(page.getByTestId('order-extfield-editor')).toContainText('报价资料暂不可用')
     await page.getByTestId('order-extfield-editor').scrollIntoViewIfNeeded()
     await shot('10-fields-read-failure')
-    await expect(page.locator('[data-testid="a-stage-order-convert"][aria-disabled="false"],[data-testid="a-stage-order-create"][aria-disabled="false"]')).toHaveCount(0)
+    await expect(page.locator('[data-testid="dev-mock-order-convert"][aria-disabled="false"],[data-testid="dev-mock-order-create"][aria-disabled="false"]')).toHaveCount(0)
     if(brand==='yuhong'){
       await expect(page.locator('#order-extfield-editor .app-status--danger .app-status__message')).toHaveCSS('color','rgb(180, 35, 24)')
       // Legacy CSS class compatibility; `error` is not an AppStatus tone API.

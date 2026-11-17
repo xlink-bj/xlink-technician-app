@@ -42,7 +42,7 @@ async function mount(result: { state: string; message: string }, nextStatus: str
   app.mount(root); await settle()
   const tap = async (id: string) => { const button = find(root, id)!; expect(button).toBeDefined(); expect(button.props.disabled).toBeFalsy(); button.props.onTap(); await settle() }
   if (options.dispatch !== false) {
-    await tap('a-stage-order-convert'); await tap('a-stage-order-convert-confirm')
+    await tap('dev-mock-order-convert'); await tap('dev-mock-order-convert-confirm')
     expect(content(root)).toContain(oldMessage)
   }
   return { app, root, tap, controller, oldMessage, workspace, composition }
@@ -55,13 +55,13 @@ describe('actual Mock quote Order result feedback', () => {
     try {
       expect(find(f.root, 'order-fields')!.props).toMatchObject({ stage: 'placeOrder', locked: true })
       expect(content(f.root)).not.toContain('请补齐维修部位、商品、数量及价格后继续')
-      await f.tap('a-stage-order-verify')
+      await f.tap('dev-mock-order-verify')
       expect(find(f.root, 'order-fields')!.props).toMatchObject({ stage: 'submitOrder', locked: nextStatus === 'succeeded' })
       expect(f.controller.convertQuoteToOrder).not.toHaveBeenCalled()
       expect(f.controller.createQuote).not.toHaveBeenCalled()
     } finally { f.app.unmount() }
   })
-  it.each([['ready', 'a-stage-order-create', 'a-stage-order-confirm'], ['quote_created', 'a-stage-order-convert', 'a-stage-order-convert-confirm']])('refuses invalid visible quantities at %s even when the last valid engine result remains ready', async (initialStatus, entry, confirm) => {
+  it.each([['ready', 'dev-mock-order-create', 'dev-mock-order-confirm'], ['quote_created', 'dev-mock-order-convert', 'dev-mock-order-convert-confirm']])('refuses invalid visible quantities at %s even when the last valid engine result remains ready', async (initialStatus, entry, confirm) => {
     const f = await mount({ state: 'confirmed', message: '已核对' }, 'succeeded', { dispatch: false, initialStatus })
     try {
       await f.tap(entry)
@@ -84,15 +84,15 @@ describe('actual Mock quote Order result feedback', () => {
   ])('replaces obsolete feedback with %s while retaining the result guard', async (state, status, message) => {
     const f = await mount({ state, message }, status)
     try {
-      await f.tap('a-stage-order-verify')
+      await f.tap('dev-mock-order-verify')
       expect(content(f.root)).toContain(message)
       expect(content(f.root)).not.toContain(f.oldMessage)
-      expect(find(f.root, 'a-stage-order-convert')).toBeUndefined()
-      expect(find(f.root, 'a-stage-order-create')).toBeUndefined()
+      expect(find(f.root, 'dev-mock-order-convert')).toBeUndefined()
+      expect(find(f.root, 'dev-mock-order-create')).toBeUndefined()
       expect(f.controller.convertQuoteToOrder).toHaveBeenCalledTimes(1)
       expect(f.controller.createQuote).not.toHaveBeenCalled()
-      expect(Boolean(find(f.root, 'a-stage-order-readback'))).toBe(state === 'confirmed')
-      expect(Boolean(find(f.root, 'a-stage-order-verify'))).toBe(state !== 'confirmed')
+      expect(Boolean(find(f.root, 'dev-mock-order-readback'))).toBe(state === 'confirmed')
+      expect(Boolean(find(f.root, 'dev-mock-order-verify'))).toBe(state !== 'confirmed')
     } finally { f.app.unmount() }
   })
 })

@@ -16,9 +16,9 @@
 ```sh
 pnpm run build:h5-review
 pnpm run build:uni-h5-review
-pnpm run build:uni-h5-g4f-review
+pnpm run build:quotation-review
 pnpm run build:mp-weixin-review
-pnpm run check:g4e-review-harness
+pnpm run check:survey-review-harness
 pnpm run check:review-root-hygiene
 ```
 

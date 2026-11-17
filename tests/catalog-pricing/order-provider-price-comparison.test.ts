@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { DirectProviderPriceLine, DirectProviderPriceOrder } from '../../scripts/g4f-order-provider-price-comparison.mjs'
-import { summarizeDirectProviderPriceSnapshots } from '../../scripts/g4f-order-provider-price-comparison.mjs'
+import type { DirectProviderPriceLine, DirectProviderPriceOrder } from '../../scripts/quotation-order-provider-price-comparison.mjs'
+import { summarizeDirectProviderPriceSnapshots } from '../../scripts/quotation-order-provider-price-comparison.mjs'
 
 const line = (
   kind: 'procedure' | 'measure', id: string, unitPrice: number, quantity = 1, lineTotal = unitPrice,

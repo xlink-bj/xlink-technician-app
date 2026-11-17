@@ -14,7 +14,7 @@ import {
   sanitizeOrderExtFieldPage,
   sanitizeOrderCodeProviderResponse,
   sanitizeOrderCascadeProviderResponse,
-} from '../../scripts/lib/g4f-order-extfield-shape.mjs'
+} from '../../scripts/lib/quotation-order-extfield-shape.mjs'
 
 describe('active Order ExtField shape inspection (synthetic only)', () => {
   it('builds a single current-account-scoped detail page with a server-enforced limit and no _all', () => {
@@ -301,7 +301,7 @@ describe('active Order ExtField shape inspection (synthetic only)', () => {
   })
 
   it('does zero network by default and blocks an unconfigured profile before login or read', () => {
-    const defaultRun = spawnSync(process.execPath, ['scripts/inspect-g4f-active-order-extfield.mjs'], { encoding: 'utf8' })
+    const defaultRun = spawnSync(process.execPath, ['scripts/inspect-quotation-active-order-extfield.mjs'], { encoding: 'utf8' })
     expect(defaultRun.status).toBe(0)
     expect(JSON.parse(defaultRun.stdout)).toMatchObject({
       status: 'NO_NETWORK_DEFAULT',
@@ -309,7 +309,7 @@ describe('active Order ExtField shape inspection (synthetic only)', () => {
     })
 
     const preflightRun = spawnSync(process.execPath, [
-      'scripts/inspect-g4f-active-order-extfield.mjs',
+      'scripts/inspect-quotation-active-order-extfield.mjs',
       '--preflight-only',
     ], {
       encoding: 'utf8',
@@ -322,7 +322,7 @@ describe('active Order ExtField shape inspection (synthetic only)', () => {
     })
 
     const blockedRun = spawnSync(process.execPath, [
-      'scripts/inspect-g4f-active-order-extfield.mjs',
+      'scripts/inspect-quotation-active-order-extfield.mjs',
       '--authorize-bounded-prod-read',
     ], {
       encoding: 'utf8',

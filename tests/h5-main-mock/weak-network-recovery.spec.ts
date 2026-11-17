@@ -14,7 +14,7 @@ test('430×932 offline editing, multi-FormDef isolation, restart recovery and ex
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto('/#/pages/work-orders/detail?id=mock-work-order-020-local-forms')
   await enterDevMockDynamicFormWorkspace(page)
-  await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
+  await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
   const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
   const savedDraftField = (formDefinitionId: string, fieldId: string) => page.evaluate(({ formDefinitionId, fieldId }) => {
     const record = Object.keys(localStorage).flatMap(key => {

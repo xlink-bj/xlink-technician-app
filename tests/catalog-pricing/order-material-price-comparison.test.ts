@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { DirectMaterialPriceLine, DirectMaterialPriceOrder } from '../../scripts/g4f-order-material-price-comparison.mjs'
-import { summarizeDirectMaterialPriceSnapshots } from '../../scripts/g4f-order-material-price-comparison.mjs'
+import type { DirectMaterialPriceLine, DirectMaterialPriceOrder } from '../../scripts/quotation-order-material-price-comparison.mjs'
+import { summarizeDirectMaterialPriceSnapshots } from '../../scripts/quotation-order-material-price-comparison.mjs'
 
 type PriceLineOverrides = Omit<Partial<DirectMaterialPriceLine>, 'identity'> & {
   identity?: Partial<NonNullable<DirectMaterialPriceLine['identity']>>

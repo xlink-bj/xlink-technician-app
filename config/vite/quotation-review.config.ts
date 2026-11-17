@@ -4,7 +4,7 @@ import { repositoryRoot, rootPath, sourceAliases } from '../paths'
 
 const require = createRequire(import.meta.url)
 const reviewInputDir = rootPath('tools/review/quotation-demo')
-const reviewOutputDir = rootPath('unpackage/g4f-phase1a-uni-h5')
+const reviewOutputDir = rootPath('unpackage/quotation-review')
 
 if (process.env.UNI_INPUT_DIR && process.env.UNI_INPUT_DIR !== reviewInputDir) {
   throw new Error(`UNI_INPUT_DIR must point to the isolated G4-F review app: ${reviewInputDir}`)
@@ -18,7 +18,7 @@ const uni = require('@dcloudio/vite-plugin-uni').default
 
 export default defineConfig({
   root: reviewInputDir,
-  cacheDir: rootPath('.cache/vite-g4f-quotation-review'),
+  cacheDir: rootPath('.cache/vite-quotation-review'),
   plugins: [uni()],
   resolve: { alias: sourceAliases },
   define: {

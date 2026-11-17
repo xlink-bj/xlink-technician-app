@@ -1,5 +1,5 @@
 <template>
-  <view class="mock-quote-order app-surface" data-testid="a-stage-mock-order-panel">
+  <view class="mock-quote-order app-surface" data-testid="dev-mock-order-panel">
     <view class="mock-quote-order__heading">
       <view>
         <text class="mock-quote-order__title">报价确认</text>
@@ -16,27 +16,27 @@
       :service-type="fieldServiceType" :stage="fieldStage" :locked="busy || status === 'succeeded' || status === 'uncertain'"
       @change="onFieldsChange" @draft-status="$emit('draft-status', $event)" />
     <AppStatus v-if="engine?.state === 'blocked' && engine.issues.length" tone="warning" quiet
-      :message="engine.issues[0].message" data-testid="a-stage-order-price-blocked" />
+      :message="engine.issues[0].message" data-testid="dev-mock-order-price-blocked" />
     <AppStatus v-else-if="!canSubmit && status !== 'succeeded' && status !== 'uncertain'" tone="neutral" quiet
       :message="!fieldReady ? '请补齐当前资料，并处理未完成的附件。' : '请补齐维修部位、商品、数量及价格后继续。未核实的价格不会按零计算。'" />
     <AppStatus v-if="status === 'quote_created'" tone="success" quiet
       message="报价单已按报价编号回读。转为订单前仍可返回检查明细。"
-      data-testid="a-stage-quote-readback" />
+      data-testid="dev-mock-quote-readback" />
     <AppStatus v-if="status === 'succeeded'" tone="success" quiet
       message="订单已按返回的订单编号和金额回读；合同状态仍需单独核验。"
-      data-testid="a-stage-order-readback" />
+      data-testid="dev-mock-order-readback" />
     <AppStatus v-if="status === 'uncertain'" tone="warning" quiet
-      message="保存结果待核查，请勿重复提交。" data-testid="a-stage-order-uncertain" />
+      message="保存结果待核查，请勿重复提交。" data-testid="dev-mock-order-uncertain" />
     <view v-if="status === 'uncertain'" class="mock-quote-order__readback">
       <AppButton variant="secondary" block :loading="checking" :disabled="checking || busy"
-        data-testid="a-stage-order-verify" @tap="verifyPending">只读核对订单记录</AppButton>
+        data-testid="dev-mock-order-verify" @tap="verifyPending">只读核对订单记录</AppButton>
       <AppStatus v-if="verification" :tone="verification === 'confirmed' ? 'success' : 'warning'"
-        quiet :message="verificationMessage" data-testid="a-stage-order-verify-result" />
+        quiet :message="verificationMessage" data-testid="dev-mock-order-verify-result" />
     </view>
     <text v-if="feedback" class="mock-quote-order__feedback" role="alert">{{ feedback }}</text>
     <view v-if="status === 'ready' || status === 'quote_created'" class="mock-quote-order__actions">
       <AppButton v-if="!confirm" block :disabled="!canSubmit || busy"
-        :data-testid="status === 'quote_created' ? 'a-stage-order-convert' : 'a-stage-order-create'"
+        :data-testid="status === 'quote_created' ? 'dev-mock-order-convert' : 'dev-mock-order-create'"
         @tap="confirm = status === 'quote_created' ? 'order' : 'quote'">
         {{ status === 'quote_created' ? '转为正式订单' : '保存报价单' }}
       </AppButton>
@@ -45,7 +45,7 @@
           {{ confirm === 'quote' ? '报价单保存后将使用单独的报价编号。' : '将按当前报价启动订单流程，正式订单会使用服务端返回的新编号。' }}
         </text>
         <AppButton :disabled="busy || !canSubmit" :loading="busy"
-          :data-testid="confirm === 'quote' ? 'a-stage-order-confirm' : 'a-stage-order-convert-confirm'"
+          :data-testid="confirm === 'quote' ? 'dev-mock-order-confirm' : 'dev-mock-order-convert-confirm'"
           @tap="confirm === 'quote' ? createQuote() : convertQuote()">
           {{ confirm === 'quote' ? '确认保存报价单' : '确认转为订单' }}
         </AppButton>
@@ -53,7 +53,7 @@
       </view>
     </view>
     <AppButton v-if="status === 'succeeded'" block variant="secondary"
-      data-testid="a-stage-order-open-records" @tap="$emit('open-order-records')">查看订单与签约状态</AppButton>
+      data-testid="dev-mock-order-open-records" @tap="$emit('open-order-records')">查看订单与签约状态</AppButton>
   </view>
 </template>
 

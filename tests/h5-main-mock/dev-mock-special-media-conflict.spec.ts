@@ -7,7 +7,7 @@ const sampleImage = Buffer.from(
   'base64',
 )
 async function capture(page: Page, scene: string) {
-  const directory = process.env.XLINK_STAGE_B_SCREENSHOTS
+  const directory = process.env.XLINK_REVIEW_SCREENSHOTS
   if (directory) await page.screenshot({ path: `${directory}/${scene}.png` })
 }
 
@@ -16,7 +16,7 @@ async function openForms(page: import('@playwright/test').Page, kind: 'forms' | 
   await page.goto('/#/pages/index/index?devReview=1')
   await page.goto(`/#/pages/work-orders/detail?id=mock-work-order-${kind === 'forms' ? '020-local-forms' : '021-local-repeat'}`)
   await enterDevMockDynamicFormWorkspace(page)
-  await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
+  await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
 }
 async function populate(page: import('@playwright/test').Page, summary: string) {
   await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill(summary)

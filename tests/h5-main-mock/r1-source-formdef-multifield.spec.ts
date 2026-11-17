@@ -23,7 +23,7 @@ test.describe('R1 source FormDef multi-field save/edit/readback', () => {
     await page.locator('.work-orders-entry').click()
     await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
 
-    const panel = page.getByTestId('a-stage-special-panel')
+    const panel = page.getByTestId('dev-mock-special-panel')
     await expect(panel).toBeVisible()
     await expect(page.getByTestId('a-special-reference-inspectionPhoto')).toContainText('只读')
     const summary = page.getByTestId('a-special-field-inspectionSummary').locator('textarea')

@@ -1,5 +1,5 @@
 import { resolve } from 'node:path'
-import { resolveAuditExecutionMode } from './lib/g4f-audit-execution-mode.mjs'
+import { resolveAuditExecutionMode } from './lib/quotation-audit-execution-mode.mjs'
 
 const executionMode = resolveAuditExecutionMode(process.argv.slice(2))
 if (executionMode === 'no_network') {

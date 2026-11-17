@@ -1,7 +1,7 @@
 /** Output-only projection over already authorized responses. No fetch, auth,
  * raw response persistence, or request-scope mutation exists in this module. */
 import { parseOrderExtFieldPage, providerRows, r1ServiceTypeApplies, r1PersonTypeApplies,
-  sanitizeOrderCodeProviderResponse, sanitizeOrderCascadeProviderResponse } from './g4f-order-extfield-shape.mjs'
+  sanitizeOrderCodeProviderResponse, sanitizeOrderCascadeProviderResponse } from './quotation-order-extfield-shape.mjs'
 const record = value => value && typeof value === 'object' && !Array.isArray(value) ? value : null
 const parse = value => { try { return record(typeof value === 'string' ? JSON.parse(value) : value) } catch { return null } }
 const kind = value => value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value

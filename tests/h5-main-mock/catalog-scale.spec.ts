@@ -32,7 +32,7 @@ async function open019Quotation(page: Page) {
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     await page.getByTestId('quotation-hub-create-unverified').click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-    await expect(page.getByTestId('a-stage-mock-order-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-order-panel')).toBeVisible()
   }
 
 
@@ -120,9 +120,9 @@ for (const lostAck of [false, true]) test(`430: priced package quote to official
   await page.getByTestId('quotation-group-details-toggle-quotation-group-1').click()
   await expect(page.locator('[data-testid^="quotation-configured-package-"]')).toHaveCount(1)
   await shot('01-套餐组合-金额已核验', 'quotation-group-section-quotation-group-1-package')
-  await page.getByTestId('a-stage-order-create').click()
-  await page.getByTestId('a-stage-order-confirm').click()
-  await expect(page.getByTestId('a-stage-quote-readback')).toBeVisible()
+  await page.getByTestId('dev-mock-order-create').click()
+  await page.getByTestId('dev-mock-order-confirm').click()
+  await expect(page.getByTestId('dev-mock-quote-readback')).toBeVisible()
   const saved = await page.evaluate(() => {
     const runtime = (window as unknown as { uni: { getStorageSync(key: string): string } }).uni
     return JSON.parse(runtime.getStorageSync('xlink.dev.mock.journey.019.quotation.v1'))
@@ -137,7 +137,7 @@ for (const lostAck of [false, true]) test(`430: priced package quote to official
   const packageLine = JSON.parse(quote.bjProducts).orderList[0].projPackages.data[0]
   expect(packageLine).toMatchObject({ _id: 'mock-scale-standard-package-027', price: 126,
     amount: 141, minimumPrice: 150, number: 2, totalAmount: 282 })
-  await shot('02-报价已保存-独立报价编号', 'a-stage-quote-readback')
+  await shot('02-报价已保存-独立报价编号', 'dev-mock-quote-readback')
   await page.getByTestId('order-field-mock-order-person').getByText('客户', { exact: true }).click()
   await page.getByTestId('order-field-mock-order-submit-note').locator('textarea').fill('套餐组合及维修范围已与客户核对')
   // A hard reload must follow the actual draft ACK, not just input delivery.
@@ -145,8 +145,8 @@ for (const lostAck of [false, true]) test(`430: priced package quote to official
   await page.reload()
   await page.getByTestId('quotation-hub-create-unverified').click()
   await expect(page.getByTestId('order-field-mock-order-submit-note').locator('textarea')).toHaveValue('套餐组合及维修范围已与客户核对')
-  await page.getByTestId('a-stage-order-convert').click()
-  await shot('03-正式订单-提交前确认', 'a-stage-order-convert-confirm')
+  await page.getByTestId('dev-mock-order-convert').click()
+  await shot('03-正式订单-提交前确认', 'dev-mock-order-convert-confirm')
   if (lostAck) await page.evaluate(() => {
     const runtime = (window as any).uni, original = runtime.setStorageSync.bind(runtime)
     runtime.setStorageSync = (key: string, value: unknown) => {
@@ -154,18 +154,18 @@ for (const lostAck of [false, true]) test(`430: priced package quote to official
       if (key === 'xlink.dev.mock.journey.019.official-order.v1') throw new Error('Synthetic persisted Order acknowledgement loss')
     }
   })
-  await page.getByTestId('a-stage-order-convert-confirm').click()
+  await page.getByTestId('dev-mock-order-convert-confirm').click()
   if (lostAck) {
-    await expect(page.getByTestId('a-stage-order-uncertain')).toBeVisible()
-    await expect(page.getByTestId('a-stage-order-convert')).toHaveCount(0)
-    await shot('04-结果不明-禁止重放', 'a-stage-order-verify')
+    await expect(page.getByTestId('dev-mock-order-uncertain')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-order-convert')).toHaveCount(0)
+    await shot('04-结果不明-禁止重放', 'dev-mock-order-verify')
     await page.reload()
     await page.getByTestId('quotation-hub-start-new').click()
-    await expect(page.getByTestId('a-stage-order-uncertain')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-order-uncertain')).toBeVisible()
     expect(await page.evaluate(() => sessionStorage.getItem('package-order-write-count'))).toBe('1')
-    await page.getByTestId('a-stage-order-verify').click()
+    await page.getByTestId('dev-mock-order-verify').click()
   }
-  await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
+  await expect(page.getByTestId('dev-mock-order-readback')).toBeVisible()
   const order = await page.evaluate(() => JSON.parse((window as any).uni.getStorageSync('xlink.dev.mock.journey.019.official-order.v1')))
   expect(order._id).not.toBe(quote._id)
   expect(order).toMatchObject({ type: 1, serviceAppointmentId: quote.serviceAppointmentId,
@@ -174,12 +174,12 @@ for (const lostAck of [false, true]) test(`430: priced package quote to official
   expect(quote.type).toBe(0)
   expect(await page.evaluate(() => sessionStorage.getItem('package-order-write-count'))).toBe('1')
   await expect(page.getByTestId('order-field-mock-order-submit-note').locator('textarea')).toBeDisabled()
-  await shot('05-正式订单-精确回读只读', 'a-stage-order-open-records')
+  await shot('05-正式订单-精确回读只读', 'dev-mock-order-open-records')
   await page.reload()
   await page.getByTestId('quotation-hub-start-new').click()
-  await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
+  await expect(page.getByTestId('dev-mock-order-readback')).toBeVisible()
   expect(await page.evaluate(() => JSON.parse((window as any).uni.getStorageSync('xlink.dev.mock.journey.019.official-order.v1')))).toEqual(order)
   expect(await page.evaluate(() => sessionStorage.getItem('package-order-write-count'))).toBe('1')
-  await shot('06-刷新恢复-订单未重复创建', 'a-stage-order-readback')
+  await shot('06-刷新恢复-订单未重复创建', 'dev-mock-order-readback')
   expect(external).toEqual([])
 })

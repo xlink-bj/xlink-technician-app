@@ -86,5 +86,11 @@
 | 已迁移：来源读取与隔离测试 | `tests/engineering/r1-forms-add-options-read-contract.test.ts`、`r1-form-data-detail-read-contract.test.ts`、`r1-workflow-form-data-read-contract.test.ts`、`dev-mock-forms-repeat-read-fixtures.test.ts`、`r1-special-form-isolated-pilot-shadow.test.ts`。分别覆盖来源选项、精确回读、Workflow/FormData 身份、DEV Mock 读、隔离 Pilot 的无 Beta 实写负例；同步 `verify:quick` 和 R1 映射路径。 |
 | 已迁移：行为测试 | `tests/engineering/mock-scenario-routing.test.ts`、`mock-command-state-isolation.test.ts`、`mock-read-fault-scenarios.test.ts` 属 Mock；`action-draft-identity-helpers.test.ts`、`action-command-revision-consistency.test.ts` 属草稿/异步；`quotation-current-action-catalog-bridge.test.ts` 属报价；`form-runtime-command-owner-boundary.test.ts` 属架构；`quality-census-accounting.test.ts` 属质量盘点。同步 `verify:quick`、关键行为清单和 Validate 路径；断言保持原样。 |
 | 已按业务归组：测试目录 | 原 G4 的 143 个测试和 3 个支持文件按真实能力迁入 `tests/auth/`、`work-order-list/`、`work-order-detail/`、`action-workspace/`、`appointments/`、`survey/`、`media/`、`api-contracts/`、`catalog-pricing/`、`catalog-sku/`、`quotation/`、`orders/`、`signing/`、`read-boundaries/`、`app-integration/`。保留测试正文与断言；同步单测选择、关键清单、R1 映射、现行 workflow 和 Review 检查消费者。跨页面体验放集成目录，生产只读与跨域权限边界单独归组，不用历史阶段作为工程所有权。 |
-| 保留的稳定测试契约及历史档案 | 既有 `a-stage-*` data-testid 与 `XLINK_STAGE_B_SCREENSHOTS` 是测试选择器/截图环境变量，跨 H5 用例被消费；改名需单独核对所有消费者。`docs/governance/` 的固定快照与 `docs/verification/` 的历史验收不改写为当前状态。 |
+| 测试定位与截图配置 | 两个 DEV Mock 面板的 13 个测试定位标识统一为 `dev-mock-*`，现行消费者同步；可选截图输出使用 `XLINK_REVIEW_SCREENSHOTS`，不改变默认测试行为。`docs/governance/` 的固定快照与 `docs/verification/` 的历史验收保留原始语境，不改写为当前状态。 |
 
+
+### Review 工具与历史快照
+
+问卷与报价隔离 Review 保留 Mock/禁写边界，入口按业务命名：`check:survey-review-harness`、`test:quotation-review`、`check:quotation-synthetic-extfield-review`。只读报价探针为 `verify:quotation-prod-read`、`inspect:quotation-active-order-extfield`，改名不赋予生产访问权限。
+
+旧 Survey closure 是固定分支/SHA 的状态自证，不是当前业务检查：停止其 package 命令、checker 与 4 项快照断言；原 JSON 原字节归档于 `docs/verification/archive/survey-closure-readiness-legacy.json`。真实 Survey 合同、可见性、媒介和提交边界测试继续运行。生产采样回执中的历史脚本路径和哈希原样保留，不要求其路径永远存在于当前代码树。

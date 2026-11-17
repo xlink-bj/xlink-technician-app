@@ -10,7 +10,7 @@ test('DEV special active task uses one Workspace content, never a Detail side ed
  await page.goto('/#/pages/index/index?devReview=1');await page.locator('.work-orders-entry').click()
  await (await searchMockWorkOrder(page,'020')).click()
  await enterDevMockDynamicFormWorkspace(page)
- await expect(page.getByTestId('a-stage-special-panel')).toHaveCount(1)
+ await expect(page.getByTestId('dev-mock-special-panel')).toHaveCount(1)
  await expect(page.getByTestId('a-special-field-inspectionSummary')).toBeVisible()
  expect(external).toEqual([]);expect(errors).toEqual([])
 })

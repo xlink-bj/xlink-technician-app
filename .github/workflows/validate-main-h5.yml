@@ -661,10 +661,10 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Verify G4-F legacy H5 review UX remains compatible
-        run: pnpm run test:uni-h5-g4f-review
+      - name: Verify isolated quotation H5 review UX remains compatible
+        run: pnpm run test:quotation-review
 
-      - name: Preserve legacy G4-F H5 regression evidence
+      - name: Preserve quotation H5 regression evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:

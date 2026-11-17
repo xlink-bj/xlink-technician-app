@@ -27,7 +27,7 @@ test('main App repeat records use the commercial Special Form surface', async ({
   await repeat.click()
   await expect(page).toHaveURL(/pages\/work-orders\/detail/)
   await expect(page.locator('.summary-number')).toContainText('021')
-  const panel = page.getByTestId('a-stage-special-panel')
+  const panel = page.getByTestId('dev-mock-special-panel')
   await expect(panel).toBeVisible()
   await expect(panel.locator('.special-forms__title')).toContainText('现场复检')
   await expect(page.getByTestId('a-special-task-state')).toContainText('正在填写')
@@ -37,7 +37,7 @@ test('main App repeat records use the commercial Special Form surface', async ({
     .toContainText('第二次复检')
   await expect(panel).not.toContainText(/(?:DEV|Mock|fixture)/)
   await panel.scrollIntoViewIfNeeded()
-  const directory = process.env.XLINK_STAGE_B_SCREENSHOTS
+  const directory = process.env.XLINK_REVIEW_SCREENSHOTS
   if (directory) {
     mkdirSync(directory, { recursive: true })
     await page.screenshot({ path: `${directory}/special-repeat-form.png` })

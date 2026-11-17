@@ -26,8 +26,8 @@ function fail(message) {
   throw new Error(`G4-E review harness check failed: ${message}`)
 }
 
-const entry = await read('tools/review/harness/g4e-survey-main.ts')
-const html = await read('tools/review/harness/g4e-survey.html')
+const entry = await read('tools/review/harness/survey-main.ts')
+const html = await read('tools/review/harness/survey.html')
 const galleryEntry = await read('tools/review/harness/design-system-main.ts')
 const galleryHtml = await read('tools/review/harness/design-system.html')
 const gallerySource = [
@@ -54,7 +54,7 @@ if (!entry.includes("if (import.meta.env.PROD)")) {
 if (!entry.includes("G4-E H5 review harness is development-only")) {
   fail('review entry must expose an explicit development-only guard')
 }
-if (!html.includes('/tools/review/harness/g4e-survey-main.ts')) {
+if (!html.includes('/tools/review/harness/survey-main.ts')) {
   fail('review HTML must use the isolated review entry')
 }
 if (!galleryEntry.includes("if (import.meta.env.PROD)")) {
@@ -78,10 +78,10 @@ if (!reviewConfig.includes("VITE_XLINK_ENABLE_REAL_WRITES': JSON.stringify('fals
 if (!reviewConfig.includes("VITE_XLINK_MOCK': JSON.stringify('true')")) {
   fail('review config must force Mock mode')
 }
-if (pages.includes('__review') || pages.includes('g4e-survey')) {
+if (pages.includes('__review') || pages.includes('tools/review/') || pages.includes('survey.html') || pages.includes('survey-main')) {
   fail('production pages.json must not expose the review route')
 }
-if (appConfig.includes('__review') || appConfig.includes('g4e-survey')) {
+if (appConfig.includes('__review') || appConfig.includes('tools/review/') || appConfig.includes('survey.html') || appConfig.includes('survey-main')) {
   fail('production Vite config must not include the review entry')
 }
 if (pages.includes('design-system.html') || pages.includes('design-system')) {

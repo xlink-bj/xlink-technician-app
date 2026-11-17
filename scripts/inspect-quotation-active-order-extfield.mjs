@@ -7,7 +7,7 @@ import {
   isAllowedOrderExtFieldTarget,
   ORDER_EXTFIELD_ROUTE,
   sanitizeOrderExtFieldPage,
-} from './lib/g4f-order-extfield-shape.mjs'
+} from './lib/quotation-order-extfield-shape.mjs'
 
 const NETWORK_AUTHORIZATION_FLAG = '--authorize-bounded-prod-read'
 const PREFLIGHT_FLAG = '--preflight-only'

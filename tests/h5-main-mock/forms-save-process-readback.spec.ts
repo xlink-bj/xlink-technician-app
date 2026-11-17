@@ -24,8 +24,8 @@ test.describe('R1 forms Save→EXTS→Process / durable readback', () => {
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
-    await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
-    await expect(page.getByTestId('a-stage-special-panel')).not.toContainText(/DEV|Mock|fixture/i)
+    await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-special-panel')).not.toContainText(/DEV|Mock|fixture/i)
   }
 
   test('430×932: confirmed Save and Process survives reload without replay', async ({ page }, info) => {
@@ -46,7 +46,7 @@ test.describe('R1 forms Save→EXTS→Process / durable readback', () => {
     await page.locator('.work-orders-entry').click()
     await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
 
-    const panel = page.getByTestId('a-stage-special-panel')
+    const panel = page.getByTestId('dev-mock-special-panel')
     await expect(panel).toBeVisible()
     await page.getByTestId('a-special-field-inspectionSummary').locator('textarea').fill('Stage1B 430 宽度下现场情况和节点完成')
     await page.getByTestId('a-special-field-inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()
@@ -171,7 +171,7 @@ test.describe('R1 forms Save→EXTS→Process / durable readback', () => {
       sessionStorage.getItem('xlink-test-r1-process-ack-lost'))).toBe('1')
 
     await page.reload({ waitUntil: 'domcontentloaded' })
-    await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
     await expect(page.getByTestId('a-special-task-state')).toContainText('结果待核对')
     await expect(page.getByTestId('a-special-local-draft'))
       .toContainText('本机草稿已保留，提交结果待核对')

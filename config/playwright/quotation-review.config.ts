@@ -5,15 +5,15 @@ const baseURL = 'http://127.0.0.1:5175'
 
 export default defineConfig({
   testDir: rootPath('tests/h5-review'),
-  testMatch: '**/g4f-quotation*.spec.ts',
-  outputDir: rootPath('test-results/uni-h5-g4f-review/attachments'),
+  testMatch: '**/quotation*.spec.ts',
+  outputDir: rootPath('test-results/quotation-review/attachments'),
   fullyParallel: false,
   workers: 1,
   timeout: 120_000,
   expect: { timeout: 30_000 },
   reporter: [['list']],
   webServer: {
-    command: 'pnpm run dev:uni-h5-g4f-review',
+    command: 'pnpm run dev:quotation-review',
     url: baseURL,
     cwd: repositoryRoot,
     timeout: 120_000,

@@ -1,5 +1,5 @@
 <template>
-  <view class="special-forms app-surface" :class="{ 'special-forms--confirming': confirmFinish || confirmSaveFinish }" data-testid="a-stage-special-panel">
+  <view class="special-forms app-surface" :class="{ 'special-forms--confirming': confirmFinish || confirmSaveFinish }" data-testid="dev-mock-special-panel">
     <view class="special-forms__header">
       <view class="special-forms__header-copy">
         <text class="special-forms__title">{{ kind === 'repeat' ? '现场复检' : '现场记录' }}</text>

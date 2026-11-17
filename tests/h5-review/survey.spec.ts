@@ -3,7 +3,7 @@ import { join, resolve } from 'node:path'
 
 import { expect, test, type Page } from '@playwright/test'
 
-const reviewPath = '/tools/review/harness/g4e-survey.html'
+const reviewPath = '/tools/review/harness/survey.html'
 const screenshotDirectory = resolve(process.cwd(), '.review/g4e-product-gate/generated')
 
 type VisualScenarioContract = {
@@ -90,7 +90,7 @@ async function assertHealthy(page: Page, evidence: BrowserEvidence): Promise<voi
 
 async function openScenario(page: Page, scenario: string, evidence: BrowserEvidence): Promise<void> {
   await page.goto(`${reviewPath}?scenario=${scenario}`, { waitUntil: 'domcontentloaded' })
-  await expect(page.getByTestId('g4e-review-harness')).toBeVisible()
+  await expect(page.getByTestId('survey-review-harness')).toBeVisible()
   await expect(page.getByTestId('g4e-review-scenario')).toHaveValue(scenario)
   await expect(page.getByTestId('g4e-review-workspace')).toBeVisible()
   await assertHealthy(page, evidence)

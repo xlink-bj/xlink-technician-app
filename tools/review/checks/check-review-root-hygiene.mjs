@@ -14,7 +14,7 @@ if (disallowed.length) {
 
 const pkg = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
 for (const [name, command] of Object.entries(pkg.scripts)) {
-  if (/\b(?:scripts\/check-g4e-review-harness|scripts\/check-g4f-phase1[ab]|scripts\/check-g4f-synthetic-extfield-review|scripts\/check-s2-ux-review|scripts\/dev-mp-isolated-ux)\b/.test(command)) {
+  if (/\b(?:scripts\/check-(?:g4e|survey)-review-harness|scripts\/check-g4f-phase1[ab]|scripts\/check-(?:g4f|quotation)-synthetic-extfield-review|scripts\/check-s2-ux-review|scripts\/dev-mp-isolated-ux)\b/.test(command)) {
     throw new Error(`Script ${name} still uses a retired review root: ${command}`)
   }
 }

@@ -25,7 +25,7 @@ test.describe('R1 typed primitive FormDef on the real H5 App', () => {
     await expect(page.locator('.mock-source-indicator')).toContainText('Mock')
     await page.locator('.work-orders-entry').click()
     await (await searchMockWorkOrder(page, '020')).click(); await enterDevMockDynamicFormWorkspace(page)
-    await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
     const field = (key: string) => page.getByTestId(`a-special-field-${key}`)
     await field('inspectionSummary').locator('textarea').fill('类型字段回读验证')
     await field('inspectionResult').locator('.app-choice').filter({ hasText: '需要跟进' }).click()

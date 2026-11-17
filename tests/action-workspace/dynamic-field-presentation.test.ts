@@ -34,7 +34,7 @@ describe('dynamic field presentation registry', () => {
   it('prohibits business-key field dispatch and a second Survey form entrypoint', () => {
     const generic = readFileSync(new URL('../../src/features/work-orders/components/GenericDynamicFormActionContent.vue', import.meta.url), 'utf8')
     const page = readFileSync(new URL('../../src/pages/work-orders/action-workspace.vue', import.meta.url), 'utf8')
-    const harness = readFileSync(new URL('../../tools/review/harness/g4e-survey-harness.vue', import.meta.url), 'utf8')
+    const harness = readFileSync(new URL('../../tools/review/harness/survey-harness.vue', import.meta.url), 'utf8')
     expect(generic).not.toContain('isSurvey')
     expect(generic).not.toContain("field.valueKey === 'part'")
     expect(generic).not.toContain('SurveyPartPicker')

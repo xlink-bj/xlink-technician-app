@@ -3,9 +3,9 @@ import { spawnSync } from 'node:child_process'
 import {
   createPlaceOrderCatalogContextSelector,
   parseCatalogContextAuditArgs,
-} from '../../scripts/g4f-prod-read-context-scope.mjs'
-import { inspectDirectMaterialOrderPage } from '../../scripts/g4f-direct-material-order-discovery.mjs'
-import { workOrderOrderLineageReadState } from '../../scripts/g4f-prod-read-summary.mjs'
+} from '../../scripts/quotation-prod-read-context-scope.mjs'
+import { inspectDirectMaterialOrderPage } from '../../scripts/quotation-direct-material-order-discovery.mjs'
+import { workOrderOrderLineageReadState } from '../../scripts/quotation-prod-read-summary.mjs'
 
 describe('bounded Production catalog context audit selection', () => {
   it('defaults to the first context and accepts an explicit bounded ordinal', () => {
@@ -107,7 +107,7 @@ describe('bounded Production catalog context audit selection', () => {
   })
 
   it('keeps the Production audit runner at zero network by default', () => {
-    const run = spawnSync(process.execPath, ['scripts/verify-g4f-prod-read.mjs'], { encoding: 'utf8' })
+    const run = spawnSync(process.execPath, ['scripts/verify-quotation-prod-read.mjs'], { encoding: 'utf8' })
     expect(run.status).toBe(0)
     expect(JSON.parse(run.stdout)).toMatchObject({
       status: 'NO_NETWORK_DEFAULT',
@@ -119,7 +119,7 @@ describe('bounded Production catalog context audit selection', () => {
 
   it('keeps the selected Order price comparison at zero network without explicit authorization', () => {
     const run = spawnSync(process.execPath, [
-      'scripts/verify-g4f-prod-read.mjs',
+      'scripts/verify-quotation-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-material-prices',
     ], { encoding: 'utf8' })
@@ -134,7 +134,7 @@ describe('bounded Production catalog context audit selection', () => {
 
   it('keeps the selected Package price comparison at zero network without explicit authorization', () => {
     const run = spawnSync(process.execPath, [
-      'scripts/verify-g4f-prod-read.mjs',
+      'scripts/verify-quotation-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-package-prices',
     ], { encoding: 'utf8' })
@@ -149,7 +149,7 @@ describe('bounded Production catalog context audit selection', () => {
 
   it('keeps the selected Procedure/Measure price comparison at zero network without explicit authorization', () => {
     const run = spawnSync(process.execPath, [
-      'scripts/verify-g4f-prod-read.mjs',
+      'scripts/verify-quotation-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-procedure-measure-prices',
     ], { encoding: 'utf8' })
@@ -164,7 +164,7 @@ describe('bounded Production catalog context audit selection', () => {
 
   it('keeps direct Procedure/Measure discovery at zero network without explicit authorization', () => {
     const run = spawnSync(process.execPath, [
-      'scripts/verify-g4f-prod-read.mjs',
+      'scripts/verify-quotation-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-procedure-measure-prices',
       '--discover-direct-provider-order',
@@ -180,7 +180,7 @@ describe('bounded Production catalog context audit selection', () => {
 
   it('keeps direct Measure discovery at zero network without explicit authorization', () => {
     const run = spawnSync(process.execPath, [
-      'scripts/verify-g4f-prod-read.mjs',
+      'scripts/verify-quotation-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-procedure-measure-prices',
       '--discover-direct-measure-order',
@@ -196,7 +196,7 @@ describe('bounded Production catalog context audit selection', () => {
 
   it('keeps direct Material discovery at zero network without explicit authorization', () => {
     const run = spawnSync(process.execPath, [
-      'scripts/verify-g4f-prod-read.mjs',
+      'scripts/verify-quotation-prod-read.mjs',
       '--catalog-context-only',
       '--compare-selected-order-material-prices',
       '--discover-direct-material-order',

@@ -75,7 +75,7 @@ for(const width of [430,375])for(const kind of ['forms','repeat'] as const)test(
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     await page.getByTestId('quotation-hub-create-unverified').click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-    await expect(page.getByTestId('a-stage-mock-order-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-order-panel')).toBeVisible()
   }
 for(const width of [430,375])test(`order ${width} exact targets, retry and cancelled removal`,async({page})=>{
  await page.setViewportSize({width,height:width===430?932:667});await open019Quotation(page)

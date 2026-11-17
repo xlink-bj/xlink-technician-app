@@ -7,7 +7,7 @@ test('430×932 three-level cascade reaches leaves and retains the entire saved p
   await page.setViewportSize({ width: 430, height: 932 })
   const field = page.getByTestId('a-special-field-inspectionLocation')
   const capture = async (name: string) => {
-    const directory = process.env.XLINK_STAGE_B_SCREENSHOTS
+    const directory = process.env.XLINK_REVIEW_SCREENSHOTS
     if (!directory) return
     mkdirSync(directory, { recursive: true })
     await field.scrollIntoViewIfNeeded()

@@ -11,16 +11,16 @@ import {
 import {
   createRoleVisibleCatalogContextSelector,
   parseCatalogContextAuditArgs,
-} from './g4f-prod-read-context-scope.mjs'
-import { workOrderOrderLineageReadState } from './g4f-prod-read-summary.mjs'
-import { inspectDirectMaterialOrderPage } from './g4f-direct-material-order-discovery.mjs'
+} from './quotation-prod-read-context-scope.mjs'
+import { workOrderOrderLineageReadState } from './quotation-prod-read-summary.mjs'
+import { inspectDirectMaterialOrderPage } from './quotation-direct-material-order-discovery.mjs'
 import {
   hasRequestedDirectProviderLines,
   inspectDirectProviderOrderPage,
-} from './g4f-direct-provider-order-discovery.mjs'
-import { summarizeDirectMaterialPriceSnapshots } from './g4f-order-material-price-comparison.mjs'
-import { summarizePackagePriceSnapshots } from './g4f-order-package-price-comparison.mjs'
-import { summarizeDirectProviderPriceSnapshots } from './g4f-order-provider-price-comparison.mjs'
+} from './quotation-direct-provider-order-discovery.mjs'
+import { summarizeDirectMaterialPriceSnapshots } from './quotation-order-material-price-comparison.mjs'
+import { summarizePackagePriceSnapshots } from './quotation-order-package-price-comparison.mjs'
+import { summarizeDirectProviderPriceSnapshots } from './quotation-order-provider-price-comparison.mjs'
 import {
   buildOrderExtFieldRequestBody,
   effectiveOrderExtFieldProviderPlan,
@@ -30,7 +30,7 @@ import {
   sanitizeOrderCascadeProviderResponse,
   sanitizeOrderCodeProviderResponse,
   summarizeEffectiveOrderExtFieldPage,
-} from './lib/g4f-order-extfield-shape.mjs'
+} from './lib/quotation-order-extfield-shape.mjs'
 
 const MAX_WORK_ORDER_PAGES = 1000
 const MAX_CATALOG_PAGES = 50

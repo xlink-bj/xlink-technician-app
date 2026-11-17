@@ -41,7 +41,7 @@ test.describe('Dynamic scalar QA: real H5 FormDef → local draft preview (R1 fo
     await page.getByTestId('mock-journey-advance').click()
     await page.locator('.primary-task-action').click()
     await expect(page.getByTestId('dynamic-form-action-content')).toBeVisible()
-    const screenshotDirectory = process.env.XLINK_STAGE_B_SCREENSHOTS
+    const screenshotDirectory = process.env.XLINK_REVIEW_SCREENSHOTS
     const capture = async (name: string, fullPage = false) => {
       if (!screenshotDirectory) return
       mkdirSync(screenshotDirectory, { recursive: true })

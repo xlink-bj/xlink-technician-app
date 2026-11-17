@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 
-import './g4e-review-runtime'
+import './survey-review-runtime'
 import './review-platform-shim'
 import '../../../src/shared/ui/design-system.scss'
 
@@ -10,10 +10,10 @@ if (import.meta.env.PROD) {
   const [{ createApplication }, composition, { default: ReviewHarness }] = await Promise.all([
     import('@app/bootstrap'),
     import('@app/composition'),
-    import('./g4e-survey-harness.vue'),
+    import('./survey-harness.vue'),
   ])
   const { createDefaultTechnicianApiReadPort, createDefaultTechnicianApiCommandPort, createDefaultSurveyLeakageCauseProvider, createDefaultUploadPort } = composition
-  const { createReviewMediaUploadQueue, reviewUserId } = await import('./g4e-review-runtime')
+  const { createReviewMediaUploadQueue, reviewUserId } = await import('./survey-review-runtime')
   const { createReviewAuthSession, createReviewMemoryStorage, createReviewNavigation, createReviewMediaCapture, createReviewMediaPicker, createReviewLocation, installReviewRpxCompatibility } = await import('./review-platform-shim')
   installReviewRpxCompatibility()
 

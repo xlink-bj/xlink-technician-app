@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { DirectProviderOrderDiscoverySummary } from '../../scripts/g4f-direct-provider-order-discovery.mjs'
+import type { DirectProviderOrderDiscoverySummary } from '../../scripts/quotation-direct-provider-order-discovery.mjs'
 import {
   hasRequestedDirectProviderLines,
   inspectDirectProviderOrderPage,
-} from '../../scripts/g4f-direct-provider-order-discovery.mjs'
+} from '../../scripts/quotation-direct-provider-order-discovery.mjs'
 
 describe('bounded direct Procedure/Measure Order discovery', () => {
   it('counts top-level provider rows under the exact type-1 WorkOrder only', () => {

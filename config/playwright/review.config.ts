@@ -5,7 +5,7 @@ const baseURL = 'http://127.0.0.1:5173'
 
 export default defineConfig({
   testDir: rootPath('tests/h5-review'),
-  testMatch: ['**/design-system.spec.ts', '**/g4e-survey.spec.ts'],
+  testMatch: ['**/design-system.spec.ts', '**/survey.spec.ts'],
   outputDir: rootPath('test-results/h5-review/attachments'),
   fullyParallel: false,
   workers: 1,
@@ -14,7 +14,7 @@ export default defineConfig({
   reporter: [['list']],
   webServer: {
     command: 'pnpm run dev:h5-review',
-    url: `${baseURL}/tools/review/harness/g4e-survey.html?scenario=survey-overview`,
+    url: `${baseURL}/tools/review/harness/survey.html?scenario=survey-overview`,
     cwd: repositoryRoot,
     timeout: 120_000,
     reuseExistingServer: false,

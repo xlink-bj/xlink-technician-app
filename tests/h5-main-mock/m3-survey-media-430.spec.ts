@@ -8,7 +8,7 @@ const sampleImage = Buffer.from(
 )
 
 async function capture(page: import('@playwright/test').Page, scene: string) {
-  const directory = process.env.XLINK_STAGE_B_SCREENSHOTS
+  const directory = process.env.XLINK_REVIEW_SCREENSHOTS
   if (!directory) return
   mkdirSync(directory, { recursive: true })
   await page.screenshot({ path: `${directory}/${scene}.png` })

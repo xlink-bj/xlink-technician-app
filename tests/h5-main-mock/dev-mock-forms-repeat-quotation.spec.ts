@@ -81,11 +81,11 @@ test.describe('DEV Mock forms, repeat and quotation operator acceptance', () => 
     await expect(page.locator('.summary-number')).toContainText(number)
     await expectDetailOverviewWithinViewport(page)
     await enterDevMockDynamicFormWorkspace(page)
-    await expect(page.getByTestId('a-stage-special-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-special-panel')).toBeVisible()
     // The Mock fixture uses the same commercial task surface as Real data.
     // Source identity belongs to the separate QA console, not this panel.
-    await expect(page.getByTestId('a-stage-special-panel')).not.toContainText(/(?:未|不会)提交后台|体验数据|Mock|DEV/)
-    await expect(page.getByTestId('a-stage-special-panel')).toContainText('保存记录')
+    await expect(page.getByTestId('dev-mock-special-panel')).not.toContainText(/(?:未|不会)提交后台|体验数据|Mock|DEV/)
+    await expect(page.getByTestId('dev-mock-special-panel')).toContainText('保存记录')
     await expect(page.getByTestId('a-special-task-state')).toContainText('正在填写')
   }
 
@@ -115,7 +115,7 @@ test.describe('DEV Mock forms, repeat and quotation operator acceptance', () => 
     await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
     await page.getByTestId('quotation-hub-create-unverified').click()
     await expect(page.getByTestId('quotation-state-ready')).toBeVisible()
-    await expect(page.getByTestId('a-stage-mock-order-panel')).toBeVisible()
+    await expect(page.getByTestId('dev-mock-order-panel')).toBeVisible()
   }
 
   for (const viewport of [
@@ -212,12 +212,12 @@ test.describe('DEV Mock forms, repeat and quotation operator acceptance', () => 
       await page.getByTestId('quotation-browse-quotation-group-1').click()
       await page.getByTestId('quotation-catalog-kind-procedure').click()
       await page.getByTestId('quotation-catalog-add-procedure-mock-catalog-procedure-seal').click()
-      const panel = page.getByTestId('a-stage-mock-order-panel')
+      const panel = page.getByTestId('dev-mock-order-panel')
       await expect(panel).toContainText('¥ 76.90')
       const skuSummary = page.locator('[data-testid^="quotation-material-skus-"]')
       await expect(skuSummary).toHaveCount(1)
       await expect(skuSummary).toContainText('2 件')
-      await expect(page.getByTestId('a-stage-order-create')).toBeEnabled()
+      await expect(page.getByTestId('dev-mock-order-create')).toBeEnabled()
       await expect(page.getByTestId('action-workspace-submit')).toHaveCount(0)
       const quoteScreenshot = await page.screenshot({
         path: `test-results/main-h5-mock/evidence/a-p1-quotation-ready-${viewport.width}.png`,
@@ -226,15 +226,15 @@ test.describe('DEV Mock forms, repeat and quotation operator acceptance', () => 
       await info.attach(`a-p1-quotation-ready-${viewport.width}`, {
         body: quoteScreenshot, contentType: 'image/png',
       })
-      await page.getByTestId('a-stage-order-create').click()
-      await page.getByTestId('a-stage-order-confirm').click()
-      await expect(page.getByTestId('a-stage-quote-readback')).toBeVisible()
+      await page.getByTestId('dev-mock-order-create').click()
+      await page.getByTestId('dev-mock-order-confirm').click()
+      await expect(page.getByTestId('dev-mock-quote-readback')).toBeVisible()
       await page.getByTestId('order-field-mock-order-person').getByText('客户', { exact: true }).click()
       await page.getByTestId('order-field-mock-order-submit-note').locator('textarea').fill('下单确认资料')
-      await expect(page.getByTestId('a-stage-order-convert')).toBeEnabled()
-      await page.getByTestId('a-stage-order-convert').click()
-      await page.getByTestId('a-stage-order-convert-confirm').click()
-      await expect(page.getByTestId('a-stage-order-readback')).toBeVisible()
+      await expect(page.getByTestId('dev-mock-order-convert')).toBeEnabled()
+      await page.getByTestId('dev-mock-order-convert').click()
+      await page.getByTestId('dev-mock-order-convert-confirm').click()
+      await expect(page.getByTestId('dev-mock-order-readback')).toBeVisible()
       await page.reload({ waitUntil: 'domcontentloaded' })
       await expect(page.getByTestId('quotation-order-hub')).toBeVisible()
       await expect(page.getByTestId('quotation-hub-order-mock-official-order-019-protocol'))
@@ -246,7 +246,7 @@ test.describe('DEV Mock forms, repeat and quotation operator acceptance', () => 
       // editor, while a clean state opens the explicit new-draft chooser.
       // Neither is an automatic second Order write or another readback card.
       const chooser = page.getByTestId('quotation-hub-mode')
-      const editor = page.getByTestId('a-stage-mock-order-panel')
+      const editor = page.getByTestId('dev-mock-order-panel')
       await expect(chooser.or(editor)).toBeVisible()
       if (await chooser.isVisible()) {
         await expect(page.getByTestId('quotation-hub-mode-new')).toBeVisible()

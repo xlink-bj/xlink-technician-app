@@ -72,12 +72,12 @@ test('normal App repeat 21-row boundary saves, reloads and explicitly finishes t
   await page.getByTestId('a-special-finish-confirm').click()
   // The accepted detail page unmounts its editor on verified completion.
   await expect(page.getByTestId('a-special-complete')).toBeVisible()
-  await expect(page.getByTestId('a-stage-special-panel')).toHaveCount(0)
+  await expect(page.getByTestId('dev-mock-special-panel')).toHaveCount(0)
   await expect(page.getByTestId('a-special-receipt-pending')).toHaveCount(0)
   await page.reload()
   // The accepted detail page unmounts its editor on verified completion.
   await expect(page.getByTestId('a-special-complete')).toBeVisible()
-  await expect(page.getByTestId('a-stage-special-panel')).toHaveCount(0)
+  await expect(page.getByTestId('dev-mock-special-panel')).toHaveCount(0)
   expect(external).toEqual([]); expect(errors).toEqual([])
   await info.attach('complete-set-evidence', { body: JSON.stringify({ records: 21, ownRecords: 19,
     externalRequests: 0, pageErrors: 0, scope: 'synthetic Mock only; no real Process request' }), contentType: 'application/json' })

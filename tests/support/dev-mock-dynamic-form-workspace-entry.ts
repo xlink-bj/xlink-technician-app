@@ -2,7 +2,7 @@ import { expect, type Page } from '@playwright/test'
 /** DEV synthetic special controller only; a route is never a write grant. */
 export async function enterDevMockDynamicFormWorkspace(page:Page):Promise<void>{
  await expect(page).toHaveURL(/pages\/work-orders\/detail/)
- await expect(page.getByTestId('a-stage-special-panel')).toHaveCount(0)
+ await expect(page.getByTestId('dev-mock-special-panel')).toHaveCount(0)
  const recovery=page.getByTestId('special-receipt-workspace-entry')
  const completed=page.getByTestId('special-completed-workspace-entry')
  if(await recovery.count())await recovery.click()

@@ -1,5 +1,5 @@
 <template>
-  <view class="review-root" data-testid="g4e-review-harness">
+  <view class="review-root" data-testid="survey-review-harness">
     <view class="review-banner">
       <view class="review-banner__title" data-testid="g4e-review-title">G4-E Survey / 勘查</view>
       <view class="review-banner__badges">
@@ -94,7 +94,7 @@ import {
   reviewWorkflowNodeId,
   setReviewScenario,
   type ReviewScenarioKey,
-} from './g4e-review-runtime'
+} from './survey-review-runtime'
 
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
