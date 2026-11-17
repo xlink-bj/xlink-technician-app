@@ -10,11 +10,11 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { WorkflowNodeRead } from '@shared/ports'
-import type { AStageDynamicFormMockControllerFactory } from './a-stage-dynamic-form-mock-port'
+import type { DevMockDynamicFormControllerFactory } from './dev-mock-dynamic-form-port'
 import type { DevMockDynamicFormWorkspaceContent } from './dev-mock-dynamic-form-workspace-content'
 import R1NodeFormsActionContent from './R1NodeFormsActionContent.vue'
 import R1DevMockDynamicFormActionContent from './R1DevMockDynamicFormActionContent.vue'
-defineProps<{node:WorkflowNodeRead|null;devMockDynamicFormContent:DevMockDynamicFormWorkspaceContent|null;workOrderId:string;actorScope:string|null;visible:boolean;createDevMockDynamicFormController:AStageDynamicFormMockControllerFactory;serviceAddress?:string;serviceDistrict?:string;customerName?:string;displayNumber?:string;exitMessage?:string}>()
+defineProps<{node:WorkflowNodeRead|null;devMockDynamicFormContent:DevMockDynamicFormWorkspaceContent|null;workOrderId:string;actorScope:string|null;visible:boolean;createDevMockDynamicFormController:DevMockDynamicFormControllerFactory;serviceAddress?:string;serviceDistrict?:string;customerName?:string;displayNumber?:string;exitMessage?:string}>()
 const emit=defineEmits<{(event:'changed'|'back'):void}>()
 const content=ref<{flushLocalDraft():Promise<boolean>}|null>(null)
 defineExpose({flushLocalDraft:()=>content.value?.flushLocalDraft()??Promise.resolve(false)})

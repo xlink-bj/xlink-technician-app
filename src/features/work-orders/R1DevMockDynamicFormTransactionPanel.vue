@@ -193,9 +193,9 @@ import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { WorkflowNodeRead } from '@shared/ports'
 import type {
-  AStageDynamicFormView, AStageDynamicFormAction, AStageDynamicFormNodeKind,
-  AStageDynamicFormMockController, AStageDynamicFormMockControllerFactory,
-} from './a-stage-dynamic-form-mock-port'
+  DevMockDynamicFormView, DevMockDynamicFormAction, DevMockDynamicFormNodeKind,
+  DevMockDynamicFormController, DevMockDynamicFormControllerFactory,
+} from './dev-mock-dynamic-form-port'
 import { useSessionStore } from '@shared/state'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppChoiceGroup from '@shared/ui/AppChoiceGroup.vue'
@@ -209,11 +209,11 @@ import {
   type R1FileWireValue, type MediaUploadTask, type MediaUploadTaskId,
 } from '@shared/types'
 
-const props = defineProps<{ readonly kind: AStageDynamicFormNodeKind; readonly workOrderId: string;
-  readonly node: WorkflowNodeRead; readonly createController: AStageDynamicFormMockControllerFactory }>()
+const props = defineProps<{ readonly kind: DevMockDynamicFormNodeKind; readonly workOrderId: string;
+  readonly node: WorkflowNodeRead; readonly createController: DevMockDynamicFormControllerFactory }>()
 const emit = defineEmits<{ (event: 'changed'): void }>()
 const session = useSessionStore()
-const viewState = ref<AStageDynamicFormView | null>(null)
+const viewState = ref<DevMockDynamicFormView | null>(null)
 const loading = ref(true)
 const restoringDraft=ref(false)
 const busy = ref(false)
@@ -223,7 +223,7 @@ const recoveryFeedback = ref('')
 const localSubmissionPending=ref(false)
 const sealedValues=ref<R1SpecialMockFields>({})
 const sealedFields=computed(()=>selectedDefinition.value?projectR1LocalFields(selectedDefinition.value,sealedValues.value):[])
-const cleanupPending = ref<{formId:string;recordId?:string;view:AStageDynamicFormView}|null>(null)
+const cleanupPending = ref<{formId:string;recordId?:string;view:DevMockDynamicFormView}|null>(null)
 const draftValues = ref<R1SpecialMockFields>({})
 const editableFieldTypes = r1SpecialMockWritableTypes
 const mediaTasks = ref<readonly MediaUploadTask[]>([])
@@ -400,7 +400,7 @@ const finishReadiness = computed(() => hasPendingMedia.value
 
 let revision = 0
 let loadRevision = 0
-let controller: AStageDynamicFormMockController | null = null
+let controller: DevMockDynamicFormController | null = null
 const draftFeedback = ref('')
 const networkState = ref<import('@shared/ports').NetworkStatus>('unknown')
 let unsubscribeNetwork: (() => void) | undefined
@@ -549,13 +549,13 @@ function cancelEdit(restoreDraft = true): void {
   if (restoreDraft) void restoreLocalDraft().then(() => restoreMediaTasks())
 }
 async function save(): Promise<void> {
-  const action: AStageDynamicFormAction = editingId.value
+  const action: DevMockDynamicFormAction = editingId.value
     ? { kind: 'edit', id: editingId.value, fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value,
       ...(editingRevision.value ? { expectedRevision: editingRevision.value } : {}) }
     : { kind: 'save', fields: draftValues.value, formDefinitionId: selectedFormDefinitionId.value }
   await run(action)
 }
-async function run(action: AStageDynamicFormAction): Promise<void> {
+async function run(action: DevMockDynamicFormAction): Promise<void> {
   if ('fields' in action && !inputsValid.value) return
   // Confirmation safeguard only. Do not change canFinish or the controller's
   // source-owned completion rules, and never silently omit the current edits.

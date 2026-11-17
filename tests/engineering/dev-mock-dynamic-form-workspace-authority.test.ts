@@ -6,7 +6,7 @@ import { tryMockRead } from '@adapters/api/mock/router'
 import * as commands from '@adapters/api/mock/r1-special-protocol'
 import { workOrderDetail } from '@adapters/api/read-models/work-order'
 import { mockR1FormsWorkOrderId,mockR1RepeatWorkOrderId } from '@adapters/api/mock/fixtures'
-import { resolveAStageDynamicFormMockWorkspace,createAStageDynamicFormMockControllerForActor } from '@app/a-stage-dynamic-form-mock-ui'
+import { resolveDevMockDynamicFormWorkspace,createDevMockDynamicFormControllerForActor } from '@app/dev-mock-dynamic-form-controller'
 import { asOpaqueId } from '@shared/types'
 const memory=new Map<string,unknown>()
 const actor={userId:'synthetic-user',roleId:'synthetic-role',identity:'owned-session'}
@@ -29,7 +29,7 @@ async function input(kind:'forms'|'repeat'='forms'){
 describe('actual app-owned DEV special host read qualification',()=>{
  it.each(['forms','repeat'] as const)('qualifies existing active %s without issuing a command',async kind=>{
   const spy=vi.spyOn(commands,'tryMockR1SpecialCommand');const i=await input(kind)
-  expect(await resolveAStageDynamicFormMockWorkspace(i)).toMatchObject({kind,mode:'active',node:{id:i.runtimeNodeId}})
+  expect(await resolveDevMockDynamicFormWorkspace(i)).toMatchObject({kind,mode:'active',node:{id:i.runtimeNodeId}})
   expect(spy).not.toHaveBeenCalled()
  })
  it.each(['node','run','definition','order','actor','action','environment'])('refuses unverified %s before mounting a controller',async variant=>{
@@ -41,30 +41,30 @@ describe('actual app-owned DEV special host read qualification',()=>{
   if(variant==='actor')i.getActor=()=>({...actor,userId:'other'})
   if(variant==='action')i.actionIntent='place_order'
   if(variant==='environment')vi.stubEnv('VITE_XLINK_H5_MOCK_E2E','false')
-  expect(await resolveAStageDynamicFormMockWorkspace(i)).toBeNull()
+  expect(await resolveDevMockDynamicFormWorkspace(i)).toBeNull()
  })
  it('closed source state10 yields readonly summary; mapped closed without matching source is not proof',async()=>{
   const stale=await input();Object.assign(stale.detail.workflowNodes![0],{lifecycle:'closed'})
-  expect(await resolveAStageDynamicFormMockWorkspace(stale)).toBeNull()
-  const ui=createAStageDynamicFormMockControllerForActor({kind:'forms',workOrderId:mockR1FormsWorkOrderId,getActor:()=>actor})
+  expect(await resolveDevMockDynamicFormWorkspace(stale)).toBeNull()
+  const ui=createDevMockDynamicFormControllerForActor({kind:'forms',workOrderId:mockR1FormsWorkOrderId,getActor:()=>actor})
   expect((await ui.execute({kind:'save_finish',fields:{inspectionSummary:'synthetic source closed',inspectionResult:'follow_up'}})).state).toBe('succeeded')
-  expect(await resolveAStageDynamicFormMockWorkspace(await input())).toMatchObject({mode:'completed'})
+  expect(await resolveDevMockDynamicFormWorkspace(await input())).toMatchObject({mode:'completed'})
  })
  it('keeps closed may-have-dispatched pending, unresolved and non-recoverable without resending',async()=>{
   const actual=commands.tryMockR1SpecialCommand
   const spy=vi.spyOn(commands,'tryMockR1SpecialCommand').mockImplementation(async(...args)=>{
    const result=await actual(...args);if(args[0].path==='workflow/process')throw Error('lost Process acknowledgement');return result
   })
-  const ui=createAStageDynamicFormMockControllerForActor({kind:'forms',workOrderId:mockR1FormsWorkOrderId,getActor:()=>actor})
+  const ui=createDevMockDynamicFormControllerForActor({kind:'forms',workOrderId:mockR1FormsWorkOrderId,getActor:()=>actor})
   expect((await ui.execute({kind:'save_finish',fields:{inspectionSummary:'synthetic closed pending',inspectionResult:'follow_up'}})).state).toBe('uncertain')
   const count=spy.mock.calls.length
-  expect(await resolveAStageDynamicFormMockWorkspace(await input())).toMatchObject({mode:'pending'})
+  expect(await resolveDevMockDynamicFormWorkspace(await input())).toMatchObject({mode:'pending'})
   expect(await ui.load()).toMatchObject({nodeActive:false,nodeClosed:true,receiptPending:true,pendingRecoverable:false})
   expect(spy).toHaveBeenCalledTimes(count)
  })
  it('a sealed submitted draft survives failed tombstone and cannot become a new editable draft on cold controller',async()=>{
   const args={kind:'forms' as const,workOrderId:mockR1FormsWorkOrderId,getActor:()=>actor}
-  const ui=createAStageDynamicFormMockControllerForActor(args),view=await ui.load(),fields={inspectionSummary:'sealed once',inspectionResult:'follow_up'}
+  const ui=createDevMockDynamicFormControllerForActor(args),view=await ui.load(),fields={inspectionSummary:'sealed once',inspectionResult:'follow_up'}
   const formId=String(view.definition.id);expect(await ui.writeDraft(formId,fields)).toBe(true)
   expect(await ui.sealDraftForSubmission(formId,fields)).toBe(true)
   const spy=vi.spyOn(commands,'tryMockR1SpecialCommand')
@@ -72,7 +72,7 @@ describe('actual app-owned DEV special host read qualification',()=>{
   const api=uni as any,original=api.setStorage
   api.setStorage=(o:any)=>JSON.parse(o.data).status==='completed'?o.fail({}):original(o)
   expect(await ui.removeDraft(formId)).toBe(false)
-  const cold=createAStageDynamicFormMockControllerForActor(args)
+  const cold=createDevMockDynamicFormControllerForActor(args)
   expect(await cold.isDraftSubmissionPending(formId)).toBe(true)
   await expect(cold.readDraft(formId)).rejects.toThrow()
   expect(await cold.writeDraft(formId,{inspectionSummary:'must not overwrite sealed input'})).toBe(false)

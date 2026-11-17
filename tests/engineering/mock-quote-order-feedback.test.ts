@@ -31,7 +31,7 @@ async function mount(result: { state: string; message: string }, nextStatus: str
   const controller = { readStatus: vi.fn().mockResolvedValueOnce(options.initialStatus ?? 'quote_created').mockResolvedValue(nextStatus),
     convertQuoteToOrder: vi.fn(async () => ({ state: 'uncertain', message: oldMessage })),
     createQuote: vi.fn(), verifyPending: vi.fn(async () => result), fields: {} }
-  const source = compileScript(parse(fs.readFileSync('src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue', 'utf8')).descriptor,
+  const source = compileScript(parse(fs.readFileSync('src/features/work-orders/quotation/DevMockQuoteOrderPanel.vue', 'utf8')).descriptor,
     { id: 'mock-order-feedback', inlineTemplate: true }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
   const modules: Record<string, any> = { vue: Vue, '../action-workspace': { useActionWorkspaceStore: () => workspace },

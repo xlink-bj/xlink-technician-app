@@ -13,7 +13,7 @@ import {
   r1FormsFinalizeProcess, r1RepeatBatchProcess, r1RepeatRemoveCommand,
 } from '@adapters/api/r1-special-workflow-wires'
 import { planR1FormsUpdateExts } from '@features/work-orders/r1-forms-exts-plan'
-import { executeR1Stage1FunctionalCandidate } from '@app/r1-stage1-functional-flow'
+import { executeR1SpecialFormCommandFlow } from '@app/r1-special-form-command-flow'
 import { inspectR1MultiStepReceipt, type R1MultiStepScope } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { StorageKey, StoragePort } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
@@ -115,7 +115,7 @@ describe('A synthetic source-specific forms / repeat writes', () => {
       authoritativeExts: (await nodeDetail('forms')).exts as Record<string, unknown>,
       processActive: true,
     }
-    const done = await executeR1Stage1FunctionalCandidate(storage, intent, gateway)
+    const done = await executeR1SpecialFormCommandFlow(storage, intent, gateway)
     expect(done).toMatchObject({ state: 'succeeded', data: { state: 'completed' } })
     expect(requests).toEqual([
       `biz/extForm/upsert/${mockSyntheticDynamicFormDefinitionId}`,
@@ -126,7 +126,7 @@ describe('A synthetic source-specific forms / repeat writes', () => {
       .toMatchObject({ state: 'completed' })
     resetMockCommandState()
     expect((await nodeDetail('forms')).state).toBe(10)
-    expect((await executeR1Stage1FunctionalCandidate(storage, intent, gateway)).state)
+    expect((await executeR1SpecialFormCommandFlow(storage, intent, gateway)).state)
       .toBe('failed_terminal')
     expect(requests).toHaveLength(3)
   })

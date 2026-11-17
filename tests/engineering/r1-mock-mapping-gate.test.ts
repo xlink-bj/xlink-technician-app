@@ -26,7 +26,7 @@ describe('whole R1/Mock mapping governance', () => {
     expect(manifest.scenarios.find(row => row.id === 'M06')?.browserTests).toEqual([
       'tests/h5-main-mock/m1-signing-official-order-read.spec.ts',
       'tests/h5-main-mock/m1-r1-contract-preview.spec.ts',
-      'tests/h5-main-mock/a-stage-p1-acceptance.spec.ts',
+      'tests/h5-main-mock/dev-mock-forms-repeat-quotation.spec.ts',
     ])
     for (const id of ['F20', 'F21']) expect(manifest.domains.find(row => row.id === id)?.unitTests)
       .toContain('tests/engineering/r1-contract-mock-anomalies.test.ts')

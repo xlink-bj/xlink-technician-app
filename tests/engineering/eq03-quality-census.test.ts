@@ -5,7 +5,7 @@ describe('source and stylesheet census accounting', () => {
   it('includes styles in the reported application total', () => {
     const output = execFileSync(
       process.execPath,
-      ['scripts/eq01-quality-census.mjs'],
+      ['scripts/quality-census.mjs'],
       { cwd: process.cwd(), encoding: 'utf8', timeout: 15000 },
     )
     const report = JSON.parse(output.trim()) as {

@@ -16,13 +16,13 @@
 import { computed, ref } from 'vue'
 import { nodeRecordProfile } from '@brand-ui/node-record-profile'
 import type { DevMockDynamicFormWorkspaceContent } from './dev-mock-dynamic-form-workspace-content'
-import type { AStageDynamicFormMockControllerFactory } from './a-stage-dynamic-form-mock-port'
+import type { DevMockDynamicFormControllerFactory } from './dev-mock-dynamic-form-port'
 import R1DevMockDynamicFormTransactionPanel from './R1DevMockDynamicFormTransactionPanel.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppStatus from '@shared/ui/AppStatus.vue'
-const props=defineProps<{workOrderId:string;content:DevMockDynamicFormWorkspaceContent;actorScope:string|null;visible:boolean;createController:AStageDynamicFormMockControllerFactory;serviceAddress?:string;serviceDistrict?:string;customerName?:string;displayNumber?:string;exitMessage?:string}>()
+const props=defineProps<{workOrderId:string;content:DevMockDynamicFormWorkspaceContent;actorScope:string|null;visible:boolean;createController:DevMockDynamicFormControllerFactory;serviceAddress?:string;serviceDistrict?:string;customerName?:string;displayNumber?:string;exitMessage?:string}>()
 const emit=defineEmits<{(event:'changed'|'back'):void}>()
 const panel=ref<{flushLocalDraft():Promise<boolean>}|null>(null)
 // An owned active→closed pending session keeps its controller; actor/scope replacement cannot.

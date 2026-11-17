@@ -17,7 +17,7 @@ test -x "$playwright"
 
 "$playwright" test --config config/playwright/main-h5-mock.config.ts \
   tests/h5-main-mock/forms-save-process-readback.spec.ts \
-  tests/h5-main-mock/a-stage-p1-acceptance.spec.ts \
+  tests/h5-main-mock/dev-mock-forms-repeat-quotation.spec.ts \
   tests/h5-main-mock/order-fields-flow.spec.ts \
   tests/h5-main-mock/package-price-source.spec.ts \
   --grep 'confirmed Save and Process survives reload|020 forms.*@430|021 repeat.*@430|order-fields-flow\.spec\.ts|package-price-source\.spec\.ts'

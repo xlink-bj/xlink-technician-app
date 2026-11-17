@@ -27,7 +27,7 @@
     :local-draft-group-count="quotationComposition.groups.length"
     :local-draft-state="quotationComposition.localState"
     :read-only="productionReadOnly"
-    :dev-mock-order="aStageMockOrderEnabled"
+    :dev-mock-order="devMockQuoteOrderEnabled"
     :dev-mock-order-read="mockOrderRead"
     :dev-visual-sample="devQuotationOrderPreview"
     :dev-synthetic-unverified-amount="isDevSyntheticContractReadPreviewEnabled(String(workspace.descriptor?.workOrderId ?? ''))"
@@ -48,9 +48,9 @@
     v-else-if="workspace.descriptor?.contentKind === 'quotation' && workspace.descriptor.actionIntent === 'place_order'"
     :content-state="quotationContentViewState"
     :product-review-only="isMockQuotationPreview"
-    :a-stage-mock-order="aStageMockOrderEnabled"
-    :order-fields-validate-selection="aStageMockOrderEnabled ? validateQuoteFields : undefined"
-    :order-fields-draft-status="aStageMockOrderEnabled ? orderFieldsDraftStatus : undefined"
+    :dev-mock-order="devMockQuoteOrderEnabled"
+    :order-fields-validate-selection="devMockQuoteOrderEnabled ? validateQuoteFields : undefined"
+    :order-fields-draft-status="devMockQuoteOrderEnabled ? orderFieldsDraftStatus : undefined"
     :sku-lineage-audit="skuLineagePreview"
     :same-catalog-lineage="sameCatalogLineagePreview"
     :synthetic-sku-readiness="syntheticSkuReadinessPreview"
@@ -71,8 +71,8 @@
     </template>
     <template #after-content>
       <AppStatus v-if="exitFeedback" tone="danger" :message="exitFeedback" data-testid="workspace-exit-feedback" />
-      <AStageMockQuoteOrderPanel ref="aStageOrderPanel" v-if="aStageMockOrderEnabled"
-        :create-controller="createAStageMockQuoteOrderControllerForUi"
+      <DevMockQuoteOrderPanel ref="devMockOrderPanel" v-if="devMockQuoteOrderEnabled"
+        :create-controller="createDevMockQuoteOrderControllerForUi"
         @draft-status="orderFieldsDraftStatus = $event"
         @open-order-records="openQuotationOrderRecords" />
     </template>
@@ -298,13 +298,13 @@ import { compareQuoteWithStandaloneSkuDemo, compareQuoteWithSameCatalogSynthetic
 import { reviewP1SyntheticSkuReadiness } from '@app/p1-sku-readiness-review'
 import { setActionWorkspacePageTitle } from '@app/action-page-title'
 import { mockJourneyContext } from '@app/mock-journey'
-import { readAStageMockOrderForActor, isAStageMockOrderEnabled,
-  createAStageMockQuoteOrderControllerForActor } from '@app/a-stage-quotation-mock-ui'
-import type { AStageMockQuoteOrderControllerFactory } from '@features/work-orders/quotation/a-stage-mock-quote-port'
+import { readDevMockQuoteOrderForActor, isDevMockQuoteOrderEnabled,
+  createDevMockQuoteOrderControllerForActor } from '@app/dev-mock-quote-order-controller'
+import type { DevMockQuoteOrderControllerFactory } from '@features/work-orders/quotation/dev-mock-quote-order-port'
 import { advanceMockJourneyWithSavedDraft } from '@app/mock-journey-closure'
 import { readMockJourneyContext, type MockJourneyContextSummary } from '@app/mock-journey-context'
 import { canAdoptMockSurveySuggestion } from '@app/mock-journey-quote-suggestion'
-import AStageMockQuoteOrderPanel from '@features/work-orders/quotation/AStageMockQuoteOrderPanel.vue'
+import DevMockQuoteOrderPanel from '@features/work-orders/quotation/DevMockQuoteOrderPanel.vue'
 import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import {
@@ -323,7 +323,7 @@ import { isMultilineField } from '@features/work-orders/form-presentation'
 import { useSessionStore } from '@shared/state'
 import ActionWorkspaceFormActions from '@shared/ui/ActionWorkspaceFormActions.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
-import { createAStageDynamicFormMockControllerForActor as createDevMockDynamicFormControllerForUi } from '@app/a-stage-dynamic-form-mock-ui'
+import { createDevMockDynamicFormControllerForActor as createDevMockDynamicFormControllerForUi } from '@app/dev-mock-dynamic-form-controller'
 import R1FormActionContentHost from '@features/work-orders/R1FormActionContentHost.vue'
 import { workOrderReadScopeKey } from '@features/work-orders/read-identity-scope'
 import GenericDynamicFormActionContent from '@features/work-orders/components/GenericDynamicFormActionContent.vue'
@@ -349,8 +349,8 @@ import type { QuotationOrderBrowseItem } from '@shared/ports'
 // must not forward route IDs onto an arbitrary DOM root.
 defineOptions({ inheritAttrs: false })
 
-const createAStageMockQuoteOrderControllerForUi: AStageMockQuoteOrderControllerFactory =
-  createAStageMockQuoteOrderControllerForActor
+const createDevMockQuoteOrderControllerForUi: DevMockQuoteOrderControllerFactory =
+  createDevMockQuoteOrderControllerForActor
 const session = useSessionStore()
 const workspace = useActionWorkspaceStore()
 const inputsValid = useFormInputValidityScope()
@@ -383,8 +383,8 @@ const devQuotationOrderPreview = computed(() =>
 )
 const quotationEditorOpened = ref(false)
 const orderFieldsDraftStatus = ref<AppActionDraftStatus | undefined>()
-const aStageOrderPanel = ref<{ validateSelectionEntry(): boolean } | null>(null)
-function validateQuoteFields(): boolean { return aStageOrderPanel.value?.validateSelectionEntry() === true }
+const devMockOrderPanel = ref<{ validateSelectionEntry(): boolean } | null>(null)
+function validateQuoteFields(): boolean { return devMockOrderPanel.value?.validateSelectionEntry() === true }
 const quotationHubRef = ref<{ finishEdit: (message?: string) => void } | null>(null)
 const quotationChoiceVisible = ref(false)
 const quotationHubVisible = computed(() =>
@@ -460,7 +460,7 @@ const appointmentDisplay = computed(() => appointmentDisplayFor(workspace.appoin
 const isMockQuotationPreview = computed(() =>
   isBusinessMockQuotationPreview(workspace.descriptor?.workOrderId),
 )
-const aStageMockOrderEnabled = computed(() => !productionReadOnly && isAStageMockOrderEnabled({
+const devMockQuoteOrderEnabled = computed(() => !productionReadOnly && isDevMockQuoteOrderEnabled({
   workOrderId: String(workspace.descriptor?.workOrderId ?? ''),
   userId: String(session.session?.user.id ?? ''),
   roleId: String(session.session?.currentRole?.id ?? ''),
@@ -471,18 +471,18 @@ let mockOrderReadRevision = 0
 async function loadMockOrderRead(): Promise<void> {
   const ticket = ++mockOrderReadRevision
   mockOrderRead.value = { state: 'loading' }
-  if (!aStageMockOrderEnabled.value || !quotationHubVisible.value) return
-  const result = await readAStageMockOrderForActor(() => {
+  if (!devMockQuoteOrderEnabled.value || !quotationHubVisible.value) return
+  const result = await readDevMockQuoteOrderForActor(() => {
       const current = session.session
       return current?.user.id && current.currentRole?.id && current.sessionRef
         ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
             identity: JSON.stringify([current.sessionRef, current.user.id,
               current.currentRole.id, current.roleVersion ?? null]) } : null
     })
-  if (ticket === mockOrderReadRevision && aStageMockOrderEnabled.value
+  if (ticket === mockOrderReadRevision && devMockQuoteOrderEnabled.value
     && quotationHubVisible.value) mockOrderRead.value = result
 }
-watch(() => [aStageMockOrderEnabled.value, quotationHubVisible.value,
+watch(() => [devMockQuoteOrderEnabled.value, quotationHubVisible.value,
   session.session?.sessionRef, session.session?.currentRole?.id,
   session.session?.roleVersion] as const, () => { void loadMockOrderRead() }, { immediate: true })
 const feedback = computed(() => exitFeedback.value || actionErrorCopy(workspace.error))

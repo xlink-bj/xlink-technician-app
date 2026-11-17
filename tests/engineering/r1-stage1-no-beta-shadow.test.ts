@@ -5,11 +5,11 @@
  * to real R1 side effects or replace an authorized live pilot.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { createR1Stage1PilotExecution } from '@app/r1-stage1-pilot-reconciliation'
+import { createR1SpecialFormPilotExecution } from '@app/r1-special-form-pilot-reconciliation'
 import { createR1PilotAuthoritativeReadback } from '@adapters/api/r1-pilot-authoritative-readback'
 import type { ApiReadRequest } from '@adapters/api/technician-api'
 import type { ApiCommandRequest } from '@adapters/api/technician-api-commands'
-import type { R1Stage1Intent } from '@app/r1-stage1-functional-flow'
+import type { R1SpecialFormIntent } from '@app/r1-special-form-command-flow'
 import { inspectR1MultiStepReceipt, type R1MultiStepScope } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { SessionSnapshot, StorageKey, StoragePort, TechnicianApiReadPort, WorkflowNodeRead } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
@@ -127,13 +127,13 @@ function shadow(sourceNodeType: 'forms' | 'repeat' = 'forms') {
     mayReadScope: candidate => candidate.workOrderId === scope.workOrderId
       && candidate.runtimeNodeId === scope.runtimeNodeId,
   })
-  const facade = createR1Stage1PilotExecution({
+  const facade = createR1SpecialFormPilotExecution({
     storage, read, command, rawReadback, getSession: () => session,
     environment: 'test', apiBaseUrl: 'https://synthetic-only.invalid',
     isExplicitPilotWriteAuthorized: candidate => candidate.workOrderId === scope.workOrderId
       && candidate.runtimeNodeId === scope.runtimeNodeId,
   })
-  const save = (processActive = false): R1Stage1Intent => ({
+  const save = (processActive = false): R1SpecialFormIntent => ({
     scope, sourceNodeType: 'forms', kind: 'forms_save',
     title: 'Synthetic roof inspection', fields: { note: 'synthetic-roof' },
     authoritativeExts: structuredClone(state.exts), processActive,
@@ -206,7 +206,7 @@ describe('No-Beta: state-changing R1 protocol shadow, never live business eviden
 
   it('processes a bounded Repeat batch using authoritative new FormData IDs', async () => {
     const h = shadow('repeat')
-    const intent: R1Stage1Intent = {
+    const intent: R1SpecialFormIntent = {
       scope: h.scope, sourceNodeType: 'repeat', kind: 'repeat_batch',
       forms: [{ note: 'synthetic-one' }, { note: 'synthetic-two' }],
     }

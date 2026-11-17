@@ -92,35 +92,35 @@
       </view>
 
       <view v-if="workflowProjection.currentTask"
-        :data-testid="normalWorkspaceEntry ? 'normal-form-workspace-entry' : aStageDynamicFormNodeKind ? 'special-form-workspace-entry' : undefined">
+        :data-testid="normalWorkspaceEntry ? 'normal-form-workspace-entry' : devMockDynamicFormNodeKind ? 'special-form-workspace-entry' : undefined">
       <WorkOrderTaskFocus
         :title="workflowProjection.currentTask.title"
         :action-label="productionReadOnly
           ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作')
-          : (normalWorkspaceEntry || aStageDynamicFormNodeKind) ? '打开表单' : workflowProjection.currentTask.actionLabel"
+          : (normalWorkspaceEntry || devMockDynamicFormNodeKind) ? '打开表单' : workflowProjection.currentTask.actionLabel"
         :tone="workflowProjection.currentTask.tone"
-        :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview && !normalWorkspaceEntry && !aStageDynamicFormNodeKind)
+        :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview && !normalWorkspaceEntry && !devMockDynamicFormNodeKind)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
-        :note="aStageDynamicFormNodeKind ? '在表单工作台填写并核对现场记录。' : productionReadOnly ? '当前仅可查看，业务操作暂未开放。' : undefined"
+        :note="devMockDynamicFormNodeKind ? '在表单工作台填写并核对现场记录。' : productionReadOnly ? '当前仅可查看，业务操作暂未开放。' : undefined"
         @action="handleCurrentTaskAction"
       />
 
       </view>
 
 
-      <view v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'pending'" class="app-surface">
+      <view v-if="devMockCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'pending'" class="app-surface">
         <AppStatus tone="warning" quiet message="上次操作结果待核对，请进入原表单工作台查看。" />
         <AppButton data-testid="special-receipt-workspace-entry" @tap="openDevMockDynamicFormReceipt">查看待核对记录</AppButton>
       </view>
-      <AppStatus v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'" tone="success" quiet
+      <AppStatus v-if="devMockCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'" tone="success" quiet
         message="现场记录已完成，可重新进入查看。"
         data-testid="a-special-complete" />
-      <AppStatus v-else-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'checking'"
+      <AppStatus v-else-if="devMockCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'checking'"
         tone="warning" quiet message="正在核对现场记录状态…" data-testid="a-special-completion-checking" />
-      <AppStatus v-else-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'unavailable'"
+      <AppStatus v-else-if="devMockCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'unavailable'"
         tone="warning" quiet message="现场记录状态暂无法核对，请重新读取工单后再试。"
         data-testid="a-special-completion-unverified" />
-      <AppButton v-if="aStageCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'"
+      <AppButton v-if="devMockCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'clear'"
         data-testid="special-completed-workspace-entry" variant="secondary" @tap="openDevMockDynamicFormReceipt">查看已完成记录</AppButton>
       </template>
       <!-- #ifdef XLINK_DEV_QA -->
@@ -345,14 +345,14 @@ import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
 import HistoricalFormsTimeline from '@features/work-orders/HistoricalFormsTimeline.vue'
 import { historicalFormsReaderKey } from '@features/work-orders/r1-historical-forms-read'
-import { isAStageDynamicFormMockAvailable, createAStageDynamicFormMockControllerForActor, type AStageDynamicFormNodeKind } from '@app/a-stage-dynamic-form-mock-ui'
-import type { AStageDynamicFormMockControllerFactory } from '@features/work-orders/a-stage-dynamic-form-mock-port'
+import { isDevMockDynamicFormAvailable, createDevMockDynamicFormControllerForActor, type DevMockDynamicFormNodeKind } from '@app/dev-mock-dynamic-form-controller'
+import type { DevMockDynamicFormControllerFactory } from '@features/work-orders/dev-mock-dynamic-form-port'
 import R1ProductionChildFormsPanel from '@features/work-orders/R1ProductionChildFormsPanel.vue'
 import R1ProductionMainRepeatPanel from '@features/work-orders/R1ProductionMainRepeatPanel.vue'
 import { appLoadingSkeletonDelayMs } from '@shared/ui/loading'
 
-const createAStageDynamicFormControllerForUi: AStageDynamicFormMockControllerFactory =
-  createAStageDynamicFormMockControllerForActor
+const createDevMockDynamicFormControllerForUi: DevMockDynamicFormControllerFactory =
+  createDevMockDynamicFormControllerForActor
 const session = useSessionStore()
 const workOrder = useWorkOrderDetailStore()
 const quotationBrowse = useQuotationOrderBrowseStore()
@@ -394,8 +394,8 @@ const normalReader = injectHistoryReader(r1NodeFormsReaderKey,null)
 const normalWorkspaceEntry = computed(() => !productionReadOnly && normalReader?.enabled() === true
   && !allowLocalMockPreview.value
   && Boolean(currentR1FormNode.value?.formDefinitionId) && ['interact_with_form','set_appointment'].includes(workflowProjection.value.currentTask?.actionIntent??'')
-  && ['enabled','disabled_read_only'].includes(workflowProjection.value.currentTask?.execution ?? '') && !aStageDynamicFormNodeKind.value)
-const aStageDynamicFormNodeKind = computed<AStageDynamicFormNodeKind | null>(() => {
+  && ['enabled','disabled_read_only'].includes(workflowProjection.value.currentTask?.execution ?? '') && !devMockDynamicFormNodeKind.value)
+const devMockDynamicFormNodeKind = computed<DevMockDynamicFormNodeKind | null>(() => {
   const source = currentR1FormNode.value?.sourceNodeType
   if (source !== 'forms' && source !== 'repeat' || productionReadOnly) return null
   const current = session.session
@@ -403,10 +403,10 @@ const aStageDynamicFormNodeKind = computed<AStageDynamicFormNodeKind | null>(() 
     ? { userId: String(current.user.id), roleId: String(current.currentRole.id),
         identity: JSON.stringify([current.sessionRef, current.user.id,
           current.currentRole.id, current.roleVersion ?? null]) } : null
-  return isAStageDynamicFormMockAvailable(source, String(detail.value?.id ?? ''), actor)
+  return isDevMockDynamicFormAvailable(source, String(detail.value?.id ?? ''), actor)
     ? source : null
 })
-const aStageCompletedDynamicFormNode = computed(() => {
+const devMockCompletedDynamicFormNode = computed(() => {
   if (productionReadOnly) return null
   const current = session.session
   const actor = current?.user.id && current.currentRole?.id && current.sessionRef
@@ -416,23 +416,23 @@ const aStageCompletedDynamicFormNode = computed(() => {
   return detail.value?.workflowNodes?.find(node =>
     (node.sourceNodeType === 'forms' || node.sourceNodeType === 'repeat')
       && node.lifecycle === 'closed'
-      && isAStageDynamicFormMockAvailable(node.sourceNodeType,
+      && isDevMockDynamicFormAvailable(node.sourceNodeType,
         String(detail.value?.id ?? ''), actor)) ?? null
 })
 type CompletedDevMockDynamicFormReceiptGate = {
   readonly nodeId: string
-  readonly kind: AStageDynamicFormNodeKind
+  readonly kind: DevMockDynamicFormNodeKind
   readonly status: 'checking' | 'pending' | 'clear' | 'unavailable'
 }
 const completedDevMockDynamicFormReceiptGate = ref<CompletedDevMockDynamicFormReceiptGate | null>(null)
 let completedDevMockDynamicFormReceiptCheck = 0
 watch(
-  () => [aStageCompletedDynamicFormNode.value?.id ?? null, detail.value?.id ?? null,
+  () => [devMockCompletedDynamicFormNode.value?.id ?? null, detail.value?.id ?? null,
     session.session?.sessionRef ?? null, session.session?.user.id ?? null,
     session.session?.currentRole?.id ?? null, session.session?.roleVersion ?? null] as const,
   async ([nodeId, workOrderId]) => {
     const check = ++completedDevMockDynamicFormReceiptCheck
-    const node = aStageCompletedDynamicFormNode.value
+    const node = devMockCompletedDynamicFormNode.value
     const kind = node?.sourceNodeType
     if (!nodeId || !workOrderId || !node || (kind !== 'forms' && kind !== 'repeat')) {
       completedDevMockDynamicFormReceiptGate.value = null
@@ -448,14 +448,14 @@ watch(
               current.currentRole.id, current.roleVersion ?? null]) }
         : null
     }
-    if (!isAStageDynamicFormMockAvailable(kind, String(workOrderId), getActor())) {
+    if (!isDevMockDynamicFormAvailable(kind, String(workOrderId), getActor())) {
       if (check === completedDevMockDynamicFormReceiptCheck) {
         completedDevMockDynamicFormReceiptGate.value = { nodeId: id, kind, status: 'unavailable' }
       }
       return
     }
     try {
-      const view = await createAStageDynamicFormControllerForUi({
+      const view = await createDevMockDynamicFormControllerForUi({
         kind, workOrderId: String(workOrderId), getActor,
       }).load()
       if (check === completedDevMockDynamicFormReceiptCheck) {
@@ -656,13 +656,13 @@ async function dialContact(): Promise<void> {
 }
 
 async function openDevMockDynamicFormReceipt():Promise<void>{
-  const node=aStageCompletedDynamicFormNode.value,id=detail.value?.id
+  const node=devMockCompletedDynamicFormNode.value,id=detail.value?.id
   if(!id||!node||completedDevMockDynamicFormReceiptGate.value?.nodeId!==String(node.id)||!['pending','clear'].includes(completedDevMockDynamicFormReceiptGate.value.status))return
   await workOrder.navigateTo(`${actionWorkspaceRouteFor(id,node.id,'interact_with_form')}&from=detail`)
 }
 async function handleCurrentTaskAction(): Promise<void> {
   const currentTask = workflowProjection.value.currentTask
-  if (!currentTask || (currentTask.execution !== 'enabled' && !allowLocalMockPreview.value && !normalWorkspaceEntry.value && !aStageDynamicFormNodeKind.value)) return
+  if (!currentTask || (currentTask.execution !== 'enabled' && !allowLocalMockPreview.value && !normalWorkspaceEntry.value && !devMockDynamicFormNodeKind.value)) return
   if (productionReadOnly && currentTask.actionIntent !== 'place_order') return
   const id = detail.value?.id
   if (!id) return
@@ -670,7 +670,7 @@ async function handleCurrentTaskAction(): Promise<void> {
   // Quotation entry is an Action task, while the read-only Order archive remains
   // independent. Production keeps its established read-only entry.
   await workOrder.navigateTo(currentTask.actionIntent === 'place_order' && !productionReadOnly
-    ? `${target}&entry=orders` : (normalWorkspaceEntry.value || aStageDynamicFormNodeKind.value) ? `${target}&from=detail` : target)
+    ? `${target}&entry=orders` : (normalWorkspaceEntry.value || devMockDynamicFormNodeKind.value) ? `${target}&from=detail` : target)
 }
 
 async function handleQuickAction(action: QuickActionKey): Promise<void> {

@@ -4,7 +4,7 @@ This directory contains **operational checks and repeatable contract tools**,
 not application runtime code. A high number of individually named checks is
 intentional when each protects an existing contract or CI gate.
 
-- `check-*.mjs`, `verify-*.mjs`, and `eq01-quality-census.mjs`: guards
+- `check-*.mjs`, `verify-*.mjs`, and `quality-census.mjs`: guards
   invoked from `package.json`, GitHub Actions, or other checks.
 - `inspect-*.mjs`, `capture-*.mjs`, `generate-*.mjs`, `audit-*.mjs`:
   explicit/manual contract discovery, safe read tools, or repeatable generators.

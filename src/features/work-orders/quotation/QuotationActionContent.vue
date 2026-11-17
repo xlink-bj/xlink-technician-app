@@ -1100,7 +1100,7 @@ const props = defineProps<{
   readonly draftBoundaryProvided?: boolean
   readonly syntheticFieldsReview?: boolean
   readonly productReviewOnly?: boolean
-  readonly aStageMockOrder?: boolean
+  readonly devMockOrder?: boolean
   readonly skuLineageAudit?: SkuLineageAudit | null
   readonly sameCatalogLineage?: SameCatalogComparison | null
   readonly syntheticSkuReadiness?: QuoteSkuReadiness | null
@@ -1137,7 +1137,7 @@ const verifiedLocalDisplay = useVerifiedLocalQuotationDisplay(() => String(works
 const submissionStatusMessage = computed(() => quotationSubmissionDisplayCopy({
   state: workspace.quotationOrderState.state,
   message: workspace.quotationOrderState.message,
-  aStageMockOrder: import.meta.env.DEV && props.aStageMockOrder === true,
+  devMockOrder: import.meta.env.DEV && props.devMockOrder === true,
 }))
 const syntheticReviewEnabled = computed(() => import.meta.env.DEV
   && props.syntheticFieldsReview === true

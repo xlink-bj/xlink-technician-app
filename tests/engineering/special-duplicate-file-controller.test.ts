@@ -5,15 +5,15 @@ import { resetMockJourney } from '@adapters/api/mock/journey'
 import * as mockReads from '@adapters/api/mock/router'
 import * as r1SpecialTransport from '@adapters/api/mock/r1-special-protocol'
 import {
-  createAStageDynamicFormMockController, type AStageMockActor,
-} from '@app/a-stage-dynamic-form-mock-ui'
+  createDevMockDynamicFormController, type DevMockActor,
+} from '@app/dev-mock-dynamic-form-controller'
 import { mockR1FormsWorkOrderId, mockR1RepeatWorkOrderId,
   mockSyntheticDynamicFormDefinitionId, mockR1NoteFormDefinitionId } from '@adapters/api/mock/fixtures'
 import type { StoragePort, StorageKey } from '@shared/ports'
 
 const memory = new Map<string, unknown>()
 const receipts = new Map<string, unknown>()
-const actor: AStageMockActor = {
+const actor: DevMockActor = {
   userId: 'synthetic-user', roleId: 'synthetic-role', identity: 'synthetic-user:synthetic-role:local',
 }
 const fields = (summary: string, result = 'follow_up', note?: string) => ({
@@ -62,7 +62,7 @@ afterEach(() => {
 })
 function controller(kind: 'forms' | 'repeat', getActor = () => actor,
   port: StoragePort = storage()) {
-  return createAStageDynamicFormMockController({ kind,
+  return createDevMockDynamicFormController({ kind,
     workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
     storage: port, getActor })
 }
@@ -81,12 +81,12 @@ async function setup(kind: 'forms' | 'repeat', reverse = false) {
     return read(path, data, options)
   })
   let count = 0, failUpload = false
-  let currentActor: AStageMockActor | null = actor
+  let currentActor: DevMockActor | null = actor
   const queue = createMediaUploadQueue(new InMemoryDurableMediaStore(), createMediaQueueRepository(storage()), {
     upload: async () => failUpload ? {state:'failed_retryable' as const, error:createOperationError('network_retryable','synthetic')} : ({ state: 'succeeded' as const, data: { url: 'https://mock-upload.invalid/duplicate-' + count + '.jpg',
       key: 'duplicate-' + count + '.jpg', extension: 'jpg', source: 'library' as const, uploadState: 'uploaded' as const } }),
   })
-  const ui = createAStageDynamicFormMockController({ kind, workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
+  const ui = createDevMockDynamicFormController({ kind, workOrderId: kind === 'forms' ? mockR1FormsWorkOrderId : mockR1RepeatWorkOrderId,
     storage: storage(), getActor: () => currentActor, mediaQueue: queue, mediaPicker: { pick: async () => createCapabilityResult('media_file_picker', 'granted', [{
       ref: asOpaqueId<'LocalMediaRef'>('synthetic-duplicate-' + ++count), source: 'library' as const, name: 'synthetic.jpg',
       mimeType: 'image/jpeg', localPath: '/synthetic/duplicate.jpg',
@@ -96,7 +96,7 @@ async function setup(kind: 'forms' | 'repeat', reverse = false) {
     const task = (await ui.listMediaTasks(mockSyntheticDynamicFormDefinitionId, recordId)).filter(t => t.scope.fieldId === fieldId).at(-1)!
     return r1FileWireFromUpload(task.uploadedRef!)!
   }
-  return { ui, queue, upload, setFailure: (fail:boolean)=>{failUpload=fail}, setActor:(next:AStageMockActor|null)=>{currentActor=next}, setDefinition: (next: typeof definition) => { definition = next } }
+  return { ui, queue, upload, setFailure: (fail:boolean)=>{failUpload=fail}, setActor:(next:DevMockActor|null)=>{currentActor=next}, setDefinition: (next: typeof definition) => { definition = next } }
 }
 
 describe('duplicate file queue source identity through real Special Mock controller', () => {

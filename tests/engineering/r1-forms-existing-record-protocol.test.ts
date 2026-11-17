@@ -9,7 +9,7 @@ import { mockR1FormsWorkOrderId, mockSyntheticDynamicFormDefinitionId } from '@a
 import { r1SpecialFormUpsert, r1FormsUpdateExtsCommand } from '@adapters/api/r1-special-workflow-wires'
 import type { ApiCommandRequest } from '@adapters/api/technician-api-commands'
 import { planR1FormsUpdateExts } from '@features/work-orders/r1-forms-exts-plan'
-import { executeR1Stage1FunctionalCandidate, type R1Stage1Intent } from '@app/r1-stage1-functional-flow'
+import { executeR1SpecialFormCommandFlow, type R1SpecialFormIntent } from '@app/r1-special-form-command-flow'
 import { inspectR1MultiStepReceipt, closeCompletedR1MutationReceiptAfterReadback,
   closeCompletedR1ReceiptAfterReadback, type R1MultiStepScope } from '@features/work-orders/r1-multistep-offline-transaction'
 import type { StorageKey, StoragePort } from '@shared/ports'
@@ -136,7 +136,7 @@ async function existing() {
   expect(baseline.formList.filter(row => row.state === -1)).toHaveLength(1)
   return { first, second, deleted, baseline }
 }
-async function saveIntent(baseline: Row, finish = false): Promise<R1Stage1Intent> {
+async function saveIntent(baseline: Row, finish = false): Promise<R1SpecialFormIntent> {
   return { kind: 'forms_save', sourceNodeType: 'forms', scope,
     fields: { inspectionSummary: 'new after multiple records' }, title: 'new appended title',
     authoritativeExts: baseline, processActive: finish }
@@ -176,7 +176,7 @@ describe('existing multiple forms records through the strict synthetic protocol'
   })
   it('appends over active/deleted history and independently proves full EXTS and exact persisted values after reload', async () => {
     const h = await existing(), receipts = storage(), g = gateway()
-    const result = await executeR1Stage1FunctionalCandidate(receipts, await saveIntent(h.baseline), g)
+    const result = await executeR1SpecialFormCommandFlow(receipts, await saveIntent(h.baseline), g)
     expect(result.state).toBe('succeeded')
     const id = result.data!.savedFormDataIds[0]!
     expect(g.requests.map(r => r.path)).toEqual([`biz/extForm/upsert/${spec.definitionId}`, `workflowNode/updateExts/${spec.workflowNodeId}`])
@@ -193,11 +193,11 @@ describe('existing multiple forms records through the strict synthetic protocol'
   it('edits the same ID with consistent raw wire values while preserving and clearing source keys', async () => {
     const h = await existing(), receipts = storage(), g = gateway(), original = await exact(h.first)
     const beforeSecond = await exact(h.second), beforeDeleted = await exact(h.deleted)
-    const intent: R1Stage1Intent = { kind: 'forms_save', sourceNodeType: 'forms', scope,
+    const intent: R1SpecialFormIntent = { kind: 'forms_save', sourceNodeType: 'forms', scope,
       fields: { inspectionSummary: 'edited existing' }, title: 'renamed existing', processActive: false,
       authoritativeExts: h.baseline, authoritativeOriginal: original, existingFormDataId: h.first,
       clearedFieldKeys: ['inspectionNote'] }
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('succeeded')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('succeeded')
     const wire = JSON.parse(String(g.requests[0]!.body?.dataStr))
     expect(wire._id).toBe(h.first); expect(wire.serverOpaque).toBe('unmapped scalar kept')
     // Assert the outgoing wire itself, before the Mock gateway's own merge.
@@ -230,10 +230,10 @@ describe('existing multiple forms records through the strict synthetic protocol'
       else data.exts.unexpectedMetadata = 'not in authoritative source'
       return dispatch({ ...request, body: { dataStr: JSON.stringify(data) } })
     })
-    const intent: R1Stage1Intent = { kind: 'forms_save', sourceNodeType: 'forms', scope,
+    const intent: R1SpecialFormIntent = { kind: 'forms_save', sourceNodeType: 'forms', scope,
       fields: { inspectionSummary: 'valid changed field' }, title: 'unchanged source protected', processActive: false,
       authoritativeExts: h.baseline, authoritativeOriginal: original, existingFormDataId: h.first }
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(1)
     resetMockCommandState()
     expect(await exact(h.first)).toEqual(original)
@@ -243,10 +243,10 @@ describe('existing multiple forms records through the strict synthetic protocol'
 
   it.each(['save_finish', 'finalize'] as const)('%s uses its distinct Process ID slots and proves persisted completion separately', async kind => {
     const h = await existing(), receipts = storage(), g = gateway()
-    const intent: R1Stage1Intent = kind === 'save_finish' ? await saveIntent(h.baseline, true)
+    const intent: R1SpecialFormIntent = kind === 'save_finish' ? await saveIntent(h.baseline, true)
       : { kind: 'forms_finalize', sourceNodeType: 'forms', scope,
         authoritativeSavedIds: h.baseline.formList.filter(row => row.state === 1).map(row => String(row._id)) }
-    const done = await executeR1Stage1FunctionalCandidate(receipts, intent, g)
+    const done = await executeR1SpecialFormCommandFlow(receipts, intent, g)
     expect(done.state).toBe('succeeded')
     expect(g.requests.map(r => r.path)).toEqual(kind === 'save_finish'
       ? [`biz/extForm/upsert/${spec.definitionId}`, `workflowNode/updateExts/${spec.workflowNodeId}`, 'workflow/process'] : ['workflow/process'])
@@ -271,10 +271,10 @@ describe('existing multiple forms records through the strict synthetic protocol'
     const id = kind === 'unknown' ? 'mock-special-form-data-forms-999' : kind === 'deleted' ? h.deleted : h.first
     const original = kind === 'unknown' ? { ...(await exact(h.first)), _id: id } : await exact(id)
     if (kind === 'wrongOriginal') original.sid = 'foreign-order'
-    const intent: R1Stage1Intent = { kind: 'forms_save', sourceNodeType: 'forms', scope,
+    const intent: R1SpecialFormIntent = { kind: 'forms_save', sourceNodeType: 'forms', scope,
       fields: { inspectionSummary: 'must not persist' }, title: 'invalid edit', processActive: false,
       authoritativeOriginal: original, authoritativeExts: h.baseline, existingFormDataId: id }
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('failed_terminal')
     expect(g.dispatch).not.toHaveBeenCalled()
     expect((await inspectR1MultiStepReceipt(receipts, scope)).data).toBeNull()
     expect(await exts()).toEqual(h.baseline)
@@ -291,14 +291,14 @@ describe('existing multiple forms records through the strict synthetic protocol'
         : { data: { _id: appliedId, id: 'contradictory-other-record' } }
     })
     const intent = await saveIntent(h.baseline)
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(1)
     resetMockCommandState()
     expect((await exact(appliedId)).inspectionSummary).toBe('new after multiple records')
     expect(await exts()).toEqual(h.baseline)
     expect((await inspectR1MultiStepReceipt(receipts, scope)).data).toMatchObject({
       state: 'may_have_dispatched', stepIndex: 0, savedFormDataIds: [] })
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, { ...g })).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, { ...g })).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(1)
   })
 
@@ -309,11 +309,11 @@ describe('existing multiple forms records through the strict synthetic protocol'
       return command(request, { ...actor, roleId: 'wrong-role' })
     })
     const intent = await saveIntent(h.baseline)
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(1)
     expect(await exts()).toEqual(h.baseline)
     expect((await inspectR1MultiStepReceipt(receipts, scope)).data?.state).toBe('may_have_dispatched')
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, { ...g })).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, { ...g })).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(1)
   })
 
@@ -324,12 +324,12 @@ describe('existing multiple forms records through the strict synthetic protocol'
     const dispatch = g.dispatch.getMockImplementation()!
     g.dispatch.mockImplementationOnce(async request => { const response = await dispatch(request); allowed = false; return response })
     const intent = await saveIntent(h.baseline)
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(1); expect(await exts()).toEqual(h.baseline)
     expect((await inspectR1MultiStepReceipt(receipts, scope)).data).toMatchObject({
       state: 'may_have_dispatched', stepIndex: 1 })
     allowed = true
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, { ...g })).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, { ...g })).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(1)
   })
 
@@ -344,7 +344,7 @@ describe('existing multiple forms records through the strict synthetic protocol'
       return result
     })
     const intent = await saveIntent(h.baseline, true)
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('failed_terminal')
     const dispatched = lost === 'upsert' ? 1 : lost === 'exts' ? 2 : 3
     expect(g.requests).toHaveLength(dispatched)
     expect((await inspectR1MultiStepReceipt(receipts, scope)).data).toMatchObject({ state: 'may_have_dispatched', stepIndex: dispatched - 1 })
@@ -353,7 +353,7 @@ describe('existing multiple forms records through the strict synthetic protocol'
     expect(current.formList.slice(0,5)).toEqual(h.baseline.formList)
     expect(current.formList).toHaveLength(lost === 'upsert' ? 5 : 6)
     expect((await node()).state).toBe(lost === 'process' ? 10 : 0)
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, { ...g })).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, { ...g })).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(dispatched)
     const receipt = (await inspectR1MultiStepReceipt(receipts, scope)).data!
     if (receipt.savedFormDataIds[0]) expect((await exact(receipt.savedFormDataIds[0])).inspectionSummary).toBe('new after multiple records')
@@ -370,13 +370,13 @@ describe('existing multiple forms records through the strict synthetic protocol'
       return dispatch(request)
     })
     const intent = await saveIntent(h.baseline, true)
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, g)).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, g)).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(failed === 'upsert' ? 1 : 2)
     expect((await inspectR1MultiStepReceipt(receipts, scope)).data?.state).toBe('may_have_dispatched')
     resetMockCommandState()
     expect(await exts()).toEqual(h.baseline); expect((await node()).state).toBe(0)
     const count = g.requests.length
-    expect((await executeR1Stage1FunctionalCandidate(receipts, intent, { ...g })).state).toBe('failed_terminal')
+    expect((await executeR1SpecialFormCommandFlow(receipts, intent, { ...g })).state).toBe('failed_terminal')
     expect(g.requests).toHaveLength(count)
   })
 })

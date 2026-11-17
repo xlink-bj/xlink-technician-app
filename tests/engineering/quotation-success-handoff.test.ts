@@ -235,7 +235,7 @@ async function mountedParent(realStore = false) {
     '@features/work-orders/survey-complete-confirmation': surveyConfirmation,
     '@shared/session-authorization': { sessionAuthorizationFingerprint },
     '@app/business-mock': { isBusinessMockQuotationPreview: () => false, isDevSyntheticContractReadPreviewEnabled: () => false },
-    '@app/a-stage-quotation-mock-ui': { isAStageMockOrderEnabled: () => false },
+    '@app/dev-mock-quote-order-controller': { isDevMockQuoteOrderEnabled: () => false },
     '@app/mock-journey': { mockJourneyContext: () => null },
     '@app/action-page-title': { setActionWorkspacePageTitle: title },
   }

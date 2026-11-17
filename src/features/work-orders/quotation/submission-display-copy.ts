@@ -6,9 +6,9 @@ import type { QuotationOrderSubmissionState } from './order-submission'
 export function quotationSubmissionDisplayCopy(input: {
   readonly state: QuotationOrderSubmissionState
   readonly message?: string
-  readonly aStageMockOrder: boolean
+  readonly devMockOrder: boolean
 }): string | undefined {
-  if (input.aStageMockOrder && input.state === 'succeeded') {
+  if (input.devMockOrder && input.state === 'succeeded') {
     return '本机 Mock 订单已完成本地回读；未提交真实业务后台。'
   }
   return input.message

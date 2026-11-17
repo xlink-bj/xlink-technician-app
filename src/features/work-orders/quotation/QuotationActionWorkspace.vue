@@ -31,7 +31,7 @@
       :order-fields-validate-selection="props.orderFieldsValidateSelection"
       :synthetic-fields-review="syntheticReviewEnabled"
       :product-review-only="productReviewOnly"
-      :a-stage-mock-order="props.aStageMockOrder"
+      :dev-mock-order="props.devMockOrder"
       :sku-lineage-audit="props.skuLineageAudit"
       :same-catalog-lineage="props.sameCatalogLineage"
       :synthetic-sku-readiness="props.syntheticSkuReadiness"
@@ -170,7 +170,7 @@ const props = defineProps<{
   readonly contentState: 'loading' | 'ready' | 'blocked' | 'failed_retryable' | 'failed_terminal'
   readonly productReviewOnly?: boolean
   /** Only the exact DEV Mock order flow may show local-readback wording. */
-  readonly aStageMockOrder?: boolean
+  readonly devMockOrder?: boolean
   readonly skuLineageAudit?: SkuLineageAudit | null
   readonly sameCatalogLineage?: SameCatalogComparison | null
   readonly syntheticSkuReadiness?: QuoteSkuReadiness | null

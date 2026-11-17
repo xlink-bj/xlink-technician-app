@@ -21,7 +21,7 @@ const commercialViews = [
   'src/features/work-orders/R1DevMockDynamicFormTransactionPanel.vue',
   'src/features/work-orders/components/MockJourneyContextPanel.vue',
   'src/features/work-orders/components/SurveyCompleteConfirmation.vue',
-  'src/features/work-orders/quotation/AStageMockQuoteOrderPanel.vue',
+  'src/features/work-orders/quotation/DevMockQuoteOrderPanel.vue',
   'src/features/work-orders/quotation/Q01EntryScreen.vue',
   'src/features/work-orders/quotation/QuotationActionContent.vue',
   'src/features/work-orders/quotation/QuotationActionWorkspace.vue',

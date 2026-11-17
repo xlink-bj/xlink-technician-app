@@ -2,7 +2,7 @@ import { useWorkbenchStore } from '@features/home/workbench'
 import { workbenchDemo } from '@adapters/api/mock/workbench-demo'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { surveyLeakageCauseReadKey } from '@features/work-orders/survey-leakage-cause-read'
-import { resolveAStageDynamicFormMockWorkspace } from './a-stage-dynamic-form-mock-ui'
+import { resolveDevMockDynamicFormWorkspace } from './dev-mock-dynamic-form-controller'
 import { createR1NormalFormDraftProvider } from './r1-normal-form-drafts'
 import { r1NormalFormDraftsKey } from '@features/work-orders/r1-normal-form-drafts'
 import { createHistoricalFormsReader } from './r1-historical-forms-read'
@@ -178,7 +178,7 @@ export function createApplication(dependencies: ApplicationDependencies = {}) {
   const actionWorkspaceStore = useActionWorkspaceStore(pinia)
   actionWorkspaceStore.configure({
     normalFormContentEnabled: () => normalNodeFormsReader.enabled(),
-    devMockDynamicFormResolver: resolveAStageDynamicFormMockWorkspace,
+    devMockDynamicFormResolver: resolveDevMockDynamicFormWorkspace,
     apiRead,
     localQuotationRepairPartsRead: normalQuotationPartsRead,
     quotationCatalogRead,

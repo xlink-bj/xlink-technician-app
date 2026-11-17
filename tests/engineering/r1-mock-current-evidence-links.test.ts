@@ -9,7 +9,7 @@ describe('current supported R1 Mock slices remain reachable from the mapping com
     const actual = manifest.domains.find(row => row.id === 'F07')!.unitTests
     const required = [
       'tests/engineering/mock-repeat-query-parity.test.ts',
-      'tests/engineering/a-stage-main-app-special-controller.test.ts',
+      'tests/engineering/dev-mock-dynamic-form-controller.test.ts',
       'tests/engineering/r1-scoped-form-read.test.ts',
     ]
     assert.deepEqual(required.filter(path => !actual.includes(path)), [])

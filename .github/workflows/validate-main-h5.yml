@@ -55,15 +55,15 @@ jobs:
           path: test-results/main-h5-mock/
           if-no-files-found: warn
           retention-days: 7
-      - name: Verify A-stage P1 forms, repeat and priced Mock Order in real H5 at both mobile widths
+      - name: Verify DEV Mock forms, repeat and priced Order in real H5 at both mobile widths
         env:
           VITE_XLINK_R1_MP_UX_FIXTURES: 'true'
-        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-p1-acceptance.spec.ts
-      - name: Preserve A-stage P1 H5 interaction traces and screenshots
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/dev-mock-forms-repeat-quotation.spec.ts
+      - name: Preserve DEV Mock forms, repeat and quotation traces
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: draft-a-stage-p1-h5-${{ github.run_id }}
+          name: dev-mock-forms-repeat-quotation-${{ github.run_id }}
           path: test-results/main-h5-mock/
           if-no-files-found: warn
           retention-days: 7
@@ -107,24 +107,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: node scripts/check-playwright-runtime.mjs
       - name: Verify forms Save/Process, source fields and appointment readback at 375/390/430
-        # The P1 job runs 020/021 on schedule/manual; keep those cases here for FORM-BATCH PRs.
+        # The forms/repeat job runs 020/021 on schedule/manual; keep those cases here for FORM-BATCH PRs.
         # The anchored file-title branch still selects all deferred cases.
         run: |
-          p1_cases=()
-          p1_pattern=''
+          forms_cases=()
+          forms_pattern=''
           if [[ "${GITHUB_EVENT_NAME:-}" == 'pull_request' ]]; then
-            p1_cases=(tests/h5-main-mock/a-stage-p1-acceptance.spec.ts)
-            p1_pattern='|020 forms|021 repeat'
+            forms_cases=(tests/h5-main-mock/dev-mock-forms-repeat-quotation.spec.ts)
+            forms_pattern='|020 forms|021 repeat'
           fi
           pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts --workers=2 \
             tests/h5-main-mock/forms-save-process-readback.spec.ts \
             tests/h5-main-mock/r1-source-formdef-multifield.spec.ts \
-            "${p1_cases[@]}" \
+            "${forms_cases[@]}" \
             tests/h5-main-mock/normal-survey-mock-reader.spec.ts \
             tests/h5-main-mock/dynamic-field-registry.spec.ts \
             tests/h5-main-mock/detail-archives.spec.ts \
             tests/h5-main-mock/deferred-appointment-r1.spec.ts \
-            --grep "R1 forms Save→EXTS→Process|R1 source FormDef multi-field save/edit/readback${p1_pattern}|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)"
+            --grep "R1 forms Save→EXTS→Process|R1 source FormDef multi-field save/edit/readback${forms_pattern}|Field registry|19017 normal|actual detail archive|^\s*deferred-appointment-r1\.spec\.ts(?:\s|$)"
       - name: Verify source-shaped typed primitive fields on the real H5 App
         env:
           VITE_XLINK_R1_TYPED_PRIMITIVE_FIELDS: 'true'
@@ -154,10 +154,10 @@ jobs:
         env:
           VITE_XLINK_R1_BUSINESS_FIELDS: 'true'
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/special-business-record.spec.ts
-      - name: Verify Stage A generic R1 file queue and stale-editor H5 acceptance
+      - name: Verify DEV Mock R1 file queue and stale-editor H5 behavior
         env:
           VITE_XLINK_R1_SPECIAL_MEDIA: 'true'
-        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/a-stage-last-two.spec.ts
+        run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/dev-mock-special-media-conflict.spec.ts
       - name: Verify default Mock quotation fields, cross-tab drafts and Quote to Order readback at 430
         run: pnpm exec playwright test --config config/playwright/main-h5-mock.config.ts tests/h5-main-mock/order-fields-flow.spec.ts tests/h5-main-mock/package-price-source.spec.ts
       - name: Verify M08 priced package Quote to Order, persistence and uncertain recovery at 430

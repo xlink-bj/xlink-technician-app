@@ -1,0 +1,45 @@
+#!/usr/bin/env node
+/** Validate emitted WXSS, not just source CSS: WeChat DevTools rejects tag
+ * and attribute selectors inside components even when H5 renders correctly.
+ * The grouped selector moved to a shared UI control; this check preserves the
+ * bounded selector safety gate, not native UI acceptance. */
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
+const root = resolve('dist/build/mp-weixin')
+const componentFiles = [
+  'shared/ui/AppWorkOrderSkeleton.wxss',
+  'shared/ui/AppSearchBar.wxss',
+  'features/work-orders/WorkOrderTaskFocus.wxss',
+  'shared/ui/AppGroupedMultiSelectField.wxss',
+  'shared/ui/AppCascadeSheetField.wxss',
+  'features/work-orders/quotation/QuotationOrderHub.wxss',
+  'features/work-orders/quotation/Q01EntryScreen.wxss',
+  'features/work-orders/quotation/QuotationActionContent.wxss',
+  'features/work-orders/quotation/QuotationActionWorkspace.wxss',
+]
+
+for (const path of componentFiles) {
+  const css = readFileSync(resolve(root, path), 'utf8')
+  const selectors = [...css.matchAll(/(?:^|\})\s*([^{}]+?)\s*\{/g)].map((match) => match[1].trim())
+  const unsupported = selectors.filter((selector) =>
+    /\[[^\]]+\]|:not\(/.test(selector)
+    || /(?:^|[\s>+~,])(?:view|text|button|input|image)(?=\b|[:.\[])/.test(selector))
+  if (unsupported.length) {
+    throw new Error(`MP component WXSS unsupported selector in ${path}: ${unsupported.slice(0, 5).join(' | ')}`)
+  }
+}
+
+const pageCss = readFileSync(resolve(root, 'pages/work-orders/detail.wxss'), 'utf8')
+const pageWxml = readFileSync(resolve(root, 'pages/work-orders/detail.wxml'), 'utf8')
+const yuhong = readFileSync(resolve(root, 'app.wxss'), 'utf8').includes('--yh-palette-brand-600:')
+const contentInset = yuhong
+  ? /\.summary-card__content\s*\{[^}]*box-sizing:border-box;[^}]*padding:var\(--yh-space-16\) var\(--yh-space-16\) 0/
+  : /\.summary-card__content\s*\{[^}]*box-sizing:border-box;[^}]*padding:28rpx 28rpx 24rpx/
+if (!/\.summary-card\s*\{[^}]*box-sizing:border-box;[^}]*padding:0/.test(pageCss)
+  || !contentInset.test(pageCss)
+  || !pageWxml.includes('class="summary-card__content"')) {
+  throw new Error('MP WorkOrder cards must share the same border-box host/slot layout for Real and Mock')
+}
+
+process.stdout.write(`MP emitted WXSS guard PASS: ${componentFiles.length} components, all WorkOrder card host/slot box model\n`)

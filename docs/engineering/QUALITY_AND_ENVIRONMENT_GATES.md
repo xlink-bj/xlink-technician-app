@@ -23,7 +23,7 @@
 | 目的 | 命令 | 说明 |
 | --- | --- | --- |
 | 局部开发反馈 | `pnpm exec vitest run <受影响的测试文件>`；按改动运行 `pnpm run typecheck` 或对应 `check:*` | 先测实际受影响行为，不必每次跑整套 |
-| 较广的本地回归 | `pnpm run verify:quick` | 固定关键样本、边界、类型检查；不能替代全量测试 |
+| 较广的本地回归 | `pnpm run verify:quick` | 固定 22 个关键单测文件、边界与类型检查；不能替代全量测试，也不运行 H5 |
 | 主干完整工程验证 | `VITE_XLINK_ENVIRONMENT=test pnpm run verify` | 静态检查、类型与全部 Vitest；`verify:full` 只是其兼容别名 |
 | 可选规模盘点 | `pnpm run audit:quality` | 独立 census，不在 `verify` / `verify:full` 内，也不是覆盖率或尺寸门禁 |
 | 架构与业务 owner | pnpm run check:boundaries、pnpm run check:engineering-ownership | 禁止直接平台/API Wire/价目越界 |
@@ -51,8 +51,8 @@
 - **完整 H5**：[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 每日 19:15 UTC 定时运行，也可在 GitHub Actions 手动运行（`gh workflow run validate-main-h5.yml --ref main`）；既有标记 PR 入口继续可用。它保留表单保存/流程、草稿、角色媒体、创建与其他专项的既定用例和失败汇总。需显式本地合成写入授权的问卷、业务选择器用例分别在专项配置中运行；不带该授权的泛用 Mock 不冒充其通过。普通 main push 不会取消完整验收。
 - **何时补跑完整 H5**：权限/角色及租户数据隔离、报价/订单金额或签署、草稿异步与弱网、媒体、共享平台或跨端关键流程，以及 workflow、Playwright 配置、测试设施、共享 fixture、构建/运行环境发生变化时，改动负责人在对应 main SHA 上手动运行并核对 run 的 `head_sha`。完整失败未修复时，相关范围不得报告验收完成；快检绿不替代完整结果，也不借用旧 SHA 的 PASS。
 - **每日失败归责**：日常项目协调 owner 检查定时完整 H5 run 的终态，指派最近相关改动负责人排查、修复并重跑；未修复前相关范围保持 FAIL/NOT_ACCEPTED。普通 main push 不因此暂停。
-- **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。旧 Draft 分支专项 workflow 与历史阶段报告不构成当前 main push 门禁。
-- **Release/Owner**：同视口商业 UI 接受、微信开发者工具/物理设备、Android/iOS、Beta 真实写入分别记录。不能用 CI green 替代这些 Gate。
+- **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。仅绑定旧草稿分支和固定历史提交的专项 workflow 已移除；历史报告保留其当时的证据，不构成当前 main push 门禁。
+- **Release/Owner**：同视口商业 UI 接受、已授权的微信开发者工具/物理设备验证、Android/iOS、Beta 真实写入分别记录。不能用 CI green 替代这些 Gate。
 
 **历史 CI 示例（2026-10-29，非当前验收）：**[Validate](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40884013124) 和 [Main H5 UX](https://github.com/xlink-bj/xlink-technician-app/actions/runs/40884013114) 于 2026-10-29 成功；quick 在 main push 依条件跳过属于预期。每次提交核对自己的 exact HEAD CI；不用历史通过替代当前结果。
 
@@ -72,4 +72,18 @@
 ## 5. 文档-only 的门禁
 
 只改 docs/、README 的提交也按当前 main push workflow 记录 exact-head CI 结果；文档局部审阅不必为了提交前反馈先重复运行所有构建和浏览器测试。工作流、配置、测试数据或执行规范即使是文档形式，也按实际影响核对应跑的验证。没有商业 UI 变化时，视觉/真机记录 NOT_RUN。报告和日志输出到 `test-results/`，`.review/` 仅保留需要查看的系统截图，不承载运行脚本、数据库或构建工程。
+
+## 6. 阶段遗留的当前处置（2026-11-17）
+
+本节记录入口和命名的处置范围；历史报告仍按原提交阅读，不因文件改名而改写当时的证据。现行命令只有上表和当前 `package.json`、workflow 定义权威。`verify:quick` 是固定 22 文件的开发反馈，`verify` 是完整工程检查，`verify:full` 是兼容别名；不另建阶段专用验证框架。
+
+| 处置 | 当前路径与理由 |
+| --- | --- |
+| 已退役的 CI 入口 | 删除 24 个只绑定固定旧草稿分支/祖先的 workflow：`eq02/05/05b/06/07/08/09`、`closure-c2/c3`、`ds07c4a/c4b/c5/c8/c9/c10/c11`、`r1-a06a/appointment/f2/f3/f4/login`、`m1-i7/m1-unified`。它们没有 main push、定时或手动入口；保留 `validate.yml`、`validate-main-h5-smoke.yml`、`validate-main-h5.yml` 和 10 个可按需运行的视觉/专项 workflow。 |
+| 已退役的自证 | 删除仅供旧 M1 候选 workflow 使用的 `scripts/check-m1-i7-reconciliation.mjs`、`scripts/check-m1-unified-main-candidate.mjs` 与对应的 `tests/g4f/m1-unified-main-candidate.test.ts`；不删除现行行为/边界测试。 |
+| 已迁移的业务代码 | DEV Mock 表单与报价控制器、端口、面板及对应 H5/工程测试改为 `dev-mock-*` 路径；隔离的 R1 特殊表单命令、Pilot 组合/对账/网关改为 `src/app/r1-special-form-*`，同步符号和直接测试路径。仅命名与导入迁移；协议、收据键、角色判断、写入开关不变。`scripts/check-engineering-ownership.mjs`、`scripts/check-mp-wxss.mjs`、`scripts/quality-census.mjs` 同样只改入口名。 |
+| 保留的实际行为守卫 | `check:critical`、`check:engineering-ownership`、`check:module-dependencies`、`check:r1-mock-mapping` 及现有单测继续保护金额、授权、草稿、异步状态与 Mock 隔离。旧 EQ/G4 前缀的测试若仍验证这些行为，不因名称删除或放松断言。 |
+| 待分组迁移：来源读取与隔离 | `tests/engineering/r1-stage1-forms-options.test.ts`、`r1-stage1-form-detail-read-contract.test.ts`、`r1-stage1-live-read-contract.test.ts`、`r1-stage1-mp-mock-fixtures.test.ts`、`r1-stage1-no-beta-shadow.test.ts`，分别按来源字段/只读合同、DEV Mock fixture、Beta fail-closed 边界复核后再命名。 |
+| 待分组迁移：行为测试 | `tests/engineering/eq01-mock-scenarios.test.ts`、`eq05-mock-command-state.test.ts`、`eq05b-mock-fault-scenarios.test.ts` 属 Mock；`eq02-action-draft-helpers.test.ts`、`eq07-command-state-consistency.test.ts` 属草稿/异步；`eq04-quotation-catalog-bridge.test.ts` 属报价；`eq08-action-architecture.test.ts` 属架构；`eq03-quality-census.test.ts` 属质量盘点。先核对 `verify:quick`、CI、映射及证据消费者，再按能力更名。 |
+| 保留的稳定测试契约及历史档案 | 既有 `a-stage-*` data-testid 与 `XLINK_STAGE_B_SCREENSHOTS` 是测试选择器/截图环境变量，跨 H5 用例被消费；改名需单独核对所有消费者。`docs/governance/` 的固定快照与 `docs/verification/` 的历史验收不改写为当前状态。 |
 

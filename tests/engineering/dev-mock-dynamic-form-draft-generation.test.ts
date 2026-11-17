@@ -1,5 +1,5 @@
 import { beforeEach,afterEach,describe,expect,it,vi } from 'vitest'
-import { createAStageDynamicFormMockController } from '@app/a-stage-dynamic-form-mock-ui'
+import { createDevMockDynamicFormController } from '@app/dev-mock-dynamic-form-controller'
 import { setBusinessMockMode,resetBusinessMockCache } from '@adapters/api/mock/config'
 import { resetMockCommandState } from '@adapters/api/mock/command-state'
 import { resetMockJourney } from '@adapters/api/mock/journey'
@@ -16,7 +16,7 @@ function fixture(){
   remove:async k=>{data.delete(k.namespace+':'+k.key);return{state:'succeeded'}},
   listKeys:async q=>({state:'succeeded',data:[...data.keys()].filter(k=>k.startsWith(q.namespace+':'+(q.prefix??''))).map(k=>k.slice(q.namespace.length+1))}),
  }
- const make=()=>createAStageDynamicFormMockController({kind:'forms',workOrderId:'mock-work-order-020-local-forms',getActor:()=>actor,storage:port})
+ const make=()=>createDevMockDynamicFormController({kind:'forms',workOrderId:'mock-work-order-020-local-forms',getActor:()=>actor,storage:port})
  const hold=(match:(v:any)=>boolean)=>{predicate=match;reached=new Promise<void>(r=>{arrived=r});return reached}
  return{data,make,hold,release:()=>release()}
 }

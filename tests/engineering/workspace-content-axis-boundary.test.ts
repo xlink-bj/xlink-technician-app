@@ -102,7 +102,7 @@ describe('data adapter and content experience are independent of a registered DE
   const protocol=await import('@adapters/api/mock/r1-special-protocol')
   const {workOrderDetail}=await import('@adapters/api/read-models/work-order')
   const {mockR1FormsWorkOrderId}=await import('@adapters/api/mock/fixtures')
-  const {resolveAStageDynamicFormMockWorkspace}=await import('@app/a-stage-dynamic-form-mock-ui')
+  const {resolveDevMockDynamicFormWorkspace}=await import('@app/dev-mock-dynamic-form-controller')
   vi.stubEnv('VITE_XLINK_ENVIRONMENT','dev');vi.stubEnv('VITE_XLINK_H5_MOCK_E2E','true');vi.stubEnv('VITE_XLINK_MOCK','true')
   const memory=new Map<string,unknown>();vi.stubGlobal('uni',{getStorageSync:(k:string)=>memory.get(k),setStorageSync:(k:string,v:unknown)=>memory.set(k,v),removeStorageSync:(k:string)=>memory.delete(k),getStorage:(o:any)=>memory.has(o.key)?o.success({data:memory.get(o.key)}):o.fail({}),getStorageInfo:(o:any)=>o.success({keys:[...memory.keys()]}),setStorage:(o:any)=>{memory.set(o.key,o.data);o.success?.()},removeStorage:(o:any)=>{memory.delete(o.key);o.success?.()}})
   resetBusinessMockCache();setBusinessMockMode('data');resetMockCommandState();resetMockJourney()
@@ -111,7 +111,7 @@ describe('data adapter and content experience are independent of a registered DE
    const raw=await tryMockRead('basic/serviceAppointment/queryById/'+mockR1FormsWorkOrderId,{}, {latencyMs:0})
    const detail=workOrderDetail(raw,asOpaqueId<'WorkOrderId'>(mockR1FormsWorkOrderId),new Map(),new Map()),node=detail.workflowNodes!.find(n=>n.sourceNodeType==='forms')!
    const actualSession:SessionSnapshot={...session,user:{id:asOpaqueId<'UserId'>('synthetic-user')},currentRole:{id:asOpaqueId<'RoleId'>('synthetic-role')}}
-   f.store.configure({apiRead:{getWorkOrderDetail:async()=>success(detail)} as unknown as TechnicianApiReadPort,commandApi:{readDynamicForm:f.readDynamic,readAppointmentForm:f.readAppointment} as unknown as TechnicianApiCommandPort,storage:f.storage,draftRepository:createActionDraftRepository(f.storage),getSession:()=>actualSession,navigation:{navigate:f.navigate},devMockDynamicFormResolver:resolveAStageDynamicFormMockWorkspace})
+   f.store.configure({apiRead:{getWorkOrderDetail:async()=>success(detail)} as unknown as TechnicianApiReadPort,commandApi:{readDynamicForm:f.readDynamic,readAppointmentForm:f.readAppointment} as unknown as TechnicianApiCommandPort,storage:f.storage,draftRepository:createActionDraftRepository(f.storage),getSession:()=>actualSession,navigation:{navigate:f.navigate},devMockDynamicFormResolver:resolveDevMockDynamicFormWorkspace})
    const request={workOrderId:detail.id,workflowNodeId:node.id,actionIntent:'interact_with_form',pageLease:{}}
    expect((await f.store.ensureLoaded(request)).state).toBe('succeeded');expect(f.store.devMockDynamicFormContent?.mode).toBe('active');expect(f.store.normalFormNode).toBeNull();expect(f.store.descriptor?.execution).toBe('disabled')
    vi.stubEnv('VITE_XLINK_H5_MOCK_E2E','false')
