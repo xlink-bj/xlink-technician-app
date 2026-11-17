@@ -29,7 +29,7 @@ const record = {
   values: { note: ' first value ' },
 }
 
-describe('EQ02 extracted Action Workspace pure draft/identity guard', () => {
+describe('Action Workspace pure draft/identity guard', () => {
   it('normalizes only supported primitive appointment values', () => {
     expect(appointmentValue(null)).toBeNull()
     expect(appointmentValue(false)).toBe(false)

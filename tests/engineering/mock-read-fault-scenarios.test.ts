@@ -6,7 +6,7 @@ import {
 } from '@adapters/api/mock'
 
 const path = 'basic/serviceAppointment/queryById/' + mockCommandScenarioIds.quotationFoundation
-describe('EQ05B explicit synthetic read failure/latency scenarios', () => {
+describe('Explicit synthetic read failure/latency scenarios', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.unstubAllEnvs()

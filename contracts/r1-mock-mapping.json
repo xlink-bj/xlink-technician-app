@@ -43,7 +43,7 @@
       "domain": "动态 FormDef 字段",
       "sourceEvidence": "docs/verification/R1_MOCK_MAPPING_CLOSURE_20261105.md",
       "unitTests": [
-        "tests/engineering/r1-stage1-forms-options.test.ts",
+        "tests/engineering/r1-forms-add-options-read-contract.test.ts",
         "tests/engineering/r1-model-contract-parity.test.ts",
         "tests/g4f/r1-current-formdef-read.test.ts",
         "tests/engineering/r1-current-formdef-structure.test.ts"

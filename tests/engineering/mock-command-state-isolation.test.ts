@@ -7,7 +7,7 @@ import {
   tryMockRead, isMockOwnedRead,
 } from '@adapters/api/mock'
 
-describe('EQ05 isolated Mock command state lifetime and provenance', () => {
+describe('Isolated Mock command state lifetime and provenance', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     resetMockCommandState()

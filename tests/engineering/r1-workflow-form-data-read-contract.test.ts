@@ -15,7 +15,7 @@ const rawNode = {
   nodeDef: { nodeType: 'repeat', name: 'Synthetic repeated form' },
 }
 
-describe('R1 Stage1 production read contracts — synthetic only', () => {
+describe('R1 Workflow and FormData production read contracts — synthetic only', () => {
   it('maps queryNode data array and preserves source-defined workflow identity', async () => {
     const execute = vi.fn(async () => ({ data: [rawNode] }))
     const adapter = createTechnicianApiReadAdapter({ execute })

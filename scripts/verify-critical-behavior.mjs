@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * EQ06 behavior authority lane. Unlike source-string tests, every entry here
+ * Critical behavior authority lane. Unlike source-string tests, every entry here
  * exercises an actual domain, adapter, or state transition through assertions.
  *
  * Explicit manifests keep Codex changes from accidentally skipping the
@@ -23,21 +23,21 @@ const suites = Object.freeze({
   ],
   'action-draft-catalog': [
     'tests/g4d/action-workspace.test.ts',
-    'tests/engineering/eq02-action-draft-helpers.test.ts',
-    'tests/engineering/eq04-quotation-catalog-bridge.test.ts',
+    'tests/engineering/action-draft-identity-helpers.test.ts',
+    'tests/engineering/quotation-current-action-catalog-bridge.test.ts',
   ],
   'mock-isolation-failure': [
-    'tests/engineering/eq01-mock-scenarios.test.ts',
-    'tests/engineering/eq05-mock-command-state.test.ts',
-    'tests/engineering/eq05b-mock-fault-scenarios.test.ts',
+    'tests/engineering/mock-scenario-routing.test.ts',
+    'tests/engineering/mock-command-state-isolation.test.ts',
+    'tests/engineering/mock-read-fault-scenarios.test.ts',
   ],
-  // EQ07: stale async saves/edits must never unlock a workflow write.
+  // Stale async saves/edits must never unlock a workflow write.
   'async-form-workflow-p0': [
-    'tests/engineering/eq07-command-state-consistency.test.ts',
+    'tests/engineering/action-command-revision-consistency.test.ts',
     'tests/engineering/r1-appointment-wire-unification.test.ts',
     'tests/engineering/r1-appointment-conditional-runtime.test.ts',
   ],
-  // EQ09: actor isolation and durable Order replay fences are business-critical.
+  // Actor isolation and durable Order replay fences are business-critical.
   'actor-price-and-order-isolation': [
     'tests/engineering/r1-catalog-price-identity-fence.test.ts',
     'tests/g4f/p0-role-order-tenant-negative.test.ts',

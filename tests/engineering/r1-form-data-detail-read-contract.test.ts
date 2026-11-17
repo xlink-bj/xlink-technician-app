@@ -7,7 +7,7 @@ const ordinary = {
   dataId: asOpaqueId<'FormDataId'>('saved-form-data-1'),
 }
 
-describe('R1 Stage1 existing FormData detail — source-specific read contract', () => {
+describe('R1 existing FormData detail — source-specific read contract', () => {
   it('uses exact-ID bounded extForm/query for ordinary forms/repeat, no read bypass', async () => {
     const execute = vi.fn(async () => ({data:[{
       _id:'saved-form-data-1',formDefId:'source-forms-definition',

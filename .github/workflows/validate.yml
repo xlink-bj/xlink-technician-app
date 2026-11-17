@@ -81,7 +81,7 @@ jobs:
             'tests/g4f/quotation-order-reconstruction.test.ts',
             'tests/g4f/quotation-order-signing-read-boundary.test.ts',
             'tests/engineering/r1-action-workspace-foundation.test.ts',
-            'tests/engineering/eq07-command-state-consistency.test.ts',
+            'tests/engineering/action-command-revision-consistency.test.ts',
             'tests/g4d/action-workspace.test.ts',
           ]
           for (const path of baseline) if (!existsSync(path)) throw new Error(`Missing critical baseline: ${path}`)

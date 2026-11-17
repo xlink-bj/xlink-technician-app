@@ -8,7 +8,7 @@ import {
 import { createUniApiReadTransport } from '@adapters/api/uni-api-read-transport'
 import { createQuotationOrderReadAdapter } from '@adapters/api/quotation-order-api'
 
-describe('EQ01 canonical Mock Scenario Registry and no-network ownership', () => {
+describe('Canonical Mock Scenario Registry and no-network ownership', () => {
   afterEach(() => {
     vi.unstubAllEnvs()
     resetBusinessMockCache()

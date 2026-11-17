@@ -127,7 +127,7 @@ function fixture(kind: 'survey' | 'appointment') {
   }
 }
 
-describe('EQ07 P0 command and form revision consistency / synthetic, no business network', () => {
+describe('Command and form revision consistency / synthetic, no business network', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'test')

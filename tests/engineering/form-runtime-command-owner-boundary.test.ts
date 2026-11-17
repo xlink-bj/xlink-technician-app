@@ -39,7 +39,7 @@ function dynamic(values: DynamicFormRead['values']): DynamicFormRead {
   return { fields: [need, conditional], values }
 }
 
-describe('EQ08 one Form Runtime schema projection and one Adapter command-wire owner', () => {
+describe('One Form Runtime schema projection and one Adapter command-wire owner', () => {
   it('carries all verified R1 field metadata without changing identity or defaulting unsupported options', () => {
     const field: FormFieldRead = {
       ...conditional, order: 2, fixed: true, operationType: 'view',

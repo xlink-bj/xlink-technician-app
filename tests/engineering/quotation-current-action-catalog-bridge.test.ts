@@ -41,7 +41,7 @@ function fixture() {
   }
 }
 
-describe('EQ04 current-Action quotation catalog bridge — behavior and provenance', () => {
+describe('Current-Action quotation catalog bridge — behavior and provenance', () => {
   it.each([
     ['unloaded', { ...enabled, loadState: 'loading' }],
     ['read-only', { ...enabled, descriptor: { ...enabled.descriptor!, execution: 'read_only' } }],

@@ -49,7 +49,7 @@
 - **L1 / 开发回路**：受影响单测、类型、静态边界，必要时本机/云 H5 UI；工具不应承诺从 GitHub PR 获得即时 HMR。
 - **每次 main push**：Validate 运行 `verify` 与三端构建；Validate Main H5 Smoke 运行现有 16 条真实 App Mock 用例，覆盖 Save/Process 与报价回读、输入/搜索 DOM、媒体恢复及双品牌。两个 workflow 的实际结果分别记录；快检通过不代表完整 H5 矩阵通过。
 - **完整 H5**：[Validate Main H5 UX](../../.github/workflows/validate-main-h5.yml) 每日 19:15 UTC 定时运行，也可在 GitHub Actions 手动运行（`gh workflow run validate-main-h5.yml --ref main`）；既有标记 PR 入口继续可用。它保留表单保存/流程、草稿、角色媒体、创建与其他专项的既定用例和失败汇总。需显式本地合成写入授权的问卷、业务选择器用例分别在专项配置中运行；不带该授权的泛用 Mock 不冒充其通过。普通 main push 不会取消完整验收。
-- **何时补跑完整 H5**：权限/角色及租户数据隔离、报价/订单金额或签署、草稿异步与弱网、媒体、共享平台或跨端关键流程，以及 workflow、Playwright 配置、测试设施、共享 fixture、构建/运行环境发生变化时，改动负责人在对应 main SHA 上手动运行并核对 run 的 `head_sha`。完整失败未修复时，相关范围不得报告验收完成；快检绿不替代完整结果，也不借用旧 SHA 的 PASS。
+- **何时补跑完整 H5**：权限/角色及租户数据隔离、报价/订单金额或签署、草稿异步与弱网、媒体、共享平台或跨端关键流程，以及改变 H5 测试选择或运行语义的 workflow、Playwright 配置、测试设施、共享 fixture、构建/运行环境发生变化时，改动负责人在对应 main SHA 上手动运行并核对 run 的 `head_sha`。纯测试路径等价迁移须核对测试内容、选择集合及受影响验证；仅因 workflow 中的路径文字变化，不机械重跑完整 H5。完整失败未修复时，相关范围不得报告验收完成；快检绿不替代完整结果，也不借用旧 SHA 的 PASS。
 - **每日失败归责**：日常项目协调 owner 检查定时完整 H5 run 的终态，指派最近相关改动负责人排查、修复并重跑；未修复前相关范围保持 FAIL/NOT_ACCEPTED。普通 main push 不因此暂停。
 - **独立专项**：DS02A 视觉 Golden、报价 CSS 归属与平台特有能力按影响触发。仅绑定旧草稿分支和固定历史提交的专项 workflow 已移除；历史报告保留其当时的证据，不构成当前 main push 门禁。
 - **Release/Owner**：同视口商业 UI 接受、已授权的微信开发者工具/物理设备验证、Android/iOS、Beta 真实写入分别记录。不能用 CI green 替代这些 Gate。
@@ -82,8 +82,9 @@
 | 已退役的 CI 入口 | 删除 24 个只绑定固定旧草稿分支/祖先的 workflow：`eq02/05/05b/06/07/08/09`、`closure-c2/c3`、`ds07c4a/c4b/c5/c8/c9/c10/c11`、`r1-a06a/appointment/f2/f3/f4/login`、`m1-i7/m1-unified`。它们没有 main push、定时或手动入口；保留 `validate.yml`、`validate-main-h5-smoke.yml`、`validate-main-h5.yml` 和 10 个可按需运行的视觉/专项 workflow。 |
 | 已退役的自证 | 删除仅供旧 M1 候选 workflow 使用的 `scripts/check-m1-i7-reconciliation.mjs`、`scripts/check-m1-unified-main-candidate.mjs` 与对应的 `tests/g4f/m1-unified-main-candidate.test.ts`；不删除现行行为/边界测试。 |
 | 已迁移的业务代码 | DEV Mock 表单与报价控制器、端口、面板及对应 H5/工程测试改为 `dev-mock-*` 路径；隔离的 R1 特殊表单命令、Pilot 组合/对账/网关改为 `src/app/r1-special-form-*`，同步符号和直接测试路径。仅命名与导入迁移；协议、收据键、角色判断、写入开关不变。`scripts/check-engineering-ownership.mjs`、`scripts/check-mp-wxss.mjs`、`scripts/quality-census.mjs` 同样只改入口名。 |
-| 保留的实际行为守卫 | `check:critical`、`check:engineering-ownership`、`check:module-dependencies`、`check:r1-mock-mapping` 及现有单测继续保护金额、授权、草稿、异步状态与 Mock 隔离。旧 EQ/G4 前缀的测试若仍验证这些行为，不因名称删除或放松断言。 |
-| 待分组迁移：来源读取与隔离 | `tests/engineering/r1-stage1-forms-options.test.ts`、`r1-stage1-form-detail-read-contract.test.ts`、`r1-stage1-live-read-contract.test.ts`、`r1-stage1-mp-mock-fixtures.test.ts`、`r1-stage1-no-beta-shadow.test.ts`，分别按来源字段/只读合同、DEV Mock fixture、Beta fail-closed 边界复核后再命名。 |
-| 待分组迁移：行为测试 | `tests/engineering/eq01-mock-scenarios.test.ts`、`eq05-mock-command-state.test.ts`、`eq05b-mock-fault-scenarios.test.ts` 属 Mock；`eq02-action-draft-helpers.test.ts`、`eq07-command-state-consistency.test.ts` 属草稿/异步；`eq04-quotation-catalog-bridge.test.ts` 属报价；`eq08-action-architecture.test.ts` 属架构；`eq03-quality-census.test.ts` 属质量盘点。先核对 `verify:quick`、CI、映射及证据消费者，再按能力更名。 |
+| 保留的实际行为守卫 | `check:critical`、`check:engineering-ownership`、`check:module-dependencies`、`check:r1-mock-mapping` 及现有单测继续保护金额、授权、草稿、异步状态与 Mock 隔离。测试文件更名不删除或放松断言。 |
+| 已迁移：来源读取与隔离测试 | `tests/engineering/r1-forms-add-options-read-contract.test.ts`、`r1-form-data-detail-read-contract.test.ts`、`r1-workflow-form-data-read-contract.test.ts`、`dev-mock-forms-repeat-read-fixtures.test.ts`、`r1-special-form-isolated-pilot-shadow.test.ts`。分别覆盖来源选项、精确回读、Workflow/FormData 身份、DEV Mock 读、隔离 Pilot 的无 Beta 实写负例；同步 `verify:quick` 和 R1 映射路径。 |
+| 已迁移：行为测试 | `tests/engineering/mock-scenario-routing.test.ts`、`mock-command-state-isolation.test.ts`、`mock-read-fault-scenarios.test.ts` 属 Mock；`action-draft-identity-helpers.test.ts`、`action-command-revision-consistency.test.ts` 属草稿/异步；`quotation-current-action-catalog-bridge.test.ts` 属报价；`form-runtime-command-owner-boundary.test.ts` 属架构；`quality-census-accounting.test.ts` 属质量盘点。同步 `verify:quick`、关键行为清单和 Validate 路径；断言保持原样。 |
+| 待按业务归组：G4 测试 | `tests/g4a/` 至 `tests/g4ux/` 共 143 个测试文件和 3 个支持文件，保留其行为。后续按登录、工单、详情、Action、问卷、报价/订单/签约及跨域集成分组迁移；`g4f` 混合多个商业能力、`g4ux` 跨页面，不把整目录机械映射为一个业务。迁移时同步 `package.json`、关键行为清单、R1 映射和专项 workflow 的路径消费者。 |
 | 保留的稳定测试契约及历史档案 | 既有 `a-stage-*` data-testid 与 `XLINK_STAGE_B_SCREENSHOTS` 是测试选择器/截图环境变量，跨 H5 用例被消费；改名需单独核对所有消费者。`docs/governance/` 的固定快照与 `docs/verification/` 的历史验收不改写为当前状态。 |
 
