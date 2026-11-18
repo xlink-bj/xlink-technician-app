@@ -7,9 +7,10 @@ import {r1RepeatActionsKey} from '@features/work-orders/r1-repeat-actions-port'
 import {r1NodeFormsReaderKey} from '@features/work-orders/r1-node-forms-read'
 import {installLocalFixtureBrowser} from './local-fixture-lock-test-support'
 beforeEach(()=>{setActivePinia(createPinia());installLocalFixtureBrowser()});afterEach(()=>vi.unstubAllGlobals())
-async function mounted(host=true,multiple=false){const f=appointmentFixture();if(multiple){const grant=JSON.parse(f.env.VITE_XLINK_R1_REPEAT_GRANT);grant.recordIds=['a','b'];f.env.VITE_XLINK_R1_REPEAT_GRANT=JSON.stringify(grant)}const s=await f.load(),root=node('root'),Panel=component('R1NodeFormsReadPanel'),Content=host?component('R1NodeFormsActionContent',Panel):Panel
- const props=Vue.reactive({reader:f.reader,workOrderId:'s',runtimeNodeId:'n',readRevision:0,actorScope:'actor-A',node:s.node,visible:true})
- const app=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Content,props)}));app.component('picker',Vue.defineComponent({inheritAttrs:false,setup:(_,ctx)=>()=>Vue.h('picker',ctx.attrs,ctx.slots.default?.())}));app.provide(r1NodeFormsReaderKey,f.reader);app.provide(r1RepeatActionsKey,f.provider());app.mount(root);await settle()
+const Navigator = Vue.defineComponent({ setup: (_, ctx) => () => Vue.h('navigator', ctx.slots.default?.()) })
+async function mounted(host=true,multiple=false,appointmentArchive?:{summary:boolean;recordId?:string}){const f=appointmentFixture();if(multiple){const grant=JSON.parse(f.env.VITE_XLINK_R1_REPEAT_GRANT);grant.recordIds=['a','b'];f.env.VITE_XLINK_R1_REPEAT_GRANT=JSON.stringify(grant)}const s=await f.load(),root=node('root'),Panel=component('R1NodeFormsReadPanel'),Content=host?component('R1NodeFormsActionContent',Panel):Panel
+ const props=Vue.reactive({reader:f.reader,workOrderId:'s',runtimeNodeId:'n',readRevision:0,actorScope:'actor-A',node:s.node,visible:true,appointmentArchive})
+ const app=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Content,props)}));app.component('picker',Vue.defineComponent({inheritAttrs:false,setup:(_,ctx)=>()=>Vue.h('picker',ctx.attrs,ctx.slots.default?.())}));app.component('navigator',Navigator);app.provide(r1NodeFormsReaderKey,f.reader);app.provide(r1RepeatActionsKey,f.provider());app.mount(root);await settle()
  const get=(id:string)=>find(root,n=>n.props['data-testid']===id),tap=async(id:string)=>{const n=get(id);expect(n,id).toBeDefined();expect(n!.props.disabled).not.toBe(true);await n!.props.onTap();await settle()}
  const read=async()=>{find(root,n=>n.type==='button'&&text(n).includes('读取已保存表单'))!.props.onTap();await settle()}
  const fill=async(key:string,value:string)=>{const n=find(root,n=>n.props['data-key']===key);expect(n,key).toBeDefined();n!.props.onInput(value);await settle()}
@@ -42,4 +43,40 @@ it('record-keyed presentation rejects A confirmation after an authorized switch 
 it('a retained visible panel renews reader ownership and an old child unmount cannot revoke it',async()=>{
  const h=await mounted(false);const Panel=h.Panel,otherRoot=node('other'),other=renderer.createApp(Vue.defineComponent({setup:()=>()=>Vue.h(Panel,{reader:h.f.reader,workOrderId:'s',runtimeNodeId:'n',actorScope:'actor-A'})}));other.provide(r1RepeatActionsKey,h.f.provider())
  try{await h.read();expect(h.get('r1-normal-form-record')).toBeDefined();other.mount(otherRoot);await settle();find(otherRoot,n=>n.type==='button'&&text(n).includes('读取已保存表单'))!.props.onTap();await settle();expect(h.get('r1-normal-form-record')).toBeUndefined();h.props.readRevision++;await settle();expect(h.get('r1-normal-form-record')).toBeDefined();other.unmount();await settle();expect(h.get('r1-normal-form-record')).toBeDefined();expect(h.f.writes).toHaveLength(0)}finally{other.unmount();h.app.unmount()}
+})
+
+it('a retained archive renews reader ownership on MP reentry and the older view can safely unmount', async () => {
+  const h = await mounted(false, false, { summary: false, recordId: 'a' })
+  const otherRoot = node('other')
+  const other = renderer.createApp(Vue.defineComponent({ setup: () => () => Vue.h(h.Panel, {
+    reader: h.f.reader, workOrderId: 's', runtimeNodeId: 'n', actorScope: 'actor-A',
+    appointmentArchive: { summary: false, recordId: 'b' },
+  }) }))
+  other.component('navigator', Navigator)
+  other.provide(r1RepeatActionsKey, h.f.provider())
+  const detail = 'appointment-record-detail'
+  let otherMounted = false
+
+  try {
+    expect(h.get(detail)).toBeDefined()
+    other.mount(otherRoot)
+    otherMounted = true
+    await settle()
+    expect(h.get(detail)).toBeUndefined()
+    expect(find(otherRoot, n => n.props['data-testid'] === detail)).toBeDefined()
+
+    h.props.readRevision++
+    await settle()
+    expect(h.get(detail)).toBeDefined()
+    expect(find(otherRoot, n => n.props['data-testid'] === detail)).toBeUndefined()
+
+    other.unmount()
+    otherMounted = false
+    await settle()
+    expect(h.get(detail)).toBeDefined()
+    expect(h.f.writes).toHaveLength(0)
+  } finally {
+    if (otherMounted) other.unmount()
+    h.app.unmount()
+  }
 })

@@ -80,9 +80,8 @@ const editing = ref(false)
 const confirmCancel = ref(false)
 const selectedNode=computed(()=>props.nodeId ? props.nodes.find(node=>String(node.id)===props.nodeId) : props.nodes.length===1?props.nodes[0]:undefined)
 const panelKey=computed(()=>JSON.stringify([props.workOrderId,selectedNode.value,props.actorScope,props.recordId]))
-const archivePresentation = computed(() => ({ summary: props.summary, recordId: props.recordId, route: recordRoute }))
+const archivePresentation = computed(() => ({ summary: props.summary, recordId: props.recordId }))
 function route(nodeId:string){return appointmentArchiveRoute(props.workOrderId,nodeId)}
-function recordRoute(recordId?:string){return appointmentArchiveRoute(props.workOrderId,String(selectedNode.value!.id),recordId)}
 // The scoped slot crosses native component boundaries, so the editor
 // registers its controls directly and releases only its own registration.
 function registerEditor(controls: AppointmentArchiveEditorControls): () => void {

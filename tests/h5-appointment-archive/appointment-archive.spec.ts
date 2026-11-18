@@ -92,6 +92,7 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
         await expect(page.getByTestId('appointment-record-a')).toBeVisible()
         await page.getByTestId('appointment-record-a').click()
         await expect(page).toHaveURL(/&record=a/)
+        await expect(page.getByTestId('appointment-record-detail')).toContainText('10:37')
       }
       await expect(page.getByTestId('action-workspace-context')).toHaveCount(0)
       await expect(page.getByTestId('detail-read-context')).toHaveCount(0)

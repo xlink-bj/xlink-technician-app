@@ -2,45 +2,13 @@
   <view data-testid="r1-normal-form-read" :class="{'form-read--commercial':commercial}">
     <slot v-if="archiveEditing" name="archive-edit-experience" :context="archiveEditPresentation" :busy="busy"
       :feedback="feedback.tone === 'error' ? displayMessage : ''" />
-    <template v-else-if="appointmentArchive">
-      <view class="archive-heading" :class="{ 'archive-summary-heading': appointmentArchive.summary }"><text class="archive-title">预约信息</text>
-        <navigator v-if="visibleSnapshot?.records.length && !busy && (appointmentArchive.summary || appointmentArchive.recordId)" class="archive-link" data-testid="appointment-archive-open"
-          :url="appointmentArchive.route(appointmentArchive.summary && visibleSnapshot.records.length === 1 ? String(visibleSnapshot.records[0]!.id) : undefined)">
-          {{ appointmentArchive.summary ? (visibleSnapshot.records.length === 1 ? '查看详情' : `查看全部 ${visibleSnapshot.records.length} 条`) : '全部预约' }} ›
-        </navigator>
-      </view>
-      <text v-if="loading" class="archive-hint" data-testid="appointment-archive-loading">正在读取预约记录…</text>
-      <view v-else-if="!visibleSnapshot" class="archive-failure" data-testid="appointment-archive-error">
-        <text class="archive-hint">{{ displayMessage || '预约记录尚未读取' }}</text>
-        <AppButton variant="text" size="compact" :disabled="busy" @tap="load">重新读取</AppButton>
-      </view>
-      <template v-else>
-        <text v-if="!visibleSnapshot.records.length" class="archive-hint" data-testid="appointment-archive-empty">暂无预约记录</text>
-        <text v-else-if="appointmentArchive.summary && visibleSnapshot.records.length > 1" class="archive-copy">共 {{ visibleSnapshot.records.length }} 条预约，请选择记录查看</text>
-        <view v-else-if="appointmentArchive.summary" :class="{ 'appointment-preview': appointmentSummaryFields.length }"
-          data-testid="appointment-archive-summary">
-          <view v-for="field in appointmentSummaryFields" :key="field.fieldId" class="archive-copy appointment-preview__row">
-            <text>{{ field.label }}<text class="appointment-preview__separator">：</text></text><text class="appointment-preview__value">{{ field.text }}</text>
-          </view>
-        </view>
-        <template v-else>
-          <text v-if="displayMessage && feedback.tone !== 'neutral'" class="archive-hint" role="status" data-testid="r1-normal-form-read-message">{{ displayMessage }}</text>
-          <text v-if="appointmentArchive.recordId && !archiveRecords.length" class="archive-hint" data-testid="appointment-record-unavailable">这条预约暂不可查看，请返回全部预约重新选择。</text>
-          <navigator v-for="(record,index) in !appointmentArchive.recordId ? visibleSnapshot.records : []" :key="String(record.id)"
-            :url="appointmentArchive.route(String(record.id))" class="archive-entry archive-navigator" :data-testid="`appointment-record-${record.id}`">
-            <view class="archive-heading"><text class="archive-entry-title">预约记录 {{ index + 1 }}</text><text class="archive-link">查看详情 ›</text></view>
-            <text v-for="field in appointmentPreview(record)" :key="field.fieldId" class="archive-copy">{{ field.label }}：{{ field.text }}</text>
-          </navigator>
-          <view v-for="record in archiveRecords" :key="String(record.id)" data-testid="appointment-record-detail">
-            <AppInformationRow v-for="field in appointmentReadFields(record)" :key="field.fieldId" :data-testid="`r1-normal-value-${field.valueKey}`">
-              <template #label>{{ field.label }}</template><template #value>{{ field.text }}</template>
-            </AppInformationRow>
-            <AppButton v-if="canEditAppointment(String(record.id))" data-testid="appointment-modify" @tap="edit(String(record.id))">修改预约</AppButton>
-            <text v-else class="archive-hint" data-testid="appointment-read-only">此预约当前仅可查看，不能修改。</text>
-          </view>
-        </template>
-      </template>
-    </template>
+    <AppointmentArchiveReadContent v-else-if="appointmentArchive"
+      :work-order-id="workOrderId" :runtime-node-id="runtimeNodeId"
+      :summary="appointmentArchive.summary" :record-id="appointmentArchive.recordId"
+      :snapshot="visibleSnapshot" :loading="loading" :busy="busy" :message="displayMessage"
+      :show-feedback="feedback.tone !== 'neutral'"
+      :can-edit="Boolean(appointmentArchive.recordId && canEditAppointment(appointmentArchive.recordId))"
+      @reload="load" @edit="edit" />
     <template v-else>
     <text v-if="!commercial" class="form-read__hint">读取当前工单节点已保存的记录。查看不会保存或推进流程。</text>
     <AppButton variant="secondary" size="compact" :disabled="loading || busy || fileBusy || fileCancelling || draftWorking" @tap="load">
@@ -136,27 +104,6 @@
   </view>
 </template>
 
-<script lang="ts">
-import { shallowRef as readerOwnerRef, toRaw as rawReader } from 'vue'
-import type { R1NodeFormsReader as ReaderPort } from './r1-node-forms-read'
-// View ownership is separate from the reader's private source/command proofs.
-const normalReaderViews = new WeakMap<ReaderPort, ReturnType<typeof readerOwnerRef<object | null>>>()
-function claimNormalReader(reader: ReaderPort) {
-  reader=rawReader(reader)
-  let current = normalReaderViews.get(reader)
-  if (!current) { current=readerOwnerRef<object|null>(null);normalReaderViews.set(reader,current) }
-  const state=current, owner={}
-  const previous=state.value;state.value=owner
-  if (previous) reader.clear() // Immediately revoke a superseded view's source.
-  const own=()=>state.value===owner
-  return { drop:()=>{if(own())state.value=null}, reader:{...reader,
-    isCurrent:(snapshot: Parameters<ReaderPort['isCurrent']>[0])=>own()&&reader.isCurrent(snapshot),
-    clear:()=>{if(own())reader.clear()},
-    load:async(...args:Parameters<ReaderPort['load']>)=>{if(!own())return null;const value=await reader.load(...args);return own()?value:null},
-  } as ReaderPort }
-}
-</script>
-
 <script setup lang="ts">
 import { useFormInputValidityScope } from '@shared/ui/form-input-validity'
 
@@ -165,8 +112,7 @@ import { r1ConfiguredFileReadDisplay } from '@shared/form/r1-configured-file-rea
 import { computed, inject, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
-import AppInformationRow from '@shared/ui/AppInformationRow.vue'
-import { appointmentDisplayFor } from './appointment-time'
+import AppointmentArchiveReadContent from './AppointmentArchiveReadContent.vue'
 import AppTaskSectionHeading from '@shared/ui/AppTaskSectionHeading.vue'
 import {r1FormFieldGroups,type R1FormWorkspaceFooter,type R1FormFooterAction} from './r1-form-workspace-presentation'
 import R1FormFieldControl from './R1FormFieldControl.vue'
@@ -180,15 +126,15 @@ import type { R1LocalFieldValue } from './r1-local-form-fields'
 import { r1NormalFormDraftsKey, r1NormalDraftValues, type R1NormalDraftRead, type R1NormalDraftSession } from './r1-normal-form-drafts'
 import { r1RepeatActionsKey } from './r1-repeat-actions-port'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot } from './r1-node-forms-read'
+import { openR1NodeFormsViewSession } from './r1-node-forms-view-session'
 
 const props = defineProps<{ readonly reader: R1NodeFormsReader; readonly workOrderId: string;
   readonly runtimeNodeId: string; readonly commercial?:boolean; readonly actorScope?: string | null;
   readonly readRevision?: number;
-  readonly appointmentArchive?: { readonly summary: boolean; readonly recordId?: string; route(recordId?: string): string };
+  readonly appointmentArchive?: { readonly summary: boolean; readonly recordId?: string };
   readonly editExperienceOverride?: (snapshot: R1NodeFormsSnapshot, recordId: string) => boolean;
   readonly readFieldOverride?: (snapshot: R1NodeFormsSnapshot, record: FormDataRead, field: R1RecordReadField) => boolean }>()
-let readerView = claimNormalReader(props.reader)
-let viewReader = readerView.reader
+let viewReader = openR1NodeFormsViewSession(props.reader)
 // Preserve the reader's exact identity while keeping the empty→loaded change reactive.
 const snapshot = shallowRef<R1NodeFormsSnapshot | null>(null)
 const snapshotActorScope = ref<string | null>(null)
@@ -217,23 +163,6 @@ const emit = defineEmits<{ (event: 'changed'): void;
 const archiveEditing = computed(() => Boolean(props.appointmentArchive && editing.value))
 watch(archiveEditing, value => emit('archive-edit-change', value))
 const actions = computed(() => visibleSnapshot.value ? actionProvider?.forSnapshot(visibleSnapshot.value) ?? null : null)
-const archiveRecords = computed(() => props.appointmentArchive?.recordId
-  ? visibleSnapshot.value?.records.filter(record => String(record.id) === props.appointmentArchive!.recordId) ?? [] : [])
-function appointmentReadFields(record: FormDataRead) {
-  const source = visibleSnapshot.value
-  return source ? projectR1RecordReadFields(source.definition, record).map(field =>
-    !field.unavailable && source.definition.fields?.find(f => f.fieldId === field.fieldId)?.type === 'datetime'
-      ? { ...field, text: appointmentMinuteText(record.values?.[field.valueKey]) } : field) : []
-}
-function appointmentMinuteText(value: unknown): string {
-  const parsed = appointmentDisplayFor(value)
-  return parsed ? `${parsed.date} ${parsed.timeLabel}` : typeof value === 'string' && value ? value : '—'
-}
-function appointmentPreview(record: FormDataRead) { return appointmentReadFields(record).filter(field => ['need','datetime'].includes(field.valueKey)) }
-const appointmentSummaryFields = computed(() => {
-  const record = visibleSnapshot.value?.records[0]
-  return record ? appointmentPreview(record) : []
-})
 function matchesArchiveEdit(id: string): boolean {
   const archive = props.appointmentArchive
   return !archive || (!archive.summary && archive.recordId === id)
@@ -264,7 +193,7 @@ let pendingEditor: { readonly id: string | undefined; readonly source: string | 
 function editSource(source: R1NodeFormsSnapshot, id: string): string | null {
   try {
     if (!props.actorScope || !viewReader.isCurrent(source)) return null
-    const original = viewReader.currentFormOriginal?.(source, id)
+    const original = viewReader.currentFormOriginal(source, id)
     if (!original) return null
     return JSON.stringify([props.actorScope, source.workOrderId, source.node,
       source.definition, source.fillableFieldIds ?? null, id, original], (_key, value) =>
@@ -303,14 +232,48 @@ const displayMessage=computed(()=>props.commercial && actions.value && !actions.
 // Share only the exact visible read state, never a save ACK or the stale parent EXTS summary.
 watch(visibleSnapshot, value => emit('snapshot-change', value && snapshotActorScope.value
   ? { actorScope: snapshotActorScope.value, snapshot: value } : null), { immediate: true, flush: 'sync' })
-function clear() { lastLocalWrite=null;draftSession=null; draftRead.value=null; draftMessage.value=''; draftWorking.value=false; confirmDraftDiscard.value=false; actions.value?.fileMedia?.dispose(); version++; pendingEditor = null; editorSource = null; editorIdentity = null; viewReader.clear(); snapshot.value = null; snapshotActorScope.value = null; loading.value = false; busy.value = false; fileEditorClosed.value=false;fileCancelling.value=false; message.value = ''; values.value = {}; confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined }
-watch(() => [props.workOrderId, props.runtimeNodeId, props.actorScope], clear)
-onBeforeUnmount(()=>{if(archiveEditing.value)emit('archive-edit-change',false);clear();readerView.drop()})
-watch(()=>props.reader,next=>{clear();readerView.drop();readerView=claimNormalReader(next);viewReader=readerView.reader})
+function resetPanel(releaseReader = false) {
+  lastLocalWrite = null
+  draftSession = null
+  draftRead.value = null
+  draftMessage.value = ''
+  draftWorking.value = false
+  confirmDraftDiscard.value = false
+  actions.value?.fileMedia?.dispose()
+  version++
+  pendingEditor = null
+  editorSource = null
+  editorIdentity = null
+  if (releaseReader) viewReader.release()
+  else viewReader.clear()
+  snapshot.value = null
+  snapshotActorScope.value = null
+  loading.value = false
+  busy.value = false
+  fileEditorClosed.value = false
+  fileCancelling.value = false
+  message.value = ''
+  values.value = {}
+  confirmCompletion.value = false
+  confirmSaveCompletion.value = false
+  editing.value = false
+  editingId.value = undefined
+}
+function renewReaderSession(reader: R1NodeFormsReader) {
+  resetPanel(true)
+  viewReader = openR1NodeFormsViewSession(reader)
+}
+watch(() => [props.workOrderId, props.runtimeNodeId, props.actorScope], () => resetPanel())
+onBeforeUnmount(() => {
+  if (archiveEditing.value) emit('archive-edit-change', false)
+  resetPanel(true)
+})
+watch(() => props.reader, renewReaderSession)
 // MP may retain a custom component despite a changed Vue key. A visible
 // archive page explicitly renews its reader ownership before reading again.
-watch(()=>props.readRevision,()=>{
-  clear();readerView.drop();readerView=claimNormalReader(props.reader);viewReader=readerView.reader;void load()
+watch(() => props.readRevision, () => {
+  renewReaderSession(props.reader)
+  void load()
 })
 watch(() => props.appointmentArchive ? [props.workOrderId,props.runtimeNodeId,props.actorScope] : null,
   value => { if(value)void load() }, { immediate: true })
@@ -334,7 +297,7 @@ async function load() {
   snapshot.value = null; message.value = ''; loading.value = true
   try {
     const value = await viewReader.load(props.workOrderId, props.runtimeNodeId)
-    if (ticket !== version || props.actorScope !== actorScope || !viewReader.isCurrent(value)) return
+    if (!value || ticket !== version || props.actorScope !== actorScope || !viewReader.isCurrent(value)) return
     snapshotActorScope.value = actorScope; snapshot.value = value
     const fresh=actions.value
     if(fresh?.fileMedia){
@@ -546,7 +509,7 @@ function edit(id:string) {
   const initial=actions.value.initialValues?.(id)
   if(!initial||actions.value.beginEdit?.(id)===false)return
   pendingEditor=null;editorSource=visibleSnapshot.value?editSource(visibleSnapshot.value,id):null
-  editorIdentity=visibleSnapshot.value?viewReader.retainReadIdentity?.(visibleSnapshot.value)??null:null
+  editorIdentity=visibleSnapshot.value?viewReader.retainReadIdentity(visibleSnapshot.value):null
   values.value={...initial} as Record<string,R1LocalFieldValue>;editing.value=true;editingId.value=id
   confirmCompletion.value=false;confirmSaveCompletion.value=false
 }
@@ -605,5 +568,4 @@ async function complete() {
 
 <style scoped lang="scss">
 @import "@brand-ui/node-forms-read.scss";
-@import "@brand-ui/detail-archives.scss";
 </style>

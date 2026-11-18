@@ -659,6 +659,21 @@ cleanup. These capabilities belong to Action Runtime, not Appointment itself.
 
 The original G4-D follow-up called for separate Appointment UX review. Current dedicated time experience is implemented; exact capability and visual acceptance remain governed by current evidence and Owner review, not this historical task description.
 
+For existing appointments, `AppointmentArchiveReadContent` projects the guarded
+snapshot into the archive summary, list and detail. It emits read and edit
+requests to `R1NodeFormsReadPanel`, which checks the exact record and coordinates
+editing, draft state and authoritative reread. `AppointmentArchive` owns the
+Action Workspace shell, shared Work Order summary and cancel confirmation for
+editing. Appointment archive saves use the save-only path.
+
+The normal reader instance is shared with the action and draft providers in
+`bootstrap.ts` so they recognize the exact snapshots and proofs it issues.
+`openR1NodeFormsViewSession` manages exclusive view access to that instance.
+Takeover, owner release and scope changes in the owning view clear the reader's source.
+Superseded views cannot consume late reads or clear a newer view's source.
+When a cached MP archive reenters, its `readRevision` opens a new session before
+rereading. The reader and providers still enforce actor, node and record scope.
+
 ## 16. Non-Goals
 
 This shared architecture document does not itself authorize business side effects. Its original G4-D implementation scope excluded quotation, contract/signing and Survey; those historical exclusions are superseded by the bounded implementations documented in the current snapshot. Continuing non-goals are:
