@@ -1,8 +1,10 @@
 <template>
   <view data-testid="r1-normal-form-read" :class="{'form-read--commercial':commercial}">
-    <template v-if="appointmentArchive">
+    <slot v-if="archiveEditing" name="archive-edit-experience" :context="archiveEditPresentation" :busy="busy"
+      :feedback="feedback.tone === 'error' ? displayMessage : ''" />
+    <template v-else-if="appointmentArchive">
       <view class="archive-heading"><text class="archive-title">预约信息</text>
-        <navigator v-if="visibleSnapshot?.records.length && !editing && !busy && (appointmentArchive.summary || appointmentArchive.recordId)" class="archive-link" data-testid="appointment-archive-open"
+        <navigator v-if="visibleSnapshot?.records.length && !busy && (appointmentArchive.summary || appointmentArchive.recordId)" class="archive-link" data-testid="appointment-archive-open"
           :url="appointmentArchive.route(appointmentArchive.summary && visibleSnapshot.records.length === 1 ? String(visibleSnapshot.records[0]!.id) : undefined)">
           {{ appointmentArchive.summary ? (visibleSnapshot.records.length === 1 ? '查看详情' : `查看全部 ${visibleSnapshot.records.length} 条`) : '全部预约' }} ›
         </navigator>
@@ -27,17 +29,11 @@
             <text v-for="field in appointmentPreview(record)" :key="field.fieldId" class="archive-copy">{{ field.label }}：{{ field.text }}</text>
           </navigator>
           <view v-for="record in archiveRecords" :key="String(record.id)" data-testid="appointment-record-detail">
-            <template v-if="!editing">
-              <AppInformationRow v-for="field in appointmentReadFields(record)" :key="field.fieldId" :data-testid="`r1-normal-value-${field.valueKey}`">
-                <template #label>{{ field.label }}</template><template #value>{{ field.text }}</template>
-              </AppInformationRow>
-              <AppButton v-if="canEditAppointment(String(record.id))" data-testid="appointment-modify" @tap="edit(String(record.id))">修改预约</AppButton>
-              <text v-else class="archive-hint" data-testid="appointment-read-only">此预约当前仅可查看，不能修改。</text>
-            </template>
-            <template v-else>
-              <slot v-if="editPresentation" name="edit-experience" :context="editPresentation" />
-              <AppButton v-else variant="text" :disabled="busy" data-testid="appointment-edit-cancel" @tap="cancelEdit">取消修改</AppButton>
-            </template>
+            <AppInformationRow v-for="field in appointmentReadFields(record)" :key="field.fieldId" :data-testid="`r1-normal-value-${field.valueKey}`">
+              <template #label>{{ field.label }}</template><template #value>{{ field.text }}</template>
+            </AppInformationRow>
+            <AppButton v-if="canEditAppointment(String(record.id))" data-testid="appointment-modify" @tap="edit(String(record.id))">修改预约</AppButton>
+            <text v-else class="archive-hint" data-testid="appointment-read-only">此预约当前仅可查看，不能修改。</text>
           </view>
         </template>
       </template>
@@ -213,7 +209,10 @@ let lastLocalWrite: Promise<boolean> | null = null
 const draftMessage = ref(''), draftWorking = ref(false), confirmDraftDiscard = ref(false)
 const draftBlocked = computed(() => !editingId.value && Boolean(draftRead.value && draftRead.value.state !== 'empty'))
 const emit = defineEmits<{ (event: 'changed'): void;
+  (event: 'archive-edit-change', editing: boolean): void;
   (event: 'snapshot-change', value: { readonly actorScope: string; readonly snapshot: R1NodeFormsSnapshot } | null): void }>()
+const archiveEditing = computed(() => Boolean(props.appointmentArchive && editing.value))
+watch(archiveEditing, value => emit('archive-edit-change', value))
 const actions = computed(() => visibleSnapshot.value ? actionProvider?.forSnapshot(visibleSnapshot.value) ?? null : null)
 const archiveRecords = computed(() => props.appointmentArchive?.recordId
   ? visibleSnapshot.value?.records.filter(record => String(record.id) === props.appointmentArchive!.recordId) ?? [] : [])
@@ -228,8 +227,13 @@ function appointmentMinuteText(value: unknown): string {
   return parsed ? `${parsed.date} ${parsed.timeLabel}` : typeof value === 'string' && value ? value : '—'
 }
 function appointmentPreview(record: FormDataRead) { return appointmentReadFields(record).filter(field => ['need','datetime'].includes(field.valueKey)) }
+function matchesArchiveEdit(id: string): boolean {
+  const archive = props.appointmentArchive
+  return !archive || (!archive.summary && archive.recordId === id)
+}
 function canEditAppointment(id: string): boolean {
-  return Boolean(visibleSnapshot.value && props.editExperienceOverride?.(visibleSnapshot.value,id)
+  return Boolean(matchesArchiveEdit(id)
+    && visibleSnapshot.value && props.editExperienceOverride?.(visibleSnapshot.value,id)
     && actions.value?.canEdit?.(id) && !actions.value.locked())
 }
 const fileBusy=computed(()=>{void actions.value?.fileMedia?.revision.value;return actions.value?.fileMedia?.busy()??false})
@@ -267,16 +271,25 @@ const visibleSnapshot = computed(() => props.actorScope && props.actorScope === 
 // Presentation callbacks belong to this exact edit, never to a future record/view.
 const editPresentation = computed(() => {
   const source=visibleSnapshot.value,id=editingId.value,action=actions.value,identity=editorIdentity,ticket=version
-  if(!source||!id||!editing.value||!identity||!action||action.locked()||!action.canEdit?.(id)
+  if(!source||!id||!editing.value||!identity||!action||!matchesArchiveEdit(id)||action.locked()||!action.canEdit?.(id)
     ||!props.editExperienceOverride?.(source,id))return null
-  const owns=()=>version===ticket&&visibleSnapshot.value===source&&editingId.value===id&&editorIdentity===identity
+  const owns=()=>version===ticket&&visibleSnapshot.value===source&&editingId.value===id&&matchesArchiveEdit(id)&&editorIdentity===identity
     &&identity.isSameActor()&&actions.value===action&&!action.locked()&&action.canEdit?.(id)===true
     &&!busy.value&&!loading.value&&!draftBlocked.value&&!draftWorking.value&&!fileCancelling.value
   return {snapshot:source,recordId:id,fields:editableFields.value,values:Object.freeze({...values.value}),originalValues:Object.freeze({...action.initialValues?.(id)}),
     disabled:busy.value||loading.value||draftBlocked.value||draftWorking.value||fileCancelling.value,valid:validDraft.value,
     updateValue:(key:string,value:R1LocalFieldValue)=>{if(owns())setValue(key,value)},
-    saveOnly:async()=>{if(owns())await save(false)},
-    cancelArchiveEdit:props.appointmentArchive ? async()=>{if(owns())await cancelEdit()} : undefined}
+    saveOnly:async()=>{if(owns())await save(false)}}
+})
+const archiveEditPresentation = computed<typeof editPresentation.value>(previous => {
+  if (!archiveEditing.value) return null
+  // Preflight and readback replace the source while saving. Keep the current
+  // pane visible and disabled during that transition, with actor checks intact.
+  if (editPresentation.value) return editPresentation.value
+  if (busy.value && previous && previous.recordId === editingId.value && matchesArchiveEdit(previous.recordId) && editorIdentity?.isSameActor()
+    && props.actorScope === snapshotActorScope.value && previous.snapshot.workOrderId === props.workOrderId
+    && String(previous.snapshot.node.id) === props.runtimeNodeId) return { ...previous, disabled: true }
+  return null
 })
 watch(actions,(next,old)=>{if(old?.fileMedia&&next?.fileMedia!==old.fileMedia)old.fileMedia.dispose()})
 const displayMessage=computed(()=>props.commercial && actions.value && !actions.value.locked() && /^已从后台读取 \d+ 条记录，当前仅查看。$/.test(message.value) ? message.value.replace('，当前仅查看。','。') : message.value)
@@ -285,7 +298,7 @@ watch(visibleSnapshot, value => emit('snapshot-change', value && snapshotActorSc
   ? { actorScope: snapshotActorScope.value, snapshot: value } : null), { immediate: true, flush: 'sync' })
 function clear() { lastLocalWrite=null;draftSession=null; draftRead.value=null; draftMessage.value=''; draftWorking.value=false; confirmDraftDiscard.value=false; actions.value?.fileMedia?.dispose(); version++; pendingEditor = null; editorSource = null; editorIdentity = null; viewReader.clear(); snapshot.value = null; snapshotActorScope.value = null; loading.value = false; busy.value = false; fileEditorClosed.value=false;fileCancelling.value=false; message.value = ''; values.value = {}; confirmCompletion.value = false; confirmSaveCompletion.value = false; editing.value = false; editingId.value = undefined }
 watch(() => [props.workOrderId, props.runtimeNodeId, props.actorScope], clear)
-onBeforeUnmount(()=>{clear();readerView.drop()})
+onBeforeUnmount(()=>{if(archiveEditing.value)emit('archive-edit-change',false);clear();readerView.drop()})
 watch(()=>props.reader,next=>{clear();readerView.drop();readerView=claimNormalReader(next);viewReader=readerView.reader})
 // MP may retain a custom component despite a changed Vue key. A visible
 // archive page explicitly renews its reader ownership before reading again.
@@ -430,7 +443,12 @@ const workspaceFooter=computed<R1FormWorkspaceFooter>(()=>{
  }
  return{actions:list,notice:list.length?notice:'',editing:editor}
 })
-defineExpose({ flushLocalDraft,workspaceFooter })
+function cancelArchiveEdit(): boolean {
+  if (!archiveEditing.value) return false
+  if (!busy.value && !loading.value && !draftWorking.value && !fileCancelling.value) void cancelEdit()
+  return true
+}
+defineExpose({ flushLocalDraft, workspaceFooter, cancelArchiveEdit })
 function restoreDraft(){
   const source=visibleSnapshot.value, action=actions.value, read=draftRead.value
   if(!source||!action||action.locked()||read?.state!=='recoverable'||draftWorking.value)return
@@ -485,7 +503,7 @@ async function cancelEdit() {
   if(!media){
     // A blocked first-create draft can outlive its shape or a consumed media
     // session. Confirm its cleanup before closing any current editor.
-    if(draftSession){const session=draftSession,ticket=version;draftWorking.value=true;try{await session.discard();if(ticket!==version||draftSession!==session)return;draftSession=null;draftRead.value=null;draftMessage.value=''}catch{if(ticket===version)draftMessage.value='本地草稿尚未清理，请保留内容后重试。';return}finally{if(ticket===version)draftWorking.value=false}}
+    if(draftSession&&!archiveEditing.value){const session=draftSession,ticket=version;draftWorking.value=true;try{await session.discard();if(ticket!==version||draftSession!==session)return;draftSession=null;draftRead.value=null;draftMessage.value=''}catch{if(ticket===version)draftMessage.value='本地草稿尚未清理，请保留内容后重试。';return}finally{if(ticket===version)draftWorking.value=false}}
     pendingEditor=null;editorSource=null;editorIdentity=null;editing.value=false;editingId.value=undefined;values.value={};confirmSaveCompletion.value=false;return}
   const ticket=version,actorScope=props.actorScope,source=visibleSnapshot.value
   fileCancelling.value=true
@@ -517,7 +535,7 @@ async function beginCreate() {
   finally{if(ticket===version)draftWorking.value=false}
 }
 function edit(id:string) {
-  if(busy.value||!actions.value?.canEdit?.(id))return
+  if(busy.value||!actions.value?.canEdit?.(id)||(props.appointmentArchive&&!canEditAppointment(id)))return
   const initial=actions.value.initialValues?.(id)
   if(!initial||actions.value.beginEdit?.(id)===false)return
   pendingEditor=null;editorSource=visibleSnapshot.value?editSource(visibleSnapshot.value,id):null
@@ -551,11 +569,16 @@ async function save(finish=false) {
       pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value=null;values.value={};editing.value=false;editingId.value=undefined;setFeedback('记录已保存，已重新读取并确认当前节点完成。', 'success');emit('changed');return
     }
     const saved = await action.saveOnly(values.value,editingId.value)
-    if (ticket !== version || props.actorScope !== actorScope || !viewReader.isCurrent(saved)) return
+    if (ticket !== version || props.actorScope !== actorScope) return
+    if (!viewReader.isCurrent(saved)) {
+      if (props.appointmentArchive) throw new Error('预约回读结果已失效')
+      return
+    }
     await finalizeLocalDraft(session)
     if(ticket!==version||props.actorScope!==actorScope)return
     draftSession=null;draftRead.value=null;
-    pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value = saved; values.value = {}; editing.value=false; editingId.value=undefined; confirmSaveCompletion.value=false; setFeedback('记录已保存并从后台重新读取，当前节点尚未完成。', 'success')
+    pendingEditor=null;editorSource=null;editorIdentity=null;snapshot.value = saved; values.value = {}; editing.value=false; editingId.value=undefined; confirmSaveCompletion.value=false
+    setFeedback(props.appointmentArchive ? '记录已保存并从后台重新读取。' : '记录已保存并从后台重新读取，当前节点尚未完成。', 'success')
   } catch { if (ticket === version) {if(pendingEditor?.id){editing.value=false;editingId.value=undefined};setFeedback('保存未完成或结果尚未核实，请勿重复提交。', 'error');if(session){draftRead.value={state:'uncertain',message:message.value};draftMessage.value='上次保存结果尚未核实。本地草稿已保留，请核对已保存记录，勿重复提交。'}} }
   finally { if (ticket === version) busy.value = false }
 }

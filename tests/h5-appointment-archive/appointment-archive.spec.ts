@@ -5,6 +5,8 @@ for(const mode of ['single','minute','date-only','multiple','empty','failed','de
 test(`appointment archive ${mode}: actual App entry and selected record`,async({page,baseURL},info)=>{
   let releaseRead!:()=>void
   const delayRead=new Promise<void>(resolve=>{releaseRead=resolve})
+  let releaseSave!:()=>void
+  const delaySave=new Promise<void>(resolve=>{releaseSave=resolve})
   const calls: { path: string; body: Record<string, string> }[] = [], writes: unknown[] = [], errors: string[] = [], unexpected: string[] = []
   const node = { _id: 'n', tenantId: 't', workflowId: 'w', workflowFormDataId: 's', workflowFormColName: 'serviceAppointment', state: 0, handlerIds: ['r'],
     nodeDef: { nodeType: 'repeat', name: '预约', formDefId: def, viewableRoleIds: ['r'],
@@ -45,7 +47,9 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
     if (path === 'biz/extForm/query/' + def) { if(mode==='failed')return route.fulfill({status:503,json:{success:false}}); if(mode==='delayed')await delayRead; const id = body['is:_id|string#and'], data = (mode==='empty'?[]:(mode==='single'||mode==='minute'||mode==='date-only')?[a]:[a,b]).filter(r => !id || r._id === id); if(mode==='uncertain'&&writes.length) data.forEach(r=>{if(r._id==='a')r.note='保存结果待核实'}); reads.push(structuredClone(data)); return ok({ data, total: data.length, page: 1, size: Number(body.rows), dataCount: data.length }) }
     if (path === 'biz/extForm/upsert/' + def) {
       const data = JSON.parse(body.dataStr); expect(data).toMatchObject({ _id: 'a', sid: 's', nodeId: 'n', workflowId: 'w', smodule: 'serviceAppointment', state: 1 })
-      expect(writes).toHaveLength(0); writes.push(structuredClone(data)); a = data; return ok({ success: true, status: 1, data: { _id: 'a' } })
+      expect(writes).toHaveLength(0); writes.push(structuredClone(data)); a = data
+      if(mode==='single')await delaySave
+      return ok({ success: true, status: 1, data: { _id: 'a' } })
     }
     unexpected.push(path); return route.abort('blockedbyclient')
   })
@@ -72,9 +76,10 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
       await page.getByTestId('appointment-archive-open').click()
       if(!['single','minute','date-only'].includes(mode)){
         await expect(page.getByTestId('appointment-record-a')).toBeVisible()
-        await expect(page.getByTestId('action-workspace-context')).toContainText('SYNTHETIC-APPOINTMENT')
+        await expect(page.getByTestId('action-workspace-context')).toHaveCount(0)
         await page.getByTestId('appointment-record-b').click()
         await expect(page.getByTestId('appointment-read-only')).toBeVisible();await expect(page.getByTestId('appointment-modify')).toHaveCount(0)
+        await expect(page.getByTestId('detail-read-context')).toHaveCount(0)
         await page.screenshot({path:info.outputPath('02-read-only-record-b.png'),fullPage:true})
         await page.getByTestId('appointment-archive-open').click();await page.getByTestId('appointment-record-a').click()
       }
@@ -88,20 +93,58 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
         await page.getByTestId('appointment-record-a').click()
         await expect(page).toHaveURL(/&record=a/)
       }
+      await expect(page.getByTestId('action-workspace-context')).toHaveCount(0)
+      await expect(page.getByTestId('detail-read-context')).toHaveCount(0)
       await page.screenshot({path:info.outputPath('03-record-a-detail.png'),fullPage:true})
+      const selectedRecordUrl=page.url()
+      const shell=page.getByTestId('action-workspace-shell')
+      const footer=shell.getByTestId('app-action-bar')
+      const context=shell.getByTestId('action-workspace-context')
+      const nativeBack=page.locator('uni-page-head .uni-page-head-btn').first()
       await page.getByTestId('appointment-modify').click()
       const reasonInput=page.getByTestId('r1-normal-input-modifyReason').locator('input,textarea')
-      await reasonInput.fill('客户调整到下午')
-      const reviewButton=page.getByTestId('normal-appointment-review')
-      const verticalGap=async(above:typeof reasonInput,below:typeof reasonInput)=>{
-        const top=(await above.boundingBox())!,bottom=(await below.boundingBox())!
-        expect(bottom.y-top.y-top.height).toBeGreaterThanOrEqual(6)
+      await expect(context).toContainText('SYNTHETIC-APPOINTMENT')
+      await expect(context).toContainText('合成改约验证')
+      await expect(page.getByTestId('appointment-record-detail')).toHaveCount(0)
+      await expect(page).toHaveURL(selectedRecordUrl)
+      if(mode==='single'){
+        await reasonInput.fill('随后取消的修改')
+        await page.getByTestId('normal-appointment-time-open').click()
+        await nativeBack.click()
+        await expect(reasonInput).toHaveValue('随后取消的修改')
+        await nativeBack.click()
+        await expect(footer.getByTestId('appointment-edit-discard')).toBeVisible()
+        await footer.getByTestId('appointment-edit-keep').click()
+        await expect(reasonInput).toHaveValue('随后取消的修改')
+        await nativeBack.click()
+        await footer.getByTestId('appointment-edit-discard').click()
+        await expect(shell).toHaveCount(0)
+        await expect(page).toHaveURL(selectedRecordUrl)
+        await expect(page.getByTestId('appointment-record-detail')).toContainText('10:37')
+        await page.getByTestId('appointment-modify').click()
+        await expect(reasonInput).toHaveValue('')
+        await reasonInput.fill('点取消的修改')
+        await footer.getByTestId('appointment-edit-cancel').click()
+        await expect(reasonInput).toHaveValue('点取消的修改')
+        await footer.getByTestId('appointment-edit-discard').click()
+        await expect(shell).toHaveCount(0)
+        await expect(page).toHaveURL(selectedRecordUrl)
+        expect(writes).toHaveLength(0)
+        await page.getByTestId('appointment-modify').click()
+        await expect(reasonInput).toHaveValue('')
       }
-      await verticalGap(reasonInput,reviewButton)
+      await reasonInput.fill('客户调整到下午')
+      const reviewButton=footer.getByTestId('normal-appointment-review')
+      const expectWorkspaceFooter=async()=>{
+        await expect(footer).toBeInViewport({ratio:0.98})
+        expect(await footer.evaluate(el=>el.closest('.action-workspace-scroll'))).toBeNull()
+        await expect(page.getByTestId('action-workspace-context')).toHaveCount(1)
+      }
+      await expectWorkspaceFooter()
       if(mode==='single')await page.screenshot({path:info.outputPath('03a-edit-actions.png'),fullPage:true})
       await page.getByTestId('normal-appointment-time-open').click()
-      await verticalGap(page.locator('.time-slots .time-slot').last(),page.getByTestId('appointment-minute-picker'))
-      await verticalGap(page.getByTestId('appointment-minute-picker'),page.getByTestId('normal-appointment-time-confirm'))
+      await expectWorkspaceFooter()
+      await expect(footer.getByTestId('normal-appointment-time-confirm')).toBeVisible()
       if(mode==='single')await page.screenshot({path:info.outputPath('03b-selection-actions.png'),fullPage:true})
       if(mode==='date-only')await expect(page.getByTestId('normal-appointment-time-confirm')).toHaveAttribute('aria-disabled','true')
       if(mode==='minute'){
@@ -113,20 +156,33 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
         await expect(page.getByTestId('appointment-minute-picker')).toContainText('10:39')
       }else await page.locator('.time-slot').filter({hasText:/^14:00$/}).click()
       await page.getByTestId('normal-appointment-time-confirm').click()
-      await page.getByTestId('normal-appointment-review').click()
+      await reviewButton.click()
+      await expectWorkspaceFooter()
       await expect(page.getByTestId('appointment-before-datetime')).toContainText(mode==='date-only'?'2026-11-20':'10:37')
       await page.screenshot({path:info.outputPath('04-review-before-after.png'),fullPage:true})
       if(mode==='single'){
         const original=page.viewportSize()!
         for(const viewport of [{width:375,height:667},{width:390,height:844}]){
           await page.setViewportSize(viewport)
+          await expectWorkspaceFooter()
           expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
           await page.screenshot({path:info.outputPath(`04-review-${viewport.width}x${viewport.height}.png`),fullPage:true})
         }
         await page.setViewportSize(original)
       }
       if(mode==='revoked')node.handlerIds=['other-role']
-      await page.getByTestId('normal-appointment-save').dblclick()
+      const save=footer.getByTestId('normal-appointment-save')
+      if(mode==='single'){
+        await save.click()
+        await expect.poll(()=>writes.length).toBe(1)
+        await expect(save).toHaveAttribute('aria-busy','true')
+        await nativeBack.click()
+        await expect(page).toHaveURL(selectedRecordUrl)
+        await expect(context).toBeVisible()
+        releaseSave()
+      }else await save.dblclick()
+      await expect(shell).toHaveCount(0)
+      await expect(page).toHaveURL(selectedRecordUrl)
       if(mode==='revoked'||mode==='uncertain'){
         await expect(page.getByTestId('appointment-archive-error').or(page.getByTestId('r1-normal-form-read-message'))).toContainText('保存未完成或结果尚未核实')
         await expect(page.getByTestId('normal-appointment-save')).toHaveCount(0)
@@ -150,5 +206,5 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
     expect(calls.filter(c=>/takeback|delete|process|updateExts|upload|upToken/i.test(c.path))).toEqual([])
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
     expect(errors).toEqual([]);expect(unexpected).toEqual([])
-  } finally {releaseRead();await info.attach('appointment-archive-http-ledger',{body:JSON.stringify({mode,calls,writes,reads,a,b,errors,unexpected,realBackend:'NOT_RUN'},null,2),contentType:'application/json'})}
+  } finally {releaseRead();releaseSave();await info.attach('appointment-archive-http-ledger',{body:JSON.stringify({mode,calls,writes,reads,a,b,errors,unexpected,realBackend:'NOT_RUN'},null,2),contentType:'application/json'})}
 })}
