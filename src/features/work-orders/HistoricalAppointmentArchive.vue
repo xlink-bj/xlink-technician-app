@@ -1,6 +1,6 @@
 <template>
   <view data-testid="historical-appointment-archive">
-    <view class="archive-heading"><text class="archive-title">预约信息</text>
+    <view class="archive-heading" :class="{ 'archive-summary-heading': summary }"><text class="archive-title">预约信息</text>
       <navigator v-if="!loading && !message && targets.length" :url="route(summary && targets.length===1?targets[0]!.recordId:undefined)" class="archive-link" data-testid="appointment-archive-open">{{ summary?'查看详情':'全部预约' }} ›</navigator>
     </view>
     <text v-if="loading" class="archive-hint" data-testid="appointment-archive-loading">正在读取预约记录…</text>

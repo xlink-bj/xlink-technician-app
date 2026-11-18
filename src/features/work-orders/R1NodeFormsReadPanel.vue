@@ -3,7 +3,7 @@
     <slot v-if="archiveEditing" name="archive-edit-experience" :context="archiveEditPresentation" :busy="busy"
       :feedback="feedback.tone === 'error' ? displayMessage : ''" />
     <template v-else-if="appointmentArchive">
-      <view class="archive-heading"><text class="archive-title">预约信息</text>
+      <view class="archive-heading" :class="{ 'archive-summary-heading': appointmentArchive.summary }"><text class="archive-title">预约信息</text>
         <navigator v-if="visibleSnapshot?.records.length && !busy && (appointmentArchive.summary || appointmentArchive.recordId)" class="archive-link" data-testid="appointment-archive-open"
           :url="appointmentArchive.route(appointmentArchive.summary && visibleSnapshot.records.length === 1 ? String(visibleSnapshot.records[0]!.id) : undefined)">
           {{ appointmentArchive.summary ? (visibleSnapshot.records.length === 1 ? '查看详情' : `查看全部 ${visibleSnapshot.records.length} 条`) : '全部预约' }} ›

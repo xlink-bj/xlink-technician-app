@@ -3,7 +3,7 @@
        hosts do not forward the caller’s scoped classes to their inner view. -->
   <view class="archive-stack" data-testid="work-order-archives">
     <view class="app-record-card archive-card information-card" data-testid="follow-up-summary">
-      <view class="archive-heading">
+      <view class="archive-heading archive-summary-heading">
         <text class="archive-title">跟进记录</text>
         <navigator v-if="activities.length || hasHistory" :url="route('follow-up')" class="archive-link" data-testid="follow-up-all">
           {{ activities.length ? `查看全部 ${activities.length} 条` : '查看已完成记录' }} ›
@@ -29,7 +29,7 @@
     <slot name="appointment" />
     <navigator :url="route('customer')" class="archive-navigator" data-testid="customer-summary">
       <view class="app-record-card archive-card">
-        <view class="archive-heading"><text class="archive-title">客户资料</text><text class="archive-link">查看详情 ›</text></view>
+        <view class="archive-heading archive-summary-heading"><text class="archive-title">客户资料</text><text class="archive-link">查看详情 ›</text></view>
         <text class="archive-copy archive-customer-summary">{{ customerSummary }}</text>
       </view>
     </navigator>
@@ -38,16 +38,16 @@
       <navigator v-if="orderState === 'succeeded' && archive.complete && archive.items.length === 1"
         :url="route('quotation', archive.items[0]!.id)" class="archive-navigator" data-testid="order-archive-single">
         <view class="app-record-card archive-card" data-testid="order-archive-summary">
-        <view class="archive-heading"><text class="archive-title">{{ archive.title }}</text><text class="archive-link">1 笔 ›</text></view>
+        <view class="archive-heading archive-summary-heading"><text class="archive-title">{{ archive.title }}</text><text class="archive-link">1 笔 ›</text></view>
         <text class="archive-entry-title">{{ orderTitle(archive.items[0]!) }}</text>
         <text class="archive-copy">{{ orderAmount(archive.items[0]!) }}</text>
         <text v-if="archive.items[0]!.updateTime" class="archive-hint">订单更新：{{ archive.items[0]!.updateTime }}</text>
         </view>
       </navigator>
       <view v-else class="app-record-card archive-card" data-testid="order-archive-summary">
-        <view class="archive-heading">
+        <view class="archive-heading archive-summary-heading">
           <text class="archive-title">{{ archive.title }}</text>
-          <text v-if="orderState === 'succeeded' && archive.complete && !archive.items.length" class="archive-hint" data-testid="order-archive-empty">尚未产生正式订单</text>
+          <text v-if="orderState === 'succeeded' && archive.complete && !archive.items.length" class="archive-hint archive-order-empty" data-testid="order-archive-empty">尚未产生正式订单</text>
           <navigator v-if="orderState === 'succeeded' && archive.items.length" :url="route('quotation')" class="archive-link" data-testid="order-archive-all">
             {{ archive.complete ? `查看全部 ${archive.total} 笔` : '查看已读取记录' }} ›
           </navigator>

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Locator } from '@playwright/test'
 import { selectBrand } from '../../config/vite/brand-profile'
 import { searchMockWorkOrder } from '../support/search-mock-work-order'
 
@@ -35,6 +35,16 @@ test('brand detail preserves archive state, unknown documents and read navigatio
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: `${directory}/${name}.png`, animations: 'disabled', caret: 'hide' })
   }
+  const expectHeadingDivider = async (card: Locator) => {
+    const divider = await card.locator('.archive-summary-heading').evaluate(heading => {
+      const line = getComputedStyle(heading, '::after')
+      return [line.borderBottomWidth, line.borderBottomColor]
+    })
+    if (yuhong) expect(divider).toEqual(['1px', 'rgb(229, 231, 232)'])
+    else expect(divider[0]).toBe('0px')
+  }
+  await expectHeadingDivider(page.getByTestId('follow-up-summary'))
+  await expectHeadingDivider(page.getByTestId('customer-summary'))
   await snapshot('01-工单详情-未读取')
   await expect(page.getByTestId('contract-archive-unverified')).toHaveCount(0)
   await expect(page.getByTestId('warranty-archive-unverified')).toHaveCount(0)
@@ -46,10 +56,14 @@ test('brand detail preserves archive state, unknown documents and read navigatio
     }, mode)
     await page.getByTestId('order-archive-load').click()
     const card = page.getByTestId('order-archive-summary')
+    await expectHeadingDivider(card)
     if (mode === 'zero') await expect(card).toContainText('尚未产生正式订单')
     else if (mode === 'one') await expect(page.getByTestId('order-archive-single')).toContainText('BJ202611130001')
     else if (mode === 'many') {
       await expect(page.getByTestId('order-archive-item')).toHaveCount(2)
+      const orders = page.getByTestId('order-archive-item')
+      await expect(orders.first()).toHaveCSS('border-top-width', yuhong ? '0px' : '1px')
+      await expect(orders.last()).toHaveCSS('border-top-width', '1px')
       await expect(page.getByTestId('follow-up-timeline-item')).toHaveCount(2)
       await expect(page.getByTestId('order-archive-all')).toContainText('全部 3 笔')
     } else if (mode === 'partial') {

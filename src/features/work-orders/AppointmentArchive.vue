@@ -1,7 +1,7 @@
 <template>
   <view v-if="nodes.length" :class="{ 'app-record-card archive-card': !editing }" data-testid="appointment-archive">
     <template v-if="!selectedNode">
-      <view class="archive-heading"><text class="archive-title">预约信息</text></view>
+      <view class="archive-heading" :class="{ 'archive-summary-heading': summary }"><text class="archive-title">预约信息</text></view>
       <navigator v-for="(node,index) in nodes" :key="String(node.id)" :url="route(String(node.id))" class="archive-link">查看预约节点 {{ index + 1 }} ›</navigator>
       <text v-if="nodeId" class="archive-hint">原预约节点已变化，请重新选择。</text>
     </template>
@@ -50,7 +50,7 @@
     <HistoricalAppointmentArchive v-else-if="selectedNode.lifecycle === 'closed'" :key="panelKey" :work-order-id="workOrderId" :node-id="String(selectedNode.id)"
       :actor-scope="actorScope" :summary="summary" :record-id="recordId" />
     <template v-else>
-      <view class="archive-heading"><text class="archive-title">预约信息</text></view>
+      <view class="archive-heading" :class="{ 'archive-summary-heading': summary }"><text class="archive-title">预约信息</text></view>
       <text class="archive-hint" data-testid="appointment-archive-unavailable">当前环境暂不支持读取预约档案。</text>
     </template>
   </view>
