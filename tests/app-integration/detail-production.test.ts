@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 
 import { detailReadView } from '@features/work-orders/detail-archive'
+import { detailTaskActionLabelFor } from '@features/work-orders/detail-workflow'
 import { presentationSource } from '../support/presentation-source'
 
 const detailPage = readFileSync(new URL('../../src/pages/work-orders/detail.vue', import.meta.url), 'utf8')
@@ -63,7 +64,10 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).toContain('workflowProjection.currentTask')
     expect(detailPage).toContain(':tone="workflowProjection.currentTask.tone"')
     expect(taskFocusSource).toContain('task-focus-panel--${tone}')
-    expect(detailPage).toContain('workflowProjection.currentTask.actionLabel')
+    expect(detailPage).toContain(':action-label="currentTaskActionLabel"')
+    expect(detailPage).toContain('detailTaskActionLabelFor(workflowProjection.value.currentTask,')
+    expect(detailPage).toContain(`|| (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"`)
+    expect(detailPage).toContain("if (productionReadOnly && currentTask.actionIntent !== 'place_order') return")
     expect(detailPage).toContain('workOrderCardToneFor(detail.taskLabel)')
     expect(detailPage).toContain('row-value--${workOrderCardToneFor(detail.taskLabel)}')
     expect(detailPage).not.toContain('detail.currentTask')
@@ -76,6 +80,24 @@ describe('G4-UX detail D3 semantic boundary', () => {
     expect(detailPage).toContain('class="activity-item"')
     expect(detailPage).toContain("activity.badge !== '系统'")
     expect(detailPage).toContain('followUpReadMessage(detail)')
+  })
+
+  it('uses the current task label in appointment and survey workspaces and preserves other action labels', () => {
+    const appointment = { actionIntent: 'set_appointment', actionLabel: '开始预约' } as const
+    const survey = { actionIntent: 'interact_with_form', actionLabel: '处理表单', formPurpose: 'survey' } as const
+    const quotation = { actionIntent: 'place_order', actionLabel: '查看报价与订单' } as const
+    const workspace = { productionReadOnly: false, opensFormWorkspace: true }
+    const noWorkspace = { ...workspace, opensFormWorkspace: false }
+    const readOnly = { ...workspace, productionReadOnly: true }
+
+    expect(detailTaskActionLabelFor(appointment, readOnly)).toBe('暂不可操作')
+    expect(detailTaskActionLabelFor({ ...survey, sourceNodeType: 'repeat' }, readOnly)).toBe('暂不可操作')
+    expect(detailTaskActionLabelFor(quotation, readOnly)).toBe('查看报价方案')
+    expect(detailTaskActionLabelFor(appointment, workspace)).toBe('开始预约')
+    expect(detailTaskActionLabelFor({ ...survey, sourceNodeType: 'repeat' }, workspace)).toBe('开始勘查')
+    expect(detailTaskActionLabelFor({ ...survey, sourceNodeType: 'forms' }, workspace)).toBe('打开表单')
+    expect(detailTaskActionLabelFor(survey, noWorkspace)).toBe('处理表单')
+    expect(detailTaskActionLabelFor(quotation, noWorkspace)).toBe('查看报价与订单')
   })
 
   it('keeps loading/error states normalized and workflow execution out of D2', () => {

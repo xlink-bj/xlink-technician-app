@@ -33,6 +33,17 @@ export interface DetailWorkflowUiProjection
   readonly currentTask?: DetailWorkflowUiCurrentTask
 }
 
+export function detailTaskActionLabelFor(
+  task: Pick<DetailWorkflowUiCurrentTask, 'actionIntent' | 'actionLabel' | 'formPurpose' | 'sourceNodeType'> | undefined,
+  { productionReadOnly, opensFormWorkspace }: { productionReadOnly: boolean; opensFormWorkspace: boolean },
+): string {
+  if (!task) return ''
+  if (productionReadOnly) return task.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作'
+  if (task.actionIntent === 'set_appointment') return task.actionLabel
+  if (task.formPurpose === 'survey' && task.sourceNodeType === 'repeat') return '开始勘查'
+  return opensFormWorkspace ? '打开表单' : task.actionLabel
+}
+
 const currentTaskPresentation: Readonly<
   Record<CurrentTaskProjection['actionIntent'], Pick<DetailWorkflowUiCurrentTask, 'actionLabel'>>
 > = {

@@ -341,7 +341,7 @@ import { constructionMockEnabled } from '@app/dev-construction-read'
 import WorkOrderArchiveCards from '@features/work-orders/WorkOrderArchiveCards.vue'
 import AppointmentArchive from '@features/work-orders/AppointmentArchive.vue'
 import {appointmentArchiveNodes} from '@features/work-orders/appointment-archive'
-import { detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
+import { detailTaskActionLabelFor, detailWorkflowUiProjectionFor } from '@features/work-orders/detail-workflow'
 import { selectActionWorkspaceLoadTarget } from '@features/work-orders/action-workspace-load-target'
 import { useLocalUnitDisplay } from '@features/work-orders/quotation/local-unit-display'
 import { quotationBrowseLineRows, useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store'
@@ -407,14 +407,10 @@ const customerServiceAddress = computed(() => {
   return [district, address].filter(Boolean).join(' ') || '—'
 })
 const workflowProjection = computed(() => detailWorkflowUiProjectionFor(detail.value, session.session))
-const currentTaskActionLabel = computed(() => {
-  const task = workflowProjection.value.currentTask
-  if (!task) return ''
-  if (productionReadOnly) return task.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作'
-  if (task.actionIntent === 'set_appointment') return task.actionLabel
-  if (task.formPurpose === 'survey' && task.sourceNodeType === 'repeat') return '开始勘查'
-  return normalWorkspaceEntry.value || devMockDynamicFormNodeKind.value ? '打开表单' : task.actionLabel
-})
+const currentTaskActionLabel = computed(() => detailTaskActionLabelFor(workflowProjection.value.currentTask, {
+  productionReadOnly,
+  opensFormWorkspace: Boolean(normalWorkspaceEntry.value || devMockDynamicFormNodeKind.value),
+}))
 const currentR1FormNode = computed(() => {
   const task = workflowProjection.value.currentTask
   if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined
