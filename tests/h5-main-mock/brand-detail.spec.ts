@@ -18,6 +18,19 @@ test('brand detail preserves archive state, unknown documents and read navigatio
   await page.locator('.work-orders-entry').click()
   await (await searchMockWorkOrder(page, { orderNum: '26018', customer: '吴先生' })).click()
   await expect(page.getByTestId('task-focus-action')).toBeEnabled()
+  const quickActions = page.locator('.summary-action')
+  const yuhong = brand === 'yuhong'
+  await expect(quickActions).toHaveCount(4)
+  await expect(quickActions.filter({ hasText: '联系' })).toHaveAttribute('disabled', 'true')
+  await expect(quickActions.first()).toHaveCSS('flex-direction', yuhong ? 'column' : 'row')
+  await expect(quickActions.first().locator('.uni-icons')).toHaveCSS('font-size', yuhong ? '20px' : '15px')
+  if (yuhong) {
+    for (const action of await quickActions.all()) {
+      const bounds = (await action.boundingBox())!
+      expect(bounds.width).toBeGreaterThanOrEqual(44)
+      expect(bounds.height).toBeGreaterThanOrEqual(44)
+    }
+  }
   const snapshot = async (name: string) => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1)
     await page.screenshot({ path: `${directory}/${name}.png`, animations: 'disabled', caret: 'hide' })
@@ -52,8 +65,11 @@ test('brand detail preserves archive state, unknown documents and read navigatio
   await page.evaluate(async () => {
     const modulePath = '/tests/h5-main-mock/fixtures/detail-archive-harness.ts'
     const harness = await import(/* @vite-ignore */ modulePath)
-    await harness.installArchiveScenario('many')
+    await harness.installArchiveScenario('many', 'long')
   })
+  await expect(page.getByTestId('follow-up-timeline-item').first()).toContainText('逐项确认维修边界')
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await snapshot('04-工单详情-长跟进')
   await page.getByTestId('order-archive-load').click()
   await page.getByTestId('follow-up-all').click()
   await expect(page.locator('.uni-page-head__title')).toHaveText('跟进记录')

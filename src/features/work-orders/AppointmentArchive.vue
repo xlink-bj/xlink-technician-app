@@ -21,7 +21,8 @@
             <AppActionContentHeading v-if="editor?.pane !== 'time'" icon="appointment"
               :title="editor?.pane === 'confirm' ? '核对改约信息' : '预约信息'"
               :caption="editor?.pane === 'confirm' ? '请确认本次修改内容' : '请与客户确认上门时间安排'" />
-            <NormalAppointmentEditExperience :key="context.recordId" ref="editor" :view="context" workspace-actions @cancel="requestCancel" />
+            <NormalAppointmentEditExperience :key="context.recordId" :view="context" :register-controls="registerEditor"
+              workspace-actions @cancel="requestCancel" />
           </view>
           <AppStatus v-else-if="!busy && !feedback" message="当前预约状态已变化，请返回详情重新查看。" tone="warning" quiet />
           <template #actions>
@@ -56,7 +57,7 @@
   <text v-else-if="!summary" class="archive-hint" data-testid="appointment-archive-unavailable">当前工单没有可核实的预约节点，请返回工单详情。</text>
 </template>
 <script setup lang="ts">
-import {computed,inject,ref} from 'vue'
+import {computed,inject,ref,shallowRef} from 'vue'
 import type {WorkflowNodeRead} from '@shared/ports'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 import AppActionContentHeading from '@shared/ui/AppActionContentHeading.vue'
@@ -65,6 +66,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import {r1NodeFormsReaderKey,type R1NodeFormsSnapshot} from './r1-node-forms-read'
 import {appointmentArchiveRoute} from './appointment-archive'
 import {appointmentEditDraft} from './r1-repeat-appointment-edit'
+import type {AppointmentArchiveEditorControls} from './r1-form-workspace-presentation'
 import HistoricalAppointmentArchive from './HistoricalAppointmentArchive.vue'
 import R1NodeFormsReadPanel from './R1NodeFormsReadPanel.vue'
 import NormalAppointmentEditExperience from './components/NormalAppointmentEditExperience.vue'
@@ -73,7 +75,7 @@ const props=defineProps<{workOrderId:string;nodes:readonly WorkflowNodeRead[];ac
 const emit=defineEmits<{(event:'edit-mode-change',editing:boolean):void}>()
 const reader=inject(r1NodeFormsReaderKey,null)
 const panel = ref<InstanceType<typeof R1NodeFormsReadPanel> | null>(null)
-const editor = ref<InstanceType<typeof NormalAppointmentEditExperience> | null>(null)
+const editor = shallowRef<AppointmentArchiveEditorControls | null>(null)
 const editing = ref(false)
 const confirmCancel = ref(false)
 const selectedNode=computed(()=>props.nodeId ? props.nodes.find(node=>String(node.id)===props.nodeId) : props.nodes.length===1?props.nodes[0]:undefined)
@@ -81,6 +83,12 @@ const panelKey=computed(()=>JSON.stringify([props.workOrderId,selectedNode.value
 const archivePresentation = computed(() => ({ summary: props.summary, recordId: props.recordId, route: recordRoute }))
 function route(nodeId:string){return appointmentArchiveRoute(props.workOrderId,nodeId)}
 function recordRoute(recordId?:string){return appointmentArchiveRoute(props.workOrderId,String(selectedNode.value!.id),recordId)}
+// The scoped slot crosses native component boundaries, so the editor
+// registers its controls directly and releases only its own registration.
+function registerEditor(controls: AppointmentArchiveEditorControls): () => void {
+  editor.value = controls
+  return () => { if (editor.value === controls) editor.value = null }
+}
 function setEditing(value:boolean) {
   editing.value = value
   if (!value) confirmCancel.value = false

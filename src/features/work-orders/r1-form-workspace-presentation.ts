@@ -20,3 +20,10 @@ export function r1FormFieldGroups<T extends {readonly fieldId:string}>(definitio
 }
 export interface R1FormFooterAction {readonly id:string;readonly label:string;readonly variant:'primary'|'secondary'|'text';readonly disabled:boolean;readonly loading?:boolean;readonly run:()=>void}
 export interface R1FormWorkspaceFooter {readonly actions:readonly R1FormFooterAction[];readonly notice:string;readonly editing:boolean}
+
+export interface AppointmentArchiveEditorControls {
+  readonly pane: 'fields' | 'time' | 'confirm'
+  readonly actions: readonly R1FormFooterAction[]
+  readonly hasChanges: boolean
+  backPress(): boolean
+}

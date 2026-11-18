@@ -32,9 +32,9 @@
   </view>
 </template>
 <script setup lang="ts">
-import {computed,ref} from 'vue'
+import {computed,ref,watch} from 'vue'
 import type {R1LocalField,R1LocalFieldValue} from '../r1-local-form-fields'
-import type {R1FormFooterAction} from '../r1-form-workspace-presentation'
+import type {AppointmentArchiveEditorControls,R1FormFooterAction} from '../r1-form-workspace-presentation'
 import R1FormFieldControl from '../R1FormFieldControl.vue'
 import AppButton from '@shared/ui/AppButton.vue'
 import AppField from '@shared/ui/AppField.vue'
@@ -42,7 +42,8 @@ import AppSelector from '@shared/ui/AppSelector.vue'
 import AppInformationRow from '@shared/ui/AppInformationRow.vue'
 import AppointmentTimeSelectionContent from './AppointmentTimeSelectionContent.vue'
 import {appointmentDisplayFor,appointmentTimeOptions,dateShortcutsFor,dateStringFor,parseAppointmentDateTime,appointmentDateForSelection,appointmentDateTimeForSelection} from '../appointment-time'
-const props=defineProps<{workspaceActions?:boolean;view:{readonly recordId:string;readonly fields:readonly(R1LocalField&{readonly visible:boolean})[];
+const props=defineProps<{workspaceActions?:boolean;registerControls?:(controls:AppointmentArchiveEditorControls)=>()=>void;
+ view:{readonly recordId:string;readonly fields:readonly(R1LocalField&{readonly visible:boolean})[];
   readonly values:Readonly<Record<string,unknown>>;readonly disabled:boolean;readonly valid:boolean;
   readonly originalValues?:Readonly<Record<string,unknown>>;
   updateValue(key:string,value:R1LocalFieldValue):void;saveOnly():Promise<void>}}>()
@@ -82,7 +83,15 @@ function backPress() {
   backToFields()
   return true
 }
-defineExpose({ actions, pane, hasChanges, backPress })
+watch(() => props.registerControls, (register, _, onCleanup) => {
+  if (!register) return
+  onCleanup(register({
+    get pane() { return pane.value },
+    get actions() { return actions.value },
+    get hasChanges() { return hasChanges.value },
+    backPress,
+  }))
+}, { immediate: true })
 function fieldValue(key:string):R1LocalFieldValue|undefined{const v=props.view.values[key];return typeof v==='string'?v:undefined}
 function displayValue(field:R1LocalField,values=props.view.values):string{const v=values[field.valueKey];const parsed=field.type==='datetime'?appointmentDisplayFor(v):undefined;return parsed?`${parsed.date} ${parsed.timeLabel}`:field.options?.find(o=>o.value===v)?.label??(typeof v==='string'&&v?v:'—')}
 function openTime(){if(props.view.disabled||!timeField.value)return;const value=props.view.values[timeField.value.valueKey],parsed=parseAppointmentDateTime(value);selectedDate.value=appointmentDateForSelection(value)??dateStringFor();selectedMinute.value=parsed?.timeLabel??'';selectedOptionKey.value=appointmentTimeOptions.find(o=>o.value===parsed?.timeLabel)?.key??'';pane.value='time'}

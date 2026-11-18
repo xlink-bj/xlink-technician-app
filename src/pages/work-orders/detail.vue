@@ -8,7 +8,7 @@
     <navigator class="back-link" url="/pages/index/index">返回登录</navigator>
   </view>
 
-  <view v-else class="detail-page">
+  <view v-else class="detail-page" :class="{ 'detail-page--appointment-editing': appointmentArchiveEditing }">
     <AppWorkOrderSkeleton v-if="showLoadingSkeleton" variant="detail" />
 
     <AppFeedbackState
@@ -71,7 +71,7 @@
           >
             <AppIcon
               :name="action.icon"
-              :size="15"
+              size="var(--detail-action-icon-size, 15px)"
               :color="action.key === 'contact' && !canDial ? 'var(--detail-action-icon-disabled)' : 'var(--detail-action-icon)'"
               aria-hidden="true"
             />
@@ -139,18 +139,16 @@
       </WorkOrderArchiveCards>
 
       <view v-else-if="readView === 'appointment'">
-        <AppWorkOrderSummary v-if="!selectedAppointmentRecordId" :customer-name="detail.customerName"
-          :display-number="workOrderNumberDisplay(detail.displayNumber)" :service-district="detail.serviceDistrict"
-          :service-address="detail.serviceAddress" />
-        <text v-else class="archive-detail-context" data-testid="detail-read-context">{{ detail.customerName }}{{ detail.displayNumber ? ` · ${workOrderNumberDisplay(detail.displayNumber)}` : '' }}</text>
-        <AppointmentArchive :key="appointmentReadVersion" :work-order-id="String(detail.id)" :nodes="appointmentNodes"
+        <AppointmentArchive ref="appointmentReadArchive" :key="appointmentReadVersion" :work-order-id="String(detail.id)" :nodes="appointmentNodes"
           :read-revision="appointmentReadVersion"
-          :actor-scope="workOrderReadScopeKey(session.session)" :summary="false" :node-id="selectedAppointmentNodeId" :record-id="selectedAppointmentRecordId" />
+          :actor-scope="workOrderReadScopeKey(session.session)" :summary="false" :node-id="selectedAppointmentNodeId" :record-id="selectedAppointmentRecordId"
+          :workspace-context="{ customerName: detail.customerName, displayNumber: workOrderNumberDisplay(detail.displayNumber),
+            serviceDistrict: detail.serviceDistrict, serviceAddress: detail.serviceAddress }"
+          @edit-mode-change="setAppointmentArchiveEditing" />
       </view>
 
       <view v-else class="app-record-card information-card">
         <view class="archive-detail-heading"><text class="tab-empty-title">{{ readView === 'follow-up' ? '全部跟进记录' : readView === 'customer' ? '客户资料' : '正式订单 · 只读' }}</text></view>
-        <text class="archive-detail-context" data-testid="detail-read-context">{{ detail.customerName }}{{ detail.displayNumber ? ` · ${workOrderNumberDisplay(detail.displayNumber)}` : '' }}</text>
 
         <view v-if="readView === 'follow-up'" class="tab-panel">
           <view v-if="activities.length > 0" class="activity-list">
@@ -324,7 +322,7 @@ import { evaluateVisibility } from '@runtimes/dynamic-form'
 import { r1ReadFieldDisplayValue } from '@features/work-orders/r1-record-read-fields'
 import { onSelectedRoleVisibilityRevoked } from '@shared/form/selected-role-visibility'
 import { computed, inject as injectHistoryReader, onBeforeUnmount, ref, watch } from 'vue'
-import { onLoad, onShow } from '@dcloudio/uni-app'
+import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
 import { setActionWorkspacePageTitle as setDetailPageTitle } from '@app/action-page-title'
 
 import { mockJourneyContext } from '@app/mock-journey'
@@ -332,7 +330,7 @@ import { hasAuthenticatedSession } from '@features/home/access'
 import { isProductionReadOnlyRuntime } from '@shared/config'
 import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { workOrderCardToneFor } from '@features/work-orders/card'
-import { useWorkOrderDetailStore } from '@features/work-orders/detail'
+import { parseWorkOrderId, useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
 // #ifdef XLINK_DEV_QA
@@ -357,7 +355,6 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
-import AppWorkOrderSummary from '@shared/ui/AppWorkOrderSummary.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
 import HistoricalFormsTimeline from '@features/work-orders/HistoricalFormsTimeline.vue'
@@ -523,6 +520,23 @@ const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
 const readView = ref<DetailReadView>('home')
+const appointmentReadArchive = ref<InstanceType<typeof AppointmentArchive> | null>(null)
+const appointmentArchiveContext = computed(() => {
+  const workOrderId = parseWorkOrderId(routeValue.value)
+  const actorScope = session.status === 'authenticated' ? workOrderReadScopeKey(session.session) : null
+  const recordId = selectedAppointmentRecordId.value
+  if (readView.value !== 'appointment' || !workOrderId || detail.value?.id !== workOrderId || !actorScope || !recordId) return null
+  return JSON.stringify([actorScope, workOrderId, selectedAppointmentNodeId.value, recordId])
+})
+const appointmentEditorContext = ref<string | null>(null)
+const appointmentArchiveEditing = computed(() => appointmentEditorContext.value !== null
+  && appointmentEditorContext.value === appointmentArchiveContext.value)
+watch(appointmentArchiveContext, () => {
+  appointmentEditorContext.value = null
+}, { flush: 'sync' })
+function setAppointmentArchiveEditing(editing: boolean): void {
+  appointmentEditorContext.value = editing ? appointmentArchiveContext.value : null
+}
 const selectedOrderId = ref('')
 const matchingQuotationOrders = computed(() => orderArchiveSummary(quotationBrowse.page).items.filter(
   (order) => order.serviceAppointmentId === String(detail.value?.id ?? '') && (!selectedOrderId.value || order.id === selectedOrderId.value),
@@ -603,6 +617,7 @@ function loadForAuthenticatedSession(): void {
 }
 
 onLoad((options) => {
+  appointmentEditorContext.value = null
   routeValue.value = options?.id
   readView.value = detailReadView(options?.read)
   selectedOrderId.value = typeof options?.order === 'string' ? options.order : ''
@@ -615,8 +630,16 @@ onLoad((options) => {
 function updateDetailPageTitle(): void {
   if (routeReady.value) setDetailPageTitle(detailReadTitle(readView.value, Boolean(selectedOrderId.value)))
 }
-// Retained parent pages must restore their own title after a read-only child.
-onShow(() => {updateDetailPageTitle(); if(readView.value === 'home'||readView.value === 'appointment')appointmentReadVersion.value++})
+onShow(() => {
+  updateDetailPageTitle()
+  // A foreground event must not remount a pending editor for this exact
+  // actor and record. The read-only parent still refreshes after returning.
+  if (readView.value === 'home' || (readView.value === 'appointment' && !appointmentArchiveEditing.value)) {
+    appointmentReadVersion.value++
+  }
+})
+onBackPress(() => readView.value === 'appointment' && appointmentArchiveEditing.value
+  && (appointmentReadArchive.value?.backPress() ?? false))
 
 watch([() => workOrder.loadState, () => detail.value?.id], ([state, id]) => {
   if (state === 'succeeded' && id && readView.value === 'quotation') void loadQuotationRead()

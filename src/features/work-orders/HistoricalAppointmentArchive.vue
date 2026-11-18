@@ -9,7 +9,11 @@
       <text v-if="!targets.length" class="archive-hint" data-testid="appointment-archive-empty">暂无可查看的预约记录</text>
       <text v-else-if="summary && targets.length>1" class="archive-copy">共 {{ targets.length }} 条预约，请选择记录查看</text>
       <template v-if="visibleRead">
-        <view v-if="summary" data-testid="appointment-archive-summary"><text v-for="field in preview" :key="field.fieldId" class="archive-copy">{{ field.label }}：{{ field.text }}</text></view>
+        <view v-if="summary" :class="{ 'appointment-preview': preview.length }" data-testid="appointment-archive-summary">
+          <view v-for="field in preview" :key="field.fieldId" class="archive-copy appointment-preview__row">
+            <text>{{ field.label }}<text class="appointment-preview__separator">：</text></text><text class="appointment-preview__value">{{ field.text }}</text>
+          </view>
+        </view>
         <view v-else data-testid="appointment-record-detail">
           <AppInformationRow v-for="field in fields" :key="field.fieldId"><template #label>{{ field.label }}</template><template #value>{{ field.text }}</template></AppInformationRow>
           <text class="archive-hint" data-testid="appointment-read-only">此预约节点已结束，记录仅可查看。</text>

@@ -5,16 +5,16 @@
   border: 1px solid var(--yh-border-subtle); border-radius: var(--yh-radius-card);
   background: var(--yh-color-surface-card); color: var(--yh-color-text-primary); overflow: hidden;
 }
-.task-focus-panel::before { content: ''; position: absolute; top: var(--yh-space-4); bottom: var(--yh-space-4); left: 0; width: 3px; background: var(--yh-action-primary); }
+.task-focus-panel::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: var(--yh-space-4); background: var(--yh-action-primary); }
 .task-focus-panel__heading { display: flex; align-items: baseline; gap: var(--yh-space-12); }
 .task-focus-panel__title { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: var(--yh-type-section-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-section-line); }
 .task-focus-panel__eyebrow { flex-shrink: 0; color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); text-align: right; }
 .task-focus-panel__note { display: block; margin-top: var(--yh-space-8); color: var(--yh-color-text-secondary); font-size: var(--yh-type-meta-size); line-height: var(--yh-type-meta-line); }
-.task-focus-panel__actions { margin-top: var(--yh-space-12); }
+.task-focus-panel__actions { margin-top: var(--yh-space-16); }
 .task-focus-panel__action { box-sizing: border-box; display: flex; align-items: center; justify-content: center; gap: var(--yh-space-8); width: 100%; min-width: 0; min-height: var(--yh-size-primary); padding: var(--yh-space-8) var(--yh-space-12); margin: 0; border: 0; border-radius: var(--yh-radius-control); background: var(--yh-action-primary); color: var(--yh-color-action-on-primary); font-family: inherit; font-size: var(--yh-type-body-size); font-weight: var(--yh-type-section-weight); line-height: var(--yh-type-body-line); white-space: normal; }
 .task-focus-panel__action::after { border: 0; }
 .task-focus-panel__action--pressed, .task-focus-panel__action:active { background: var(--yh-color-action-pressed); }
 .task-focus-panel__action:focus-visible { outline: 2px solid var(--yh-focus-ring); outline-offset: 2px; }
 .task-focus-panel__action--disabled, .task-focus-panel__action--disabled:active { background: var(--yh-color-action-disabled-bg); color: var(--yh-color-action-disabled-text); opacity: 1; }
 .task-focus-panel__action-label { min-width: 0; overflow-wrap: anywhere; }
-.task-focus-panel__chevron { flex-shrink: 0; }
+.task-focus-panel__chevron { flex-shrink: 0; font-size: var(--yh-size-icon); line-height: 1; }

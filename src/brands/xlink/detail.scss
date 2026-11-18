@@ -46,6 +46,9 @@
   width: 100%;
 }
 
+.detail-page--appointment-editing { min-height: 0; padding: 0; }
+.detail-page--appointment-editing .detail-content { max-width: none; }
+
 .back-link {
   color: #2878f2;
   font-size: 24rpx;
@@ -231,7 +234,6 @@
    Keep this business page free of a competing task palette. */
 
 .archive-detail-heading { padding: 20rpx 28rpx 0; }
-.archive-detail-context { display: block; padding: 8rpx 28rpx; color: var(--app-color-text-secondary); font-size: var(--app-font-meta); overflow-wrap: anywhere; }
 
 .tab-panel {
   padding: 16rpx 28rpx 18rpx;

@@ -30,7 +30,7 @@
     <navigator :url="route('customer')" class="archive-navigator" data-testid="customer-summary">
       <view class="app-record-card archive-card">
         <view class="archive-heading"><text class="archive-title">客户资料</text><text class="archive-link">查看详情 ›</text></view>
-        <text class="archive-copy">{{ customerSummary }}</text>
+        <text class="archive-copy archive-customer-summary">{{ customerSummary }}</text>
       </view>
     </navigator>
 
