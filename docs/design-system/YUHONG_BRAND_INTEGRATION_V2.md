@@ -55,6 +55,8 @@ Owner 已明确替换包内旧 PDF。旧 PDF 不再作为验收依据；替代�
 
 三页明确值与 tokens 一致：主操作/按下/禁用、蓝色链接与焦点、反馈色、20/18/16/14 排版、16 px 边距、4/8 px 控件/卡片圆角。第 2 页合同、质保为结构示意，不能推导新增 API、合同资格、质保适用性或文件权限。实际详情仅显示状态待确认；成功零条才可显示暂无。
 
+2026-11-17，用户选中工单详情品质试点首版「品质精修概念稿」：Mac 本机索引 `/Users/yesun/Documents/雨虹/原型设计/工单详情品质试点-20261117/对比.html`，图件 `02-品质精修概念稿.png`。这是本机归档引用，非团队共享地址；不指后续 B 方案或纯颜色实验，图件不入库。该稿提供视觉方向，不是像素精确规范；具体颜色、字体、尺寸与语义角色以项目已确认的 tokens 和设计系统为准。分隔线角色不能替代控件边框角色；禁用与只读须分别表达，不能因外观相近而混同。现有页面的打磨与取证见 [UI 交付流程的范围限定小节](UI_DELIVERY_WORKFLOW.md#existing-page-polish)。
+
 ## 详情迁移的样式归属
 
 `detail.vue`、`WorkOrderTaskFocus.vue`、`WorkOrderArchiveCards.vue` 的页面/组件样式各自仅导入 `@brand-ui/detail.scss`、`task-focus.scss`、`detail-archives.scss`。两种产品不叠加页面皮肤；共用原有模板、读取模型、事件与权限判断。修链原规则移至自身目录，只清除确定被后续同选择器覆盖的 `.summary-card` padding 和 `.summary-action` min-height。没有按重复数量删除其他有效规则。
