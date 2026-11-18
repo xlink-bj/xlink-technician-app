@@ -44,6 +44,7 @@ export interface R1RecordEditRead {
 }
 export interface R1NodeFormsReader {
   enabled(): boolean
+  canReadCompletedAppointment?(workOrderId: string, runtimeNodeId: string): boolean
   load(workOrderId: string, runtimeNodeId: string): Promise<R1NodeFormsSnapshot>
   isCurrent(snapshot: R1NodeFormsSnapshot): boolean
   /** Transient complete EXTS for this reader's exact current forms snapshot.

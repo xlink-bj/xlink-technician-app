@@ -5,7 +5,8 @@
       <navigator v-for="(node,index) in nodes" :key="String(node.id)" :url="route(String(node.id))" class="archive-link">查看预约节点 {{ index + 1 }} ›</navigator>
       <text v-if="nodeId" class="archive-hint">原预约节点已变化，请重新选择。</text>
     </template>
-    <R1NodeFormsReadPanel v-else-if="reader?.enabled() && selectedNode.lifecycle === 'active'" :key="panelKey"
+    <R1NodeFormsReadPanel v-else-if="reader?.enabled() && (selectedNode.lifecycle === 'active'
+      || reader.canReadCompletedAppointment?.(workOrderId,String(selectedNode.id)))" :key="panelKey"
       :reader="reader" :work-order-id="workOrderId" :runtime-node-id="String(selectedNode.id)" :actor-scope="actorScope"
       :read-revision="readRevision"
       :appointment-archive="{summary,recordId,route:recordRoute}" :edit-experience-override="isAppointmentEdit">

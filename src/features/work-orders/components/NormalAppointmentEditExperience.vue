@@ -11,16 +11,22 @@
           :disabled="view.disabled" @update:model-value="view.updateValue(field.valueKey,$event)" />
         <text v-else>{{ field.reason || '当前字段不可编辑' }}</text>
       </AppField>
-      <AppButton :disabled="view.disabled || !view.valid" data-testid="normal-appointment-review"
-        @tap="pane='confirm'">核对改约信息</AppButton>
+      <view class="normal-appointment-actions">
+        <AppButton :disabled="view.disabled || !view.valid" data-testid="normal-appointment-review"
+          @tap="pane='confirm'">核对改约信息</AppButton>
+        <AppButton v-if="view.cancelArchiveEdit" variant="text" :disabled="view.disabled"
+          data-testid="appointment-edit-cancel" @tap="view.cancelArchiveEdit()">取消修改</AppButton>
+      </view>
     </template>
     <template v-else-if="pane === 'time'">
       <AppointmentTimeSelectionContent :selected-date="selectedDate" :selected-option-key="selectedOptionKey"
         :date-shortcuts="dateShortcuts" :time-options="appointmentTimeOptions" :disabled="view.disabled"
         :allow-minute-selection="true" :minute-time="selectedMinute"
         @select-date="selectedDate=$event" @select-option="selectShortcut" @select-minute="selectMinute" />
-      <AppButton :disabled="view.disabled || !selectedValue" data-testid="normal-appointment-time-confirm" @tap="confirmTime">确认选择</AppButton>
-      <AppButton variant="text" :disabled="view.disabled" data-testid="normal-appointment-time-cancel" @tap="pane='fields'">返回修改</AppButton>
+      <view class="normal-appointment-actions">
+        <AppButton :disabled="view.disabled || !selectedValue" data-testid="normal-appointment-time-confirm" @tap="confirmTime">确认选择</AppButton>
+        <AppButton variant="text" :disabled="view.disabled" data-testid="normal-appointment-time-cancel" @tap="pane='fields'">返回修改</AppButton>
+      </view>
     </template>
     <template v-else>
       <view v-for="field in view.fields.filter(f=>f.visible)" :key="field.fieldId" class="normal-appointment-summary">
@@ -28,8 +34,10 @@
         <text v-if="view.originalValues && view.originalValues[field.valueKey] !== view.values[field.valueKey]" class="normal-appointment-hint" :data-testid="`appointment-before-${field.valueKey}`">修改前：{{ displayValue(field,view.originalValues) }}</text>
       </view>
       <text class="normal-appointment-hint">仅保存本条改约记录，不会完成当前节点。</text>
-      <AppButton :disabled="view.disabled || !view.valid" data-testid="normal-appointment-save" @tap="view.saveOnly()">确认保存记录</AppButton>
-      <AppButton variant="text" :disabled="view.disabled" data-testid="normal-appointment-review-back" @tap="pane='fields'">返回修改</AppButton>
+      <view class="normal-appointment-actions">
+        <AppButton :disabled="view.disabled || !view.valid" data-testid="normal-appointment-save" @tap="view.saveOnly()">确认保存记录</AppButton>
+        <AppButton variant="text" :disabled="view.disabled" data-testid="normal-appointment-review-back" @tap="pane='fields'">返回修改</AppButton>
+      </view>
     </template>
   </view>
 </template>
@@ -46,7 +54,7 @@ import {appointmentDisplayFor,appointmentTimeOptions,dateShortcutsFor,dateString
 const props=defineProps<{view:{readonly recordId:string;readonly fields:readonly(R1LocalField&{readonly visible:boolean})[];
   readonly values:Readonly<Record<string,unknown>>;readonly disabled:boolean;readonly valid:boolean;
   readonly originalValues?:Readonly<Record<string,unknown>>;
-  updateValue(key:string,value:R1LocalFieldValue):void;saveOnly():Promise<void>}}>()
+  updateValue(key:string,value:R1LocalFieldValue):void;saveOnly():Promise<void>;cancelArchiveEdit?():Promise<void>}}>()
 // Only an unconfirmed picker selection is local. All form values remain in Panel.
 const pane=ref<'fields'|'time'|'confirm'>('fields'),selectedDate=ref(''),selectedOptionKey=ref(''),selectedMinute=ref('')
 const dateShortcuts=dateShortcutsFor()
@@ -64,4 +72,5 @@ function confirmTime(){const field=timeField.value,value=selectedValue.value;if(
 <style scoped lang="scss">
 .normal-appointment-hint{display:block;margin:var(--app-space-sm) 0;color:var(--app-color-text-secondary);font-size:var(--app-font-meta);line-height:1.6;overflow-wrap:anywhere}
 .normal-appointment-summary{padding-bottom:var(--app-space-xs)}
+.normal-appointment-actions{padding-top:var(--app-space-md)}
 </style>

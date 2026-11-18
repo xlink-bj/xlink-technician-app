@@ -2,7 +2,7 @@
   <view data-testid="r1-normal-form-read" :class="{'form-read--commercial':commercial}">
     <template v-if="appointmentArchive">
       <view class="archive-heading"><text class="archive-title">预约信息</text>
-        <navigator v-if="visibleSnapshot?.records.length && !editing && !busy" class="archive-link" data-testid="appointment-archive-open"
+        <navigator v-if="visibleSnapshot?.records.length && !editing && !busy && (appointmentArchive.summary || appointmentArchive.recordId)" class="archive-link" data-testid="appointment-archive-open"
           :url="appointmentArchive.route(appointmentArchive.summary && visibleSnapshot.records.length === 1 ? String(visibleSnapshot.records[0]!.id) : undefined)">
           {{ appointmentArchive.summary ? (visibleSnapshot.records.length === 1 ? '查看详情' : `查看全部 ${visibleSnapshot.records.length} 条`) : '全部预约' }} ›
         </navigator>
@@ -36,7 +36,7 @@
             </template>
             <template v-else>
               <slot v-if="editPresentation" name="edit-experience" :context="editPresentation" />
-              <AppButton variant="text" :disabled="busy" data-testid="appointment-edit-cancel" @tap="cancelEdit">取消修改</AppButton>
+              <AppButton v-else variant="text" :disabled="busy" data-testid="appointment-edit-cancel" @tap="cancelEdit">取消修改</AppButton>
             </template>
           </view>
         </template>
@@ -275,7 +275,8 @@ const editPresentation = computed(() => {
   return {snapshot:source,recordId:id,fields:editableFields.value,values:Object.freeze({...values.value}),originalValues:Object.freeze({...action.initialValues?.(id)}),
     disabled:busy.value||loading.value||draftBlocked.value||draftWorking.value||fileCancelling.value,valid:validDraft.value,
     updateValue:(key:string,value:R1LocalFieldValue)=>{if(owns())setValue(key,value)},
-    saveOnly:async()=>{if(owns())await save(false)}}
+    saveOnly:async()=>{if(owns())await save(false)},
+    cancelArchiveEdit:props.appointmentArchive ? async()=>{if(owns())await cancelEdit()} : undefined}
 })
 watch(actions,(next,old)=>{if(old?.fileMedia&&next?.fileMedia!==old.fileMedia)old.fileMedia.dispose()})
 const displayMessage=computed(()=>props.commercial && actions.value && !actions.value.locked() && /^已从后台读取 \d+ 条记录，当前仅查看。$/.test(message.value) ? message.value.replace('，当前仅查看。','。') : message.value)

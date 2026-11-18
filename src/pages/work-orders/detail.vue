@@ -95,9 +95,7 @@
         :data-testid="normalWorkspaceEntry ? 'normal-form-workspace-entry' : devMockDynamicFormNodeKind ? 'special-form-workspace-entry' : undefined">
       <WorkOrderTaskFocus
         :title="workflowProjection.currentTask.title"
-        :action-label="productionReadOnly
-          ? (workflowProjection.currentTask.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作')
-          : (normalWorkspaceEntry || devMockDynamicFormNodeKind) ? '打开表单' : workflowProjection.currentTask.actionLabel"
+        :action-label="currentTaskActionLabel"
         :tone="workflowProjection.currentTask.tone"
         :disabled="(workflowProjection.currentTask.execution !== 'enabled' && !allowLocalMockPreview && !normalWorkspaceEntry && !devMockDynamicFormNodeKind)
           || (productionReadOnly && workflowProjection.currentTask.actionIntent !== 'place_order')"
@@ -141,7 +139,10 @@
       </WorkOrderArchiveCards>
 
       <view v-else-if="readView === 'appointment'">
-        <text class="archive-detail-context" data-testid="detail-read-context">{{ detail.customerName }}{{ detail.displayNumber ? ` · ${workOrderNumberDisplay(detail.displayNumber)}` : '' }}</text>
+        <AppWorkOrderSummary v-if="!selectedAppointmentRecordId" :customer-name="detail.customerName"
+          :display-number="workOrderNumberDisplay(detail.displayNumber)" :service-district="detail.serviceDistrict"
+          :service-address="detail.serviceAddress" />
+        <text v-else class="archive-detail-context" data-testid="detail-read-context">{{ detail.customerName }}{{ detail.displayNumber ? ` · ${workOrderNumberDisplay(detail.displayNumber)}` : '' }}</text>
         <AppointmentArchive :key="appointmentReadVersion" :work-order-id="String(detail.id)" :nodes="appointmentNodes"
           :read-revision="appointmentReadVersion"
           :actor-scope="workOrderReadScopeKey(session.session)" :summary="false" :node-id="selectedAppointmentNodeId" :record-id="selectedAppointmentRecordId" />
@@ -356,6 +357,7 @@ import AppStatus from '@shared/ui/AppStatus.vue'
 import AppMetaTag from '@shared/ui/AppMetaTag.vue'
 import AppFeedbackState from '@shared/ui/AppFeedbackState.vue'
 import AppWorkOrderSkeleton from '@shared/ui/AppWorkOrderSkeleton.vue'
+import AppWorkOrderSummary from '@shared/ui/AppWorkOrderSummary.vue'
 import WorkOrderTaskFocus from '@features/work-orders/WorkOrderTaskFocus.vue'
 import { r1NodeFormsReaderKey } from '@features/work-orders/r1-node-forms-read'
 import HistoricalFormsTimeline from '@features/work-orders/HistoricalFormsTimeline.vue'
@@ -405,6 +407,14 @@ const customerServiceAddress = computed(() => {
   return [district, address].filter(Boolean).join(' ') || '—'
 })
 const workflowProjection = computed(() => detailWorkflowUiProjectionFor(detail.value, session.session))
+const currentTaskActionLabel = computed(() => {
+  const task = workflowProjection.value.currentTask
+  if (!task) return ''
+  if (productionReadOnly) return task.actionIntent === 'place_order' ? '查看报价方案' : '暂不可操作'
+  if (task.actionIntent === 'set_appointment') return task.actionLabel
+  if (task.formPurpose === 'survey' && task.sourceNodeType === 'repeat') return '开始勘查'
+  return normalWorkspaceEntry.value || devMockDynamicFormNodeKind.value ? '打开表单' : task.actionLabel
+})
 const currentR1FormNode = computed(() => {
   const task = workflowProjection.value.currentTask
   if (!task || (task.sourceNodeType !== 'forms' && task.sourceNodeType !== 'repeat')) return undefined

@@ -248,7 +248,7 @@ export const normalSurveyMockAppointment = { _id:ids.work,tenantId:ids.tenant,wo
   exts:{sourceType:'mock-source-standard'} }
 export const normalSurveyMockDetail = {success:true,status:1,data:{serviceAppointment:normalSurveyMockAppointment,
   workflow:{_id:ids.run,tenantId:ids.tenant,formDataId:ids.work,state:0},workflowNode:[normalSurveyMockNode]}}
-const record = {_id:ids.record,tenantId:ids.tenant,sid:ids.work,nodeId:ids.node,
+export const normalSurveyMockRecord = {_id:ids.record,tenantId:ids.tenant,sid:ids.work,nodeId:ids.node,
   workflowId:ids.run,extId:ids.definition,state:1,part:['survey-option-6b86b273ff34','survey-option-38d66d9692ac'],width:0,leakageCause:['mock-leakage-cause-roof-1'],exts:{}}
 
 /** Only the existing normal-reader request shapes get synthetic responses. */
@@ -268,7 +268,7 @@ export function normalSurveyMockRead(path:string, body:Readonly<Record<string,un
       &&body['is:sid|string#and']===ids.work&&body['is:nodeId|string#and']===ids.node
       &&body['is:workflowId|string#and']===ids.run&&body['ne:state|integer#and']===-1
       &&body['is:_id|string#and']===ids.record&&body.page===1&&body.rows===2
-    return{data:owned?[record]:[],total:owned?1:0,page:1,size:2,dataCount:owned?1:0}
+    return{data:owned?[normalSurveyMockRecord]:[],total:owned?1:0,page:1,size:2,dataCount:owned?1:0}
   }
   return null
 }

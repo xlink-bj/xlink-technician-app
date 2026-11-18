@@ -47,9 +47,11 @@
             <AppIcon v-if="selectedOptionKey === option.key" class="time-slot-check" name="complete" :size="14" color="var(--app-color-surface)" aria-hidden="true" />
           </button>
         </view>
-        <picker v-if="allowMinuteSelection" mode="time" :value="minuteTime || '09:00'" :disabled="disabled" @change="handleMinuteChange" data-testid="appointment-minute-picker">
-          <view class="time-slot" :class="{'time-slot--selected': Boolean(minuteTime)}">{{ minuteTime ? `已选 ${minuteTime} · 调整时间` : '选择其他时间（到分钟）' }}</view>
-        </picker>
+        <view v-if="allowMinuteSelection" class="time-selection-minute">
+          <picker mode="time" :value="minuteTime || '09:00'" :disabled="disabled" @change="handleMinuteChange" data-testid="appointment-minute-picker">
+            <view class="time-slot" :class="{'time-slot--selected': Boolean(minuteTime)}">{{ minuteTime ? `已选 ${minuteTime} · 调整时间` : '选择其他时间（到分钟）' }}</view>
+          </picker>
+        </view>
         <text v-if="timeError" class="time-selection-error">{{ timeError }}</text>
       </view>
     </view>
@@ -64,4 +66,5 @@ function handleMinuteChange(event:unknown){const value=(event as {detail?:{value
 </script>
 <style>
 @import "@brand-ui/appointment-time.scss";
+.time-selection-minute { margin-top: var(--app-space-sm); }
 </style>

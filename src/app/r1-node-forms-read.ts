@@ -1,5 +1,6 @@
 import { createSelectedRoleVisibilityContext } from '@shared/form/selected-role-visibility'
 import {nativeAppointmentMockEnabled} from '@shared/config/native-appointment-mock'
+import {nativeAppointmentIds, nativeAppointmentSurveyPending} from '@adapters/api/mock/native-appointment'
 import { isR1RetainedFileArray } from '@shared/form/r1-retained-file-values'
 import {decodeR1ScopedJson} from '@adapters/api/r1-scoped-json'
 import {bindR1ConfiguredFileReadDisplay} from '@shared/form/r1-configured-file-read-evidence'
@@ -204,9 +205,13 @@ export function createNormalNodeFormsReader(input: {
     return enabled() && a ? sessionAuthorizationFingerprint({ sessionRef: a.sessionRef,
       userId: a.user.id, roleId: a.currentRole?.id, roleVersion: a.roleVersion }) : null
   }
+  const canReadCompletedAppointment = (workOrderId: string, runtimeNodeId: string) =>
+    workOrderId === nativeAppointmentIds.workOrderId && runtimeNodeId === nativeAppointmentIds.runtimeNodeId
+    && nativeAppointmentMockEnabled(input.env,input.origin) && enabled()
   let viewEpoch = 0
   const api:R1NodeFormsReader = {
     enabled,
+    canReadCompletedAppointment,
     clear() { viewEpoch++; generation++; current = null },
     beginSurveyMediaRead(snapshot,evidence){
       if(api.isCurrentSurveyMediaSource?.(snapshot,evidence)!==true)return deny()
@@ -479,9 +484,12 @@ export function createNormalNodeFormsReader(input: {
         if (new Set(nodes.map(n => id(n._id))).size !== nodes.length) deny()
         const rawNode = nodes.find(n => n._id === runtimeNodeId)
         if (!rawNode) return deny()
-        if (rawNode.tenantId !== input.tenantId || rawNode.workflowId !== wf._id
-          || rawNode.workflowFormDataId !== workOrderId || rawNode.workflowFormColName !== 'serviceAppointment' || rawNode.state !== 0) deny()
         const def = row(rawNode.nodeDef)
+        const completedAppointment = rawNode.state === 10 && canReadCompletedAppointment(workOrderId,runtimeNodeId)
+          && def.nodeType === 'repeat' && def.formDefId === nativeAppointmentIds.formDefinitionId
+        if (rawNode.tenantId !== input.tenantId || rawNode.workflowId !== wf._id
+          || rawNode.workflowFormDataId !== workOrderId || rawNode.workflowFormColName !== 'serviceAppointment'
+          || (rawNode.state !== 0 && !completedAppointment)) deny()
         if (!['forms', 'repeat'].includes(String(def.nodeType)) || (rawNode.formDefId !== undefined && rawNode.formDefId !== def.formDefId)) deny()
         id(def.formDefId)
         rawFormsExts = def.nodeType === 'forms' ? formsExtsJson(rawNode.exts) : undefined
@@ -495,10 +503,13 @@ export function createNormalNodeFormsReader(input: {
           && def.formFieldIdsFill.every(v => typeof v === 'string' && v.length > 0 && v.trim() === v)
           && new Set(def.formFieldIdsFill).size === def.formFieldIdsFill.length
           ? [...def.formFieldIdsFill] : undefined
-        appointmentSubmitAllowed = !Object.hasOwn(def,'submitHideNodeId') || def.submitHideNodeId === ''
+        appointmentSubmitAllowed = (!Object.hasOwn(def,'submitHideNodeId') || def.submitHideNodeId === '')
+          && (!completedAppointment || nativeAppointmentSurveyPending())
         const node = workflowNode(rawNode)
+        // The completed local archive still uses the exact actor/role visibility check.
+        const visibilityNode = completedAppointment ? {...node,lifecycle:'active' as const} : node
         if (node.formDefinitionId !== def.formDefId || node.runId !== wf._id || node.nodeTypeEvidence !== 'runtime_node_def'
-          || !evaluateNodeVisibility(node, { userId: actor.user.id, roleIds: [actor.currentRole!.id], organizationRoles: [] }).visible) deny()
+          || !evaluateNodeVisibility(visibilityNode, { userId: actor.user.id, roleIds: [actor.currentRole!.id], organizationRoles: [] }).visible) deny()
         return node
       }
       const node = await readNode(), definitionId = id(node.formDefinitionId)

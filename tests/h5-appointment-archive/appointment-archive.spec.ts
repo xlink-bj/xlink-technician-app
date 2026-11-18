@@ -63,6 +63,7 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
       await expect(page.getByTestId('appointment-archive-open')).toBeVisible()
     }else if(mode==='empty'){
       await expect(page.getByTestId('appointment-archive-empty')).toBeVisible();await expect(page.getByTestId('appointment-archive-open')).toHaveCount(0)
+      await expect(page.getByTestId('task-focus-action')).toHaveAccessibleName('开始预约')
     }else if(mode==='failed'){
       await expect(page.getByTestId('appointment-archive-error')).toBeVisible();await expect(page.getByTestId('appointment-archive-empty')).toHaveCount(0)
     }else{
@@ -71,6 +72,7 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
       await page.getByTestId('appointment-archive-open').click()
       if(!['single','minute','date-only'].includes(mode)){
         await expect(page.getByTestId('appointment-record-a')).toBeVisible()
+        await expect(page.getByTestId('action-workspace-context')).toContainText('SYNTHETIC-APPOINTMENT')
         await page.getByTestId('appointment-record-b').click()
         await expect(page.getByTestId('appointment-read-only')).toBeVisible();await expect(page.getByTestId('appointment-modify')).toHaveCount(0)
         await page.screenshot({path:info.outputPath('02-read-only-record-b.png'),fullPage:true})
@@ -88,8 +90,19 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
       }
       await page.screenshot({path:info.outputPath('03-record-a-detail.png'),fullPage:true})
       await page.getByTestId('appointment-modify').click()
-      await page.getByTestId('r1-normal-input-modifyReason').locator('input,textarea').fill('客户调整到下午')
+      const reasonInput=page.getByTestId('r1-normal-input-modifyReason').locator('input,textarea')
+      await reasonInput.fill('客户调整到下午')
+      const reviewButton=page.getByTestId('normal-appointment-review')
+      const verticalGap=async(above:typeof reasonInput,below:typeof reasonInput)=>{
+        const top=(await above.boundingBox())!,bottom=(await below.boundingBox())!
+        expect(bottom.y-top.y-top.height).toBeGreaterThanOrEqual(6)
+      }
+      await verticalGap(reasonInput,reviewButton)
+      if(mode==='single')await page.screenshot({path:info.outputPath('03a-edit-actions.png'),fullPage:true})
       await page.getByTestId('normal-appointment-time-open').click()
+      await verticalGap(page.locator('.time-slots .time-slot').last(),page.getByTestId('appointment-minute-picker'))
+      await verticalGap(page.getByTestId('appointment-minute-picker'),page.getByTestId('normal-appointment-time-confirm'))
+      if(mode==='single')await page.screenshot({path:info.outputPath('03b-selection-actions.png'),fullPage:true})
       if(mode==='date-only')await expect(page.getByTestId('normal-appointment-time-confirm')).toHaveAttribute('aria-disabled','true')
       if(mode==='minute'){
         await page.getByTestId('appointment-minute-picker').click()

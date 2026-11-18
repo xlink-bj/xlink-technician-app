@@ -1,6 +1,9 @@
 import {beforeEach,afterEach,describe,it,expect,vi} from 'vitest'
 import {clonePlainData} from '@adapters/common/clone-plain-data'
 import {workOrderActivities} from '@adapters/api/read-models/work-order-activity'
+import {workflowNode} from '@adapters/api/read-models/workflow'
+import {projectDetailWorkflow} from '@runtimes/workflow'
+import {asOpaqueId} from '@shared/types'
 import {nativeAppointmentMockEnabled} from '@shared/config/native-appointment-mock'
 import {nativeAppointmentIds as ids,nativeAppointmentMockRead,nativeAppointmentSceneKey,nativeAppointmentWriteCountKey,createNativeAppointmentMockCommandTransport} from '@adapters/api/mock/native-appointment'
 import {createNormalNodeFormsReader} from '@app/r1-node-forms-read'
@@ -34,8 +37,9 @@ describe('native appointment explicit offline profile',()=>{
   expect(nativeAppointmentMockEnabled(env,'')).toBe(true);expect(nativeAppointmentMockEnabled(env,'http://localhost:5174')).toBe(false)
  })
  it.each([{DEV:false},{PROD:true},{UNI_PLATFORM:'h5'},{UNI_PLATFORM:'app'},{VITE_XLINK_ENVIRONMENT:'prod'},{VITE_XLINK_ENVIRONMENT:'production'},{VITE_XLINK_ENVIRONMENT:'beta'},{VITE_XLINK_NATIVE_APPOINTMENT_MOCK:'false'},{VITE_XLINK_MOCK:'false'},{VITE_XLINK_AUTH_TENANT:'real'},{VITE_XLINK_API_BASE_URL:'http://127.0.0.1:5189/xlink/wm'},{VITE_XLINK_ENABLE_REAL_WRITES:'true'},{VITE_XLINK_ENABLE_R1_SPECIAL_WRITES:'true'},{VITE_XLINK_AUTH_API_BASE_URL:'https://example.com'},{VITE_XLINK_R1_REPEAT_ACTIONS:'true'},{VITE_XLINK_R1_REPEAT_GRANT:'{}'},{VITE_XLINK_QUICK_LOGIN_PHONE:'test'}])('denies unsafe profile %j',override=>{expect(nativeAppointmentMockEnabled({...env,...override},'',(override as any).UNI_PLATFORM??'mp-weixin')).toBe(false)})
- it('edits exact active A with the original six-field guard, saves locally and rereads; B is unchanged',async()=>{
+ it('edits exact completed A before survey work, saves locally and rereads; B is unchanged',async()=>{
   store.set(nativeAppointmentSceneKey,'multiple');const f=fixture(),snapshot=await f.reader.load(ids.workOrderId,ids.runtimeNodeId),action=f.provider.forSnapshot(snapshot)!
+  expect(snapshot.node.lifecycle).toBe('closed')
   expect(action.canEdit?.(ids.recordId)).toBe(true);expect(action.canEdit?.('mock-appointment-record-022-b')).toBe(false)
   const b=JSON.stringify(snapshot.records[1]),values=action.initialValues!(ids.recordId)!
   const saved=await action.saveOnly({...values,datetime:'2026-11-20 14:09:42',modifyReason:'客户调整'},ids.recordId)
@@ -52,9 +56,34 @@ describe('native appointment explicit offline profile',()=>{
   const fresh=fixture(),s=await fresh.reader.load(ids.workOrderId,ids.runtimeNodeId),next=fresh.provider.forSnapshot(s)!
   expect(next.canEdit?.(ids.recordId)).toBe(false);await expect(next.saveOnly({...values,modifyReason:'retry'},ids.recordId)).rejects.toThrow();expect(store.get(nativeAppointmentWriteCountKey)).toBe(1)
  })
- it('does not open a write capability for a completed node or foreign scope',async()=>{
+ it('keeps the current task separate from the appointment archive',()=>{
+  const actor={userId:asOpaqueId<'UserId'>(ids.userId),roleIds:[asOpaqueId<'RoleId'>(ids.roleId)],organizationRoles:[]}
+  function task(){
+    const detail=nativeAppointmentMockRead(`basic/serviceAppointment/queryById/${ids.workOrderId}`,{}) as {data:{workflowNode:unknown[]}}
+    return projectDetailWorkflow(detail.data.workflowNode.map(node=>workflowNode(node)),actor).currentTask
+  }
+  expect(task()).toMatchObject({nodeId:ids.surveyNodeId,actionIntent:'interact_with_form',formPurpose:'survey',title:'勘察'})
+  store.set(nativeAppointmentSceneKey,'failed')
+  expect(task()?.nodeId).toBe(ids.surveyNodeId)
+  store.set(nativeAppointmentSceneKey,'empty')
+  expect(task()).toMatchObject({nodeId:ids.runtimeNodeId,actionIntent:'set_appointment'})
+ })
+ it('revokes an open editor once survey work starts and still reads the completed archive',async()=>{
+  const f=fixture(),s=await f.reader.load(ids.workOrderId,ids.runtimeNodeId),action=f.provider.forSnapshot(s)!
+  const values=action.initialValues!(ids.recordId)!
+  store.set(nativeAppointmentSceneKey,'survey-started')
+  expect(action.canEdit?.(ids.recordId)).toBe(false)
+  await expect(action.saveOnly({...values,modifyReason:'changed'},ids.recordId)).rejects.toThrow()
+  const after=await f.reader.load(ids.workOrderId,ids.runtimeNodeId)
+  expect(after.node.lifecycle).toBe('closed')
+  expect(after.records.map(record=>record.id)).toEqual([ids.recordId])
+  expect(f.provider.forSnapshot(after)).toBeNull()
+  expect(store.get(nativeAppointmentWriteCountKey)).toBeUndefined()
+  expect(network).not.toHaveBeenCalled()
+ })
+ it('does not open a write capability for a copied snapshot or a workflow command',async()=>{
   const f=fixture(),s=await f.reader.load(ids.workOrderId,ids.runtimeNodeId)
-  expect(f.provider.forSnapshot({...s,node:{...s.node,lifecycle:'closed'}})).toBeNull()
+  expect(f.provider.forSnapshot({...s})).toBeNull()
   await expect(createNativeAppointmentMockCommandTransport().execute({method:'POST',path:'basic/workflow/process',body:{}})).rejects.toThrow();expect(network).not.toHaveBeenCalled()
  })
  it('unmatched native history reads are blocked without a network executor call',async()=>{

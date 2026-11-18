@@ -28,8 +28,10 @@ export function createRepeatAppointmentPageActions(input:{snapshot:R1NodeFormsSn
    &&(r1RepeatActionsEnabled(input.env,input.origin)||nativeMock())&&input.env.VITE_XLINK_AUTH_TENANT===scope.tenantId&&JSON.stringify(input.getGrant())===grantBytes)}
  const valid=(s:R1NodeFormsSnapshot)=>{
   const actor={userId:asOpaqueId<'UserId'>(scope.userId),roleIds:[asOpaqueId<'RoleId'>(scope.roleId)],organizationRoles:[]}
-  return input.schemaMatches(s)&&signature(s)===initialSchema&&s.node.lifecycle==='active'&&s.node.nodeTypeEvidence==='runtime_node_def'
-   &&s.records.length<=50&&isHandlerMatch(actor,s.node.handlers??[])&&evaluateNodeVisibility(s.node,actor).visible
+  const localCompleted=nativeMock()&&s.node.lifecycle==='closed'
+  const visibilityNode=localCompleted?{...s.node,lifecycle:'active' as const}:s.node
+  return input.schemaMatches(s)&&signature(s)===initialSchema&&s.node.nodeTypeEvidence==='runtime_node_def'
+   &&s.records.length<=50&&isHandlerMatch(actor,s.node.handlers??[])&&evaluateNodeVisibility(visibilityNode,actor).visible
  }
  const owns=()=>authorized()&&input.reader.isCurrent(lease)&&valid(lease)
  const evidence=(s:R1NodeFormsSnapshot,id:string):R1RepeatAppointmentRead=>{
