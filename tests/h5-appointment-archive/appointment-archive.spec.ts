@@ -141,11 +141,15 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
         await expect(page.getByTestId('action-workspace-context')).toHaveCount(1)
       }
       await expectWorkspaceFooter()
-      if(mode==='single')await page.screenshot({path:info.outputPath('03a-edit-actions.png'),fullPage:true})
+      if(mode==='single'){
+        await reasonInput.blur()
+        await expect(reviewButton).toBeEnabled()
+        await page.screenshot({path:info.outputPath('03a-edit-actions.png')})
+      }
       await page.getByTestId('normal-appointment-time-open').click()
       await expectWorkspaceFooter()
       await expect(footer.getByTestId('normal-appointment-time-confirm')).toBeVisible()
-      if(mode==='single')await page.screenshot({path:info.outputPath('03b-selection-actions.png'),fullPage:true})
+      if(mode==='single')await page.screenshot({path:info.outputPath('03b-selection-actions.png')})
       if(mode==='date-only')await expect(page.getByTestId('normal-appointment-time-confirm')).toHaveAttribute('aria-disabled','true')
       if(mode==='minute'){
         await page.getByTestId('appointment-minute-picker').click()
@@ -159,14 +163,14 @@ test(`appointment archive ${mode}: actual App entry and selected record`,async({
       await reviewButton.click()
       await expectWorkspaceFooter()
       await expect(page.getByTestId('appointment-before-datetime')).toContainText(mode==='date-only'?'2026-11-20':'10:37')
-      await page.screenshot({path:info.outputPath('04-review-before-after.png'),fullPage:true})
+      await page.screenshot({path:info.outputPath('04-review-before-after.png')})
       if(mode==='single'){
         const original=page.viewportSize()!
         for(const viewport of [{width:375,height:667},{width:390,height:844}]){
           await page.setViewportSize(viewport)
           await expectWorkspaceFooter()
           expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true)
-          await page.screenshot({path:info.outputPath(`04-review-${viewport.width}x${viewport.height}.png`),fullPage:true})
+          await page.screenshot({path:info.outputPath(`04-review-${viewport.width}x${viewport.height}.png`)})
         }
         await page.setViewportSize(original)
       }

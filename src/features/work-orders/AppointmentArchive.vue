@@ -10,7 +10,7 @@
       ref="panel"
       :reader="reader" :work-order-id="workOrderId" :runtime-node-id="String(selectedNode.id)" :actor-scope="actorScope"
       :read-revision="readRevision"
-      :appointment-archive="{summary,recordId,route:recordRoute}" :edit-experience-override="isAppointmentEdit"
+      :appointment-archive="archivePresentation" :edit-experience-override="isAppointmentEdit"
       @archive-edit-change="setEditing">
       <template #archive-edit-experience="{context,busy,feedback}">
         <ActionWorkspaceShell h5-navigation-fit :customer-name="workspaceContext?.customerName"
@@ -78,6 +78,7 @@ const editing = ref(false)
 const confirmCancel = ref(false)
 const selectedNode=computed(()=>props.nodeId ? props.nodes.find(node=>String(node.id)===props.nodeId) : props.nodes.length===1?props.nodes[0]:undefined)
 const panelKey=computed(()=>JSON.stringify([props.workOrderId,selectedNode.value,props.actorScope,props.recordId]))
+const archivePresentation = computed(() => ({ summary: props.summary, recordId: props.recordId, route: recordRoute }))
 function route(nodeId:string){return appointmentArchiveRoute(props.workOrderId,nodeId)}
 function recordRoute(recordId?:string){return appointmentArchiveRoute(props.workOrderId,String(selectedNode.value!.id),recordId)}
 function setEditing(value:boolean) {
