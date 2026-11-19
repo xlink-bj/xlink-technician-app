@@ -275,6 +275,7 @@
               </view>
               <text class="quotation-read-readonly">后台订单记录 · 仅供查看</text>
               <text v-if="order.totalPrice !== undefined" class="quotation-read-total">订单金额：¥{{ order.totalPrice.toFixed(2) }}</text>
+              <text class="quotation-read-meta" data-testid="child-order-construction-progress">本订单施工进展：{{ childOrderConstructionProgress(String(detail?.id ?? ''), order) }}</text>
               <view v-if="order.groups.length === 0" class="quotation-read-warning">
                 <text>报价分组内容暂不可识别，已保留只读状态。</text>
               </view>
@@ -332,7 +333,7 @@ import { workOrderNumberDisplay } from '@shared/ui/work-order-number-display'
 import { workOrderCardToneFor } from '@features/work-orders/card'
 import { parseWorkOrderId, useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
-import { detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
+import { childOrderConstructionProgress, detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
 // #ifdef XLINK_DEV_QA
 import { constructionMockEnabled } from '@app/dev-construction-read'
 // #endif

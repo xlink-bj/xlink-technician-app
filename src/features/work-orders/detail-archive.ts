@@ -37,6 +37,24 @@ export function orderArchiveSummary(page: ReadPage<QuotationOrderBrowseItem> | n
   return { kind: 'order', title: '正式订单', items, complete, total: complete ? total : undefined }
 }
 
+/** Displays only the verified construction state of this individual Order. */
+export function childOrderConstructionProgress(
+  workOrderId: string,
+  order: Pick<QuotationOrderBrowseItem, 'id' | 'serviceAppointmentId' | 'state' | 'processState'> & { readonly type: number },
+): string {
+  const unconfirmed = '暂不可确认'
+  if (![workOrderId, order.id].every(id => typeof id === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(id))
+    || order.serviceAppointmentId !== workOrderId || order.type !== 1 || order.state !== 1) {
+    return unconfirmed
+  }
+  switch (order.processState) {
+    case 1: return '待开工'
+    case 2: return '已开工'
+    case 3: return '已完工'
+    default: return unconfirmed
+  }
+}
+
 export function followUpReadMessage(detail: WorkOrderDetail): string {
   switch (detail.activityReadState) {
     case 'succeeded': return detail.activities?.length ? '' : '暂无跟进记录'

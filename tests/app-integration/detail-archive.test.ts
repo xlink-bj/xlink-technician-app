@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detailReadRoute, detailReadTitle, detailReadView, followUpReadMessage, orderArchiveSummary } from '@features/work-orders/detail-archive'
+import { childOrderConstructionProgress, detailReadRoute, detailReadTitle, detailReadView, followUpReadMessage, orderArchiveSummary } from '@features/work-orders/detail-archive'
 import { workOrderActivities } from '@adapters/api/read-models/work-order-activity'
 import type { QuotationOrderBrowseItem, WorkOrderDetail } from '@shared/ports'
 
@@ -44,5 +44,35 @@ describe('verified detail archive projection', () => {
     expect(detailReadView('follow-up')).toBe('follow-up')
     expect(detailReadView('submit')).toBe('home')
     expect(detailReadRoute('work &1', 'quotation', 'order/1')).toBe('/pages/work-orders/detail?id=work%20%261&read=quotation&order=order%2F1')
+  })
+})
+
+describe('individual Order construction progress', () => {
+  const activeOrder = { ...order('order-1'), state: 1, processState: 2 }
+
+  it.each([
+    [1, '待开工'],
+    [2, '已开工'],
+    [3, '已完工'],
+  ] as const)('maps verified process state %s for the matching active Order', (processState, label) => {
+    expect(childOrderConstructionProgress('work', { ...activeOrder, processState })).toBe(label)
+  })
+
+  it.each([
+    ['blank Order ID', 'work', { id: '' }],
+    ['invalid Order ID', 'work', { id: 'order/1' }],
+    ['invalid Work Order ID', 'work 1', { serviceAppointmentId: 'work 1' }],
+    ['foreign Work Order', 'work', { serviceAppointmentId: 'other-work' }],
+    ['quotation', 'work', { type: 0 }],
+    ['inactive Order', 'work', { state: -1 }],
+    ['missing Order state', 'work', { state: undefined }],
+  ] as const)('keeps progress unconfirmed for %s', (_case, workOrderId, changes) => {
+    expect(childOrderConstructionProgress(workOrderId, { ...activeOrder, ...changes })).toBe('暂不可确认')
+  })
+
+  it('keeps unknown and out-of-scope process states unconfirmed', () => {
+    for (const processState of [undefined, -2, -1, 0, 4, 99, 2.5, Number.NaN]) {
+      expect(childOrderConstructionProgress('work', { ...activeOrder, processState })).toBe('暂不可确认')
+    }
   })
 })
