@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Page, type Request } from '@playwright/test'
+import { expectWorkOrderBAfterLateInformationA, observeWorkOrderALoad } from '../support/late-work-order-information'
 import { isWorkOrderInformationRead } from '../support/work-order-information-fixture'
 test.beforeEach(({}, info) => test.skip(info.config.metadata.informationRole !== true, 'Dedicated fully intercepted DEV information role read'))
 
@@ -7,8 +8,8 @@ function field(showType: string, roleIds: unknown = ['r'], extra: Record<string,
     state: 1, preset: 0, readOnly: 0, type: 'text', showList: ['4'], showType, roleIds, frontEndConfig: '{}', ...extra }
 }
 async function fixture(page: Page, origin: string, initialRole: string | null = 'r') {
-  let role = initialRole, lastId = '', config = [field('4')], hold = false, release = () => {}, arrived = () => {}
-  let held = Promise.resolve()
+  let role = initialRole, lastId = '', config = [field('4')], release = () => {}
+  let markHeldA: ((request: Request) => void) | undefined
   const calls: { path: string; body: Record<string, string> }[] = [], unexpected: string[] = [], errors: string[] = []
   const row = (id: string) => ({ _id: id, tenantId: 'synthetic-authority', name: '合成客户' + id, orderNum: 'SYNTHETIC-ROLE-' + id,
     state: 1, status: 104, serviceType: '40', phone: '13800000000', memo: '根备注' + id, exts: { sourceType: '', memo: '扩展备注' + id } })
@@ -31,7 +32,11 @@ async function fixture(page: Page, origin: string, initialRole: string | null = 
     }
     if (isWorkOrderInformationRead(req, origin)) {
       const response = { data: structuredClone(config), total: config.length, page: 1, size: 200 }
-      if (hold && lastId === 'A') { hold = false; arrived(); await new Promise<void>(resolve => { release = resolve }) }
+      if (markHeldA && lastId === 'A') {
+        const arrived = markHeldA
+        markHeldA = undefined
+        await new Promise<void>(resolve => { release = resolve; arrived(req) })
+      }
       return ok(response)
     }
     if (path === 'code/query' && body['is:type|string#and'] === 'STATUS') return ok({ data: [], total: 0, page: Number(body.page), rows: Number(body.rows) })
@@ -43,7 +48,7 @@ async function fixture(page: Page, origin: string, initialRole: string | null = 
   const back = async () => { if(page.url().includes('read=customer')) { await page.goBack(); await expect(page.getByTestId('work-order-archives')).toBeVisible() } await page.goBack(); await expect(page.locator('.work-orders-page')).toBeVisible() }
   const rows = page.getByTestId('configured-information-row')
   return { calls, unexpected, errors, rows, open, back, login, config: (next: ReturnType<typeof field>[]) => { config = next },
-    role: (next: string | null) => { role = next }, holdA: () => { hold = true; held = new Promise<void>(resolve => { arrived = resolve }) }, arrived: () => held, release: () => release() }
+    role: (next: string | null) => { role = next }, holdA: () => new Promise<Request>(resolve => { markHeldA = resolve }), release: () => release() }
 }
 
 for (const [showType, role, visible] of [['4', 'r', true], ['4', 'other', false], ['5', 'r', false], ['5', 'other', true]] as const) test(`normal readonly information ${showType} selected ${role}: visible ${visible}`, async ({ page, baseURL }, info) => {
@@ -74,9 +79,13 @@ test('real detail rejects malformed/legacy role rules, stale A and logout/missin
     }
     h.config([field('4', ['r'], { frontEndConfig: { showField: 'memo', showValue: '根备注A' }, showFieldPreset: 1 })])
     await h.open(); await expect(h.rows).toHaveCount(0); await h.back()
-    h.config([field('4')]); h.holdA(); await page.locator('.card-customer').filter({ hasText: '合成客户A' }).click(); await h.arrived()
-    await h.back(); await h.open('B'); await expect(h.rows).toContainText('扩展备注B'); h.release()
-    await expect(page.getByTestId('detail-read-context')).toContainText('合成客户B'); await expect(h.rows).toContainText('扩展备注B')
+    h.config([field('4')])
+    await observeWorkOrderALoad(page)
+    const arrivedA = h.holdA()
+    await page.locator('.card-customer').filter({ hasText: '合成客户A' }).click()
+    const requestA = await arrivedA
+    await h.back(); await h.open('B'); await expect(h.rows).toContainText('扩展备注B')
+    await expectWorkOrderBAfterLateInformationA(page, requestA, h.release)
     await relogin('other'); await h.open(); await expect(h.rows).toHaveCount(0)
     await h.back(); h.config([field('5')]); await h.open(); await expect(h.rows).toContainText('扩展备注A')
     const before = h.calls.filter(c => c.path === 'biz/extField/query').length

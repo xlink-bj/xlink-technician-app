@@ -1,10 +1,12 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Request } from '@playwright/test'
+import { expectWorkOrderBAfterLateInformationA, observeWorkOrderALoad } from '../support/late-work-order-information'
 
 test('normal App displays bounded configured information, safe fallback and isolated object switching', async ({ page, baseURL }, info) => {
   const origin=baseURL!, calls:{path:string;body:Record<string,string>}[]=[], unexpected:string[]=[], errors:string[]=[]
   const field=(name:string,extra:Record<string,unknown>={})=>({_id:'field-'+name,name,nameDisp:name,colName:'serviceAppointment',tenantId:'synthetic-authority',state:1,preset:0,type:'text',showList:['4'],order:0,...extra})
-  let config:Record<string,unknown>={data:[]}, currentId='A', configFailure=false, preAccept=false, holdA=false, releaseA=()=>{}, markA=()=>{}
-  const arrivedA=new Promise<void>(resolve=>{markA=resolve})
+  let config:Record<string,unknown>={data:[]}, currentId='A', configFailure=false, preAccept=false, holdA=false, releaseA=()=>{}
+  let markA!: (request: Request) => void
+  const arrivedA = new Promise<Request>(resolve => { markA = resolve })
   const row=(id:string)=>({_id:id,name:'合成客户'+id,phone:'13800000000',orderNum:'SYNTHETIC-'+id,tenantId:'synthetic-authority',state:1,status:104,
     address:'合成地址',area:['440000','440300','440305'],gpsPoint:{longitude:'DO-NOT-EXPOSE-LNG',latitude:'DO-NOT-EXPOSE-LAT'},serviceType:'40',memo:'根部备注'+id,exts:{sourceType:'',area:[330000,330100,330106],memo:'扩展备注'+id,hidden:'不能展示的合成隐藏值',unknown:{secret:'不能展示的合成对象'}}})
   const configured=(data:unknown[])=>({data,total:data.length,page:1,size:200})
@@ -26,7 +28,10 @@ test('normal App displays bounded configured information, safe fallback and isol
     if(path==='biz/extField/query'){
       if(configFailure)return route.fulfill({status:503,json:{message:'synthetic unavailable configuration'}})
       const response=structuredClone(config)
-      if(holdA&&currentId==='A'){holdA=false;markA();await new Promise<void>(resolve=>{releaseA=resolve})}
+      if (holdA && currentId === 'A') {
+        holdA = false
+        await new Promise<void>(resolve => { releaseA = resolve; markA(request) })
+      }
       return route.fulfill({json:response})
     }
     if(path==='biz/action/query.do')return route.fulfill({json:{data:[]}})
@@ -63,8 +68,11 @@ test('normal App displays bounded configured information, safe fallback and isol
     config=configured([]);await open();await expect(rows).toHaveCount(0);await expect(page.locator('.customer-info-panel')).toContainText('暂无可展示资料');await back()
     configFailure=true;await open();await expect(rows).toHaveCount(0);await expect(page.locator('.customer-info-panel')).toContainText('客户姓名');await back();configFailure=false
     config=configured([field('memo',{nameDisp:'切换字段'})]);holdA=true
-    await page.locator('.card-customer').filter({hasText:'合成客户A'}).click();await arrivedA;await back();await open('B')
-    await expect(rows).toContainText(['扩展备注B']);releaseA();await expect(page.getByTestId('detail-read-context')).toContainText('合成客户B');await expect(rows).toContainText(['扩展备注B'])
+    await observeWorkOrderALoad(page)
+    await page.locator('.card-customer').filter({ hasText: '合成客户A' }).click()
+    const requestA = await arrivedA
+    await back(); await open('B'); await expect(rows).toContainText(['扩展备注B'])
+    await expectWorkOrderBAfterLateInformationA(page, requestA, releaseA)
     await page.screenshot({path:info.outputPath('B-after-late-A-430x932.png'),fullPage:true})
     await back();preAccept=true;const readsBefore=calls.filter(c=>c.path==='biz/extField/query').length
     await page.locator('.card-customer').filter({hasText:'合成客户A'}).click();await expect(page.getByText('工单待接单',{exact:true})).toBeVisible()
