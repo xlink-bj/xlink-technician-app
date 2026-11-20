@@ -350,7 +350,8 @@ function setValue(key: string,value: R1LocalFieldValue) {
   if (!visibleSnapshot.value) return
   try {
     let next:typeof values.value
-    if(actions.value?.updateCreateDraft)next=actions.value.updateCreateDraft(values.value as Record<string,R1LocalFieldValue>,key,value,editingId.value)
+    if(editingId.value&&actions.value?.updateEditDraft)next=actions.value.updateEditDraft(editingId.value,values.value as Record<string,R1LocalFieldValue>,key,value)
+    else if(actions.value?.updateCreateDraft)next=actions.value.updateCreateDraft(values.value as Record<string,R1LocalFieldValue>,key,value,editingId.value)
     else if(actions.value?.fileMedia)next={...values.value,[key]:value}
     else next=updateR1FormDraftValue(visibleSnapshot.value, values.value as Record<string,R1LocalFieldValue>, key, value)
     // Validate choice intent against the proposed current draft before either

@@ -6,6 +6,7 @@ import type { AppointmentFormFieldRead, AuthSessionPort } from '@shared/ports'
 import type { R1NodeFormsReader, R1NodeFormsSnapshot, R1RecordEditRead } from '@features/work-orders/r1-node-forms-read'
 import type { R1RepeatPageActions } from '@features/work-orders/r1-repeat-actions-port'
 import { actionFormSchemaFor, ACTION_FORM_SURFACE } from '@features/work-orders/action-form-schema'
+import { hasCanonicalSurveyPart, isCompleteSurveyPart } from '@features/work-orders/r1-survey-part-create'
 import { hasDistinctR1ChoiceMembers } from '@features/work-orders/r1-local-form-fields'
 import { isR1MobilePhone } from '@shared/form/r1-mobile-phone'
 import { isR1DefaultSwitchValue, isR1DefaultRateValue } from '@shared/form/r1-default-controls'
@@ -124,6 +125,17 @@ export function createConfiguredRecordEditActions(input: {
   const originals=new Map(initial.records.map(r=>[String(r.id),stable(input.reader.currentFormOriginal?.(initial,String(r.id)))]))
   const wires=new Map(grant.recordIds!.map(id=>[id,stable(sources.get(id)!.wireOriginal)]))
   const locks=new Map(grant.recordIds!.map(id=>[id,createLocalFixtureMutationLock('xlink:r1-configured-record-edit:'+stable([scope,id]))]))
+  function isExistingSurveyPart(s:R1NodeFormsSnapshot, field: Pick<AppointmentFormFieldRead,'valueKey'|'type'>): boolean {
+    return hasCanonicalSurveyPart(s)&&field.valueKey==='part'&&field.type==='cascade'
+  }
+  const surveyPartField=initial.definition.fields?.find(f=>grant.fieldIds.includes(f.fieldId)&&isExistingSurveyPart(initial,f))
+  const hasSurveyPartEditor=grant.fieldIds.length===1&&Boolean(surveyPartField)
+    &&[...sources.values()].every(e=>e?.storage.kind==='survey-dto')
+  function checkedSurveyPart(field:AppointmentFormFieldRead,original:unknown,next:unknown):readonly string[] {
+    if(!isCompleteSurveyPart(field.options??[],next)||!isCompleteSurveyPart(field.options??[],original)||next[0]!==original[0])
+      refuse('只能更正同一一级部位下的完整路径。')
+    return next
+  }
   function source(s:R1NodeFormsSnapshot,id:string):R1RecordEditRead {
     const e=evidence(s,id);if(!e)refuse('完整记录来源已失效。')
     const expected={_id:id,tenantId:scope.tenantId,sid:scope.workOrderId,nodeId:scope.runtimeNodeId,workflowId:scope.workflowRunId,state:1}
@@ -136,6 +148,10 @@ export function createConfiguredRecordEditActions(input: {
       const root=Object.hasOwn(e.original,f.valueKey),ext=object(ex)&&Object.hasOwn(ex,f.valueKey)
       if(root&&!f.slots.includes('root')||ext&&!f.slots.includes('exts')
         ||root&&ext&&stable(e.original[f.valueKey])!==stable(ex![f.valueKey]))refuse('字段 root/EXTS 存储位置或副本冲突。')
+      if(e.storage.kind==='survey-dto'&&isExistingSurveyPart(s,f)){
+        const part=s.definition.fields?.find(field=>field.fieldId===f.fieldId)
+        if(!root||!isCompleteSurveyPart(part?.options??[],e.original.part))refuse('原勘查部位未核实。')
+      }
       // A readonly selector still owns its historical companion. Another
       // declared editable field must not overwrite that same root/EXTS key.
       if(f.labelKey&&s.definition.fields!.some(field=>field.valueKey===f.labelKey&&grant.fieldIds.includes(field.fieldId)))
@@ -231,6 +247,10 @@ export function createConfiguredRecordEditActions(input: {
         continue
       }
       if(f.type==='checkbox'||f.type==='cascade'){
+        if(isExistingSurveyPart(lease,f)&&source(lease,id).storage.kind==='survey-dto'){
+          const original=initial.part
+          if(stable(checkedSurveyPart(f,original,v))===stable(original))refuse('请选择不同的维修部位后保存。')
+        }
         if(v!==undefined&&(!Array.isArray(v)||v.length>30||v.some(x=>typeof x!=='string'||!x||x.length>256)
           ||f.type==='checkbox'&&!hasDistinctR1ChoiceMembers(v)))refuse()
         if(f.type==='cascade'&&Array.isArray(v)&&v.length===0&&stable(v)!==stable(initial[f.valueKey]))refuse('级联清空规则尚未核实。')
@@ -292,12 +312,23 @@ export function createConfiguredRecordEditActions(input: {
     },
     ...(lease.definition.fields?.some(f=>f.type==='file')?{retainedFiles:true as const}:{}),
     beginEdit,
+    ...(hasSurveyPartEditor?{updateEditDraft(id,values,key,value){
+      if(!canEdit(id)||key!=='part')refuse()
+      const field=lease.definition.fields?.find(f=>f.fieldId===surveyPartField!.fieldId&&isExistingSurveyPart(lease,f))
+      const e=source(lease,id)
+      if(!field||e.storage.kind!=='survey-dto')refuse()
+      // Existing records use their exact reader-issued path and grant, never a
+      // create-only transition or its conditional/measurement side effects.
+      return {...values,part:Object.freeze([...checkedSurveyPart(field,e.original.part,value)])}
+    }}:{}),
     get fileMedia(){return mediaSession},
     initialValues(id){try{return canEdit(id)?initialValues(id):null}catch{return null}},
     recordFieldSelection(id,key,value,draft){
-      if(selectionRecord!==id||!canEdit(id))refuse()
+      if(!canEdit(id))refuse()
       const f=lease.definition.fields?.find(f=>f.valueKey===key&&f.type==='bizSelect')
       if(!f)return
+      // Only label-backed business choices need the explicit editor session.
+      if(selectionRecord!==id)refuse()
       if(draft!==undefined&&(!object(draft)||Object.keys(draft).some(key=>!lease.definition.fields!.some(f=>f.valueKey===key))))refuse()
       const context={...initialValues(id),...draft,[key]:value}
       verifyConditionValues(lease,context)
@@ -320,7 +351,13 @@ export function createConfiguredRecordEditActions(input: {
     validateDraft(values,id){try{if(!id)return false;normalize(values,id);return true}catch{return false}},
     complete:async()=>refuse(),
     async saveOnly(values,selectedId){
-      if(!selectedId||!canEdit(selectedId))refuse();const id=selectedId,draft=Object.freeze({...values});normalize(draft,id)
+      if(!selectedId||!canEdit(selectedId))refuse()
+      const id=selectedId
+      // The approved Cascade array belongs to this save attempt. Caller/DOM
+      // changes during the fresh read cannot alter the submitted path.
+      const draft=Object.freeze({...values,...(Array.isArray(values.part)&&lease.definition.fields?.some(f=>isExistingSurveyPart(lease,f))
+        ?{part:Object.freeze([...values.part])}:{})})
+      normalize(draft,id)
       return locks.get(id)!.run(async mark=>{
         if(!current())refuse();await fresh();if(!canEdit(id))refuse()
         for(const[k,v]of originals)if(stable(input.reader.currentFormOriginal?.(lease,k))!==v)refuse('完整原文已变化。')

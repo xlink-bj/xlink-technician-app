@@ -8,6 +8,7 @@ import { configuredFileStorage } from '@adapters/api/r1-configured-file-storage'
 import { isR1DefaultImageFieldConfig } from '@shared/form/r1-normal-image-contract'
 import { classifyFieldType } from '@runtimes/dynamic-form'
 import { hasR1DefaultControlOverrides } from '@shared/form/r1-default-controls'
+import { hasCanonicalSurveyPart } from '@features/work-orders/r1-survey-part-create'
 
 /** The query formats top-level Dates. Recognize only the existing inherited
  * audit slots, from TWO same-record server reads; never guess epoch/timezone
@@ -57,6 +58,12 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     const mapDefault=ext.type==='0'&&['switch','rate'].includes(field.type)
       &&!hasR1DefaultControlOverrides(raw??{})
     const mapCascade=ext.type==='0'&&field.type==='cascade'&&!field.multiple
+    // BF016 is one current, authorized Survey field, not a general whitelist
+    // for typed List properties or the 59-field conditional Survey.
+    const surveyPart=ext.type==='1'&&ext.colName==='survey'&&hasCanonicalSurveyPart(snapshot)
+      &&field.valueKey==='part'&&field.type==='cascade'&&field.preset===true&&field.required
+      &&!field.multiple&&fill.length===1&&fill[0]===field.fieldId&&field.valueOption==='parts'
+    const cascade=mapCascade||surveyPart
     const rule=field.visibility
     const dependency=rule&&'path'in rule&&typeof rule.path==='string'?fields.find(f=>f.valueKey===rule.path):undefined
     // Current proved subset: root metadata equality against a declared choice
@@ -74,7 +81,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
     const preserveOnly=ext.type==='0'&&ro.includes(field.fieldId)
       &&classifyFieldType(field.type).capability==='SUPPORTED_GENERIC'
     if (!raw || raw.extId !== ext._id || raw.tenantId !== tenantId || raw.state !== 1 || raw.colName !== ext.colName
-      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapBusiness||mapScalar||mapDefault||mapCascade||retainedFile||preserveOnly)
+      || raw.name !== field.valueKey || raw.type !== field.type || !(['text', 'textarea', 'number', 'digit'].includes(field.type)||mapChoice||mapBusiness||mapScalar||mapDefault||cascade||retainedFile||preserveOnly)
       || ![0, 1].includes(raw.preset as number) || field.preset !== (raw.preset === 1)
       || !['0', '1'].includes(String(raw.required)) || field.required !== (String(raw.required) === '1')
       || raw.operationType !== '1' || (mapBusiness
@@ -89,7 +96,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
       || typeof field.readOnly !== 'boolean' || field.readOnly !== (raw.readOnly === 1 || raw.readonly === 1)
       || field.readOnly && fill.includes(field.fieldId) || !field.readOnly && !ro.includes(field.fieldId) && !fill.includes(field.fieldId)
       || !Array.isArray(raw.showList) || !raw.showList.includes('4') || field.visibility&&!mapCondition || field.unsupportedReason || field.presentationOnly
-      || !mapChoice&&!mapBusiness&&!mapCascade&&!preserveOnly&&(field.valueOption || field.options?.length || raw.valueOption) || (mapBusiness?!isR1EmptyCalculationConfig(raw.calculateConfig):raw.calculateConfig) || raw.router
+      || !mapChoice&&!mapBusiness&&!cascade&&!preserveOnly&&(field.valueOption || field.options?.length || raw.valueOption) || (mapBusiness?!isR1EmptyCalculationConfig(raw.calculateConfig):raw.calculateConfig) || raw.router
       || raw.roleIds != null && (!Array.isArray(raw.roleIds) || raw.roleIds.length)
       || ['componentType', 'surveyTool', 'url', 'params'].some(k => Object.hasOwn(raw, k))
       || !mapCondition&&(raw.showType !== undefined && raw.showType !== '1' || raw.showField || raw.showValue)
@@ -122,7 +129,7 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
         ||field.options.length>5000||new Set(field.options.map(o=>o.value)).size!==field.options.length
         ||field.options.some(o=>!o.value||!o.label||o.children?.length))return
     }
-    if(mapCascade&&!preserveOnly){
+    if(cascade&&!preserveOnly){
       // Tree shape/topology/tenant and its complete 5000-node/20-level budget
       // were validated by the normal scoped provider reader before issuance.
       if(!field.options?.length||typeof raw.valueOption!=='string'||!raw.valueOption
@@ -151,8 +158,9 @@ export function configuredRecordEditStorage(snapshot: R1NodeFormsSnapshot, ext: 
       storageFields.push(file);continue
     }
     const property=kind==='survey-dto'?typedSurveyPropertyKind(f.valueKey):undefined
-    if(kind==='survey-dto'&&(f.preset||property)&&!(['number','digit'].includes(f.type)
-      ?property==='double'||property==='integer':property==='string'))return
+    const typedPart=property==='list'&&f.valueKey==='part'&&f.type==='cascade'
+    if(kind==='survey-dto'&&(f.preset||property)&&!(typedPart||(['number','digit'].includes(f.type)
+      ?property==='double'||property==='integer':property==='string')))return
     const slots:('root'|'exts')[]=f.preset?['root']:kind==='generic-map'||property?['root','exts']:['exts']
     storageFields.push(Object.freeze({fieldId:f.fieldId,valueKey:f.valueKey,type:f.type,max:0,slots:Object.freeze(slots),
       ...(kind==='generic-map'&&f.type==='bizSelect'?{labelKey:f.valueKey+'Label'}:{})}))
