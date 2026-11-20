@@ -437,8 +437,11 @@ function openQuotationOrderRecords(): void {
 }
 async function openExistingQuotationEditor(orderId: string): Promise<void> {
   if (productionReadOnly || !quotationHubVisible.value || !orderId.trim()) return
+  const action = mountedWorkspaceAction
+  if (!workspace.ownsPage(action, workspacePageLease)) return
   quotationSuccessHandoff.reset()
-  const result = await workspace.loadQuotationOrderForEdit(orderId)
+  const result = await workspace.loadQuotationOrderForEdit(orderId, workspacePageLease)
+  if (!routeReady.value || !workspace.ownsPage(action, workspacePageLease)) return
   if (result.state === 'succeeded') {
     quotationEditorOpened.value = true
   } else {
@@ -582,8 +585,10 @@ async function loadWorkspace(): Promise<void> {
       setActionWorkspacePageTitle(workspaceNavigationTitle.value)
     }
   }
-  if (loaded.state === 'succeeded' && routeQuotationOrderId.value && workspace.descriptor?.contentKind === 'quotation') {
-    await workspace.loadQuotationOrderForEdit(routeQuotationOrderId.value)
+  if (loaded.state === 'succeeded' && contextVersion === journeyContextRequest && routeQuotationOrderId.value
+    && mountedWorkspaceAction?.contentKind === 'quotation'
+    && workspace.ownsPage(mountedWorkspaceAction, workspacePageLease)) {
+    await workspace.loadQuotationOrderForEdit(routeQuotationOrderId.value, workspacePageLease)
   }
   const stage = mockJourney.value?.stage
   if (loaded.state === 'succeeded' && stage && stage !== 'appointment') {

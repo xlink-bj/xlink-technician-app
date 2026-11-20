@@ -32,12 +32,18 @@ export interface ActionDraftRegistrySnapshot {
   readonly invalidRecordCount: number
 }
 
+interface ActionDraftWriteOptions {
+  readonly onlyIfAbsent: true
+  readonly stillCurrent: () => boolean
+}
+
 export interface ActionDraftRepository {
   read<TState extends Readonly<Record<string, unknown>>>(
     identity: ActionDraftIdentity,
   ): Promise<OperationSnapshot<ActionDraftRecord<TState> | null>>
   write<TState extends Readonly<Record<string, unknown>>>(
     record: ActionDraftRecord<TState>,
+    options?: ActionDraftWriteOptions,
   ): Promise<OperationSnapshot<void>>
   remove(identity: ActionDraftIdentity): Promise<OperationSnapshot<void>>
   /** Supplying a role returns ONLY that role's provenanced drafts; unscoped
@@ -180,11 +186,15 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
 
   async write<TState extends Readonly<Record<string, unknown>>>(
     record: ActionDraftRecord<TState>,
+    options?: ActionDraftWriteOptions,
   ): Promise<OperationSnapshot<void>> {
     const key = { namespace: 'draft' as const, key: actionDraftStorageKey(record.identity) }
     const existing = await this.storage.read<unknown>(key)
     if (existing.state !== 'succeeded') return existing as OperationSnapshot<void>
     const current = existing.data
+    if (options?.onlyIfAbsent && current !== null) {
+      return { state: 'failed_terminal', error: createOperationError('validation', 'A local draft already exists') }
+    }
     if (current !== null && !validDraftRecord(current, record.identity)) {
       // Never overwrite a damaged or differently-owned canonical record.
       return { state: 'failed_terminal', error: createOperationError('server_terminal', 'Stored draft cannot be safely overwritten') }
@@ -197,6 +207,9 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
         || record.updatedAt < current.updatedAt) {
         return { state: 'failed_terminal', error: createOperationError('server_terminal', 'A newer draft revision already exists') }
       }
+    }
+    if (options && !options.stillCurrent()) {
+      return { state: 'failed_terminal', error: createOperationError('cancelled', 'Draft write was superseded') }
     }
     return this.storage.write(key, record)
   }

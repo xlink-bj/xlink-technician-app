@@ -7,7 +7,7 @@ import ts from 'typescript';
 import { compileScript, parse } from '@vue/compiler-sfc';
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace';
 import { useQuotationOrderBrowseStore } from '@features/work-orders/quotation/order-browse-store';
-import { createActionDraftRepository } from '@runtimes/action';
+import { actionDraftIdentityFor, actionDraftStorageKey, createActionDraftRepository } from '@runtimes/action';
 import * as language from '@shared/ui/ux-state-language';
 import * as numbers from '@shared/ui/work-order-number-display';
 import * as routes from '@features/work-orders/signing/signing-review-read-workspace';
@@ -115,7 +115,7 @@ function workspace() {
         })).state).toBe('succeeded');
     };
     return {
-        store, load, getOrder, getDetail, values, storage, start, upsert, setSession: (next: SessionSnapshot | null) => {
+        store, load, getOrder, getDetail, values, storage, catalog, start, upsert, setSession: (next: SessionSnapshot | null) => {
             activeSession = next;
         }
     };
@@ -336,6 +336,168 @@ describe('quotation action identity and authoritative hub refresh', () => {
         expect(h.store.quotationComposition.groups).toHaveLength(0);
         expect(h.start).not.toHaveBeenCalled();
         expect(h.upsert).not.toHaveBeenCalled();
+    });
+    it('cancels a late order read when the same quotation action moves to a new page', async () => {
+        const h = workspace();
+        const input = {
+            workOrderId: asOpaqueId<'WorkOrderId'>('scope-a'),
+            workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('scope-a-node'),
+            actionIntent: 'place_order',
+        };
+        const oldPage = {};
+        const newPage = {};
+        expect((await h.store.ensureLoaded({ ...input, pageLease: oldPage })).state).toBe('succeeded');
+        const action = h.store.descriptor;
+        let release!: (value: ReturnType<typeof ok<QuotationOrderRead>>) => void;
+        h.getOrder.mockImplementationOnce(() => new Promise(resolve => { release = resolve; }));
+        const pending = h.store.loadQuotationOrderForEdit('order-scope-a', oldPage);
+        expect(h.getOrder).toHaveBeenCalledWith('order-scope-a');
+        expect(h.store.quotationEditState.state).toBe('loading');
+
+        expect((await h.store.ensureLoaded({ ...input, pageLease: newPage })).state).toBe('succeeded');
+        expect(h.store.descriptor).toBe(action);
+        expect(h.store.ownsPage(action, oldPage)).toBe(false);
+        expect(h.store.ownsPage(action, newPage)).toBe(true);
+        release(ok(order()));
+
+        expect.soft(await pending).toMatchObject({ state: 'failed_terminal', error: { category: 'cancelled' } });
+        expect.soft(h.store.quotationEditState).toEqual({ state: 'none' });
+        expect.soft(h.store.quotationComposition.origin).toBe('new');
+        expect.soft(h.store.quotationComposition.groups).toHaveLength(0);
+        expect.soft(h.values.size).toBe(0);
+        expect(h.start).not.toHaveBeenCalled();
+        expect(h.upsert).not.toHaveBeenCalled();
+
+        expect(await h.store.loadQuotationOrderForEdit('order-scope-a', oldPage))
+            .toMatchObject({ state: 'failed_terminal', error: { category: 'cancelled' } });
+        expect(h.getOrder).toHaveBeenCalledOnce();
+        expect((await h.store.loadQuotationOrderForEdit('order-scope-a', newPage)).state).toBe('succeeded');
+        expect(h.store.quotationEditState.state).toBe('ready');
+        expect(h.store.quotationComposition.origin).toBe('existing');
+        expect(h.values.size).toBe(1);
+    });
+    it('does not publish a staged order from a write settled after the same action moves to a new page', async () => {
+        const h = workspace();
+        const input = {
+            workOrderId: asOpaqueId<'WorkOrderId'>('scope-a'),
+            workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('scope-a-node'),
+            actionIntent: 'place_order',
+        };
+        const oldPage = {};
+        const newPage = {};
+        expect((await h.store.ensureLoaded({ ...input, pageLease: oldPage })).state).toBe('succeeded');
+        const action = h.store.descriptor;
+        const write = h.storage.write;
+        let release!: () => void;
+        let dispatched!: () => void;
+        const atWrite = new Promise<void>(resolve => { dispatched = resolve; });
+        h.storage.write = vi.fn(write).mockImplementationOnce(async (key, value) => {
+            await new Promise<void>(done => { release = done; dispatched(); });
+            return write(key, value);
+        });
+        const pending = h.store.loadQuotationOrderForEdit('order-scope-a', oldPage);
+        await atWrite;
+        const composition = h.store.quotationComposition;
+        expect.soft(composition.groups).toHaveLength(0);
+        expect.soft(composition.quantityTextBySelection).toEqual({});
+        expect.soft(composition.origin).toBe('new');
+        expect(await h.store.loadQuotationOrderForEdit('same-page-duplicate', oldPage))
+            .toMatchObject({ state: 'failed_terminal', error: { category: 'cancelled' } });
+        expect(h.getOrder).toHaveBeenCalledOnce();
+
+        expect((await h.store.ensureLoaded({ ...input, pageLease: newPage })).state).toBe('succeeded');
+        expect(h.store.descriptor).toBe(action);
+        expect(h.store.ownsPage(action, newPage)).toBe(true);
+        release();
+        expect(await pending).toMatchObject({ state: 'failed_terminal', error: { category: 'cancelled' } });
+
+        expect.soft(composition.groups).toHaveLength(0);
+        expect.soft(composition.quantityTextBySelection).toEqual({});
+        expect.soft(h.store.quotationEditState.state).not.toBe('ready');
+        expect.soft(h.store.canSubmitQuotation).toBe(false);
+        expect.soft(composition.createGroup({ repairParts: ['roof'], partDescription: 'fresh', maintainAreaNum: '12' }).state)
+            .toBe('failed_terminal');
+        expect(h.values.size).toBe(1);
+        const retained = JSON.stringify([...h.values]);
+        await composition.flushDraft();
+        expect(JSON.stringify([...h.values])).toBe(retained);
+        expect(h.storage.write).toHaveBeenCalledOnce();
+
+        h.getOrder.mockResolvedValueOnce(ok({ ...order(), id: 'other-order' }));
+        expect((await h.store.loadQuotationOrderForEdit('other-order', newPage)).state).toBe('failed_terminal');
+        expect(composition.groups).toHaveLength(0);
+        expect(JSON.stringify([...h.values])).toBe(retained);
+
+        expect((await h.store.loadQuotationOrderForEdit('order-scope-a', newPage)).state).toBe('succeeded');
+        expect(h.getOrder).toHaveBeenLastCalledWith('order-scope-a');
+        expect(h.store.quotationEditState.state).toBe('ready');
+        expect(composition.groups).toHaveLength(1);
+        expect(h.storage.write).toHaveBeenCalledOnce();
+        expect(JSON.stringify([...h.values])).toBe(retained);
+    });
+    it('rechecks the page after the repository read and before writing to local storage', async () => {
+        const h = workspace();
+        const input = {
+            workOrderId: asOpaqueId<'WorkOrderId'>('scope-a'),
+            workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('scope-a-node'),
+            actionIntent: 'place_order',
+        };
+        const oldPage = {};
+        const newPage = {};
+        expect((await h.store.ensureLoaded({ ...input, pageLease: oldPage })).state).toBe('succeeded');
+        const key = actionDraftStorageKey(actionDraftIdentityFor(h.store.descriptor!, session.currentRole!.id));
+        const read = h.storage.read;
+        const write = vi.spyOn(h.storage, 'write');
+        let canonicalReads = 0;
+        let release!: () => void;
+        let readStarted!: () => void;
+        const beforeWrite = new Promise<void>(resolve => { readStarted = resolve; });
+        h.storage.read = async <T>(storageKey: Parameters<StoragePort['read']>[0]) => {
+            if (storageKey.key === key && ++canonicalReads === 2) {
+                await new Promise<void>(done => { release = done; readStarted(); });
+            }
+            return read<T>(storageKey);
+        };
+        const pending = h.store.loadQuotationOrderForEdit('order-scope-a', oldPage);
+        await beforeWrite;
+        expect((await h.store.ensureLoaded({ ...input, pageLease: newPage })).state).toBe('succeeded');
+        release();
+        expect(await pending).toMatchObject({ state: 'failed_terminal', error: { category: 'cancelled' } });
+        expect(h.store.quotationComposition.localState).toBe('fresh');
+        expect(h.store.quotationComposition.groups).toHaveLength(0);
+        expect(h.values.size).toBe(0);
+        expect(write).not.toHaveBeenCalled();
+    });
+    it('keeps the quote hidden and makes no local write when the page changes during price verification', async () => {
+        const h = workspace();
+        const input = {
+            workOrderId: asOpaqueId<'WorkOrderId'>('scope-a'),
+            workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>('scope-a-node'),
+            actionIntent: 'place_order',
+        };
+        const oldPage = {};
+        const newPage = {};
+        expect((await h.store.ensureLoaded({ ...input, pageLease: oldPage })).state).toBe('succeeded');
+        const list = h.catalog.listProcedures;
+        const write = vi.spyOn(h.storage, 'write');
+        let release!: () => void;
+        let priceReadStarted!: () => void;
+        const verifying = new Promise<void>(resolve => { priceReadStarted = resolve; });
+        vi.spyOn(h.catalog, 'listProcedures').mockImplementationOnce(async request => {
+            await new Promise<void>(done => { release = done; priceReadStarted(); });
+            return list(request);
+        });
+        const pending = h.store.loadQuotationOrderForEdit('order-scope-a', oldPage);
+        await verifying;
+        expect(h.store.quotationComposition.groups).toHaveLength(0);
+        expect((await h.store.ensureLoaded({ ...input, pageLease: newPage })).state).toBe('succeeded');
+        release();
+
+        expect(await pending).toMatchObject({ state: 'failed_terminal', error: { category: 'cancelled' } });
+        expect(h.store.quotationEditState.state).toBe('none');
+        expect(h.store.quotationComposition.groups).toHaveLength(0);
+        expect(h.store.canSubmitQuotation).toBe(false);
+        expect(write).not.toHaveBeenCalled();
     });
     it('does not carry ready edit state into a new authenticated session', async () => {
         const h = workspace();

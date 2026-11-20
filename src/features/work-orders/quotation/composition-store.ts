@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import type { ActionDraftIdentity, ActionDraftRepository } from '@runtimes/action'
+import { actionDraftStorageKey, type ActionDraftIdentity, type ActionDraftRepository } from '@runtimes/action'
 import type {
   CodeOptionRead,
   QuotationCatalogItemRead,
@@ -54,10 +54,12 @@ function succeeded<T = void>(data?: T): OperationSnapshot<T> {
   return { state: 'succeeded', ...(data === undefined ? {} : { data }) }
 }
 
-function failed<T = void>(category: 'validation' | 'unsupported_capability' | 'server_terminal', message: string): OperationSnapshot<T> {
+function failed<T = void>(category: 'validation' | 'unsupported_capability' | 'server_terminal' | 'cancelled', message: string): OperationSnapshot<T> {
   const error = createOperationError(category, message)
   return { state: 'failed_terminal', error }
 }
+
+const serverOrderRecoveryMessage = '请重新读取同一订单，核对本机保留的报价后继续。'
 
 function selections(draft: QuotationDraft) {
   return draft.groups.flatMap((group) => [
@@ -87,6 +89,12 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   let timer: ReturnType<typeof setTimeout> | undefined
   let generation = 0
   let activeWrite: { readonly generation: number; readonly promise: Promise<OperationSnapshot<void>> } | null = null
+  // Keep an unsettled or abandoned write fenced across page generations.
+  const serverRestores = new Map<string, {
+    readonly orderId: string
+    readonly record: ReturnType<typeof quotationDraftRecordFor>
+    write?: Promise<OperationSnapshot<void>>
+  }>()
 
   function canEdit(): boolean {
     return ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(localState.value)
@@ -136,6 +144,15 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     quantityTextBySelection.value = {}
     quantityErrorBySelection.value = {}
 
+    const draftKey = actionDraftStorageKey(input.identity)
+    const pendingRestore = serverRestores.get(draftKey)?.write
+    if (pendingRestore) await pendingRestore
+    if (currentGeneration !== generation) return localState.value
+    if (serverRestores.has(draftKey)) {
+      localState.value = 'unavailable'
+      localStateMessage.value = serverOrderRecoveryMessage
+      return localState.value
+    }
     const stored = await input.repository.read<Readonly<Record<string, unknown>>>(input.identity)
     if (currentGeneration !== generation) return localState.value
     if (stored.state !== 'succeeded') {
@@ -508,24 +525,87 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
-  async function restoreServerOrderDraft(source: QuotationDraft): Promise<OperationSnapshot<void>> {
-    if (!identity || localState.value !== 'fresh' || draft.value?.groups.length !== 0) {
+  async function restoreServerOrderDraft(input: {
+    readonly draft: QuotationDraft
+    readonly orderId: string
+    readonly stillCurrent: () => boolean
+    readonly onRestored: () => void
+  }): Promise<OperationSnapshot<void>> {
+    const currentGeneration = generation
+    const currentRepository = repository
+    const currentIdentity = identity
+    const current = () => currentGeneration === generation && input.stillCurrent()
+    const cancelled = () => failed('cancelled', '订单编辑已切换，未恢复原订单。')
+    if (!current()) return cancelled()
+    if (!currentRepository || !currentIdentity) {
+      return failed('unsupported_capability', '当前报价草稿存储不可用。')
+    }
+    const key = actionDraftStorageKey(currentIdentity)
+    const previous = serverRestores.get(key)
+    const initialState = localState.value
+    if (previous?.write || (!previous && (initialState !== 'fresh' || draft.value?.groups.length !== 0))) {
       return failed('unsupported_capability', '已有本地草稿未完成处理，服务器订单不会覆盖本地内容。')
     }
-    if (String(source.workOrderId) !== String(identity.workOrderId) || source.groups.length === 0) {
+    const source = input.draft
+    if (source.workOrderId !== String(currentIdentity.workOrderId)
+      || source.workflowNodeId !== String(currentIdentity.workflowNodeId) || source.groups.length === 0) {
       return failed('validation', '服务器订单与当前工单不匹配，未恢复到本地草稿。')
     }
-    origin.value = 'existing'
-    draft.value = {
-      ...source,
-      workOrderId: String(identity.workOrderId),
-      workflowNodeId: String(identity.workflowNodeId),
-      draftVersion: 1,
+
+    const stored = await currentRepository.read<Readonly<Record<string, unknown>>>(currentIdentity)
+    if (!current() || localState.value !== initialState || serverRestores.get(key) !== previous) return cancelled()
+    if (stored.state !== 'succeeded') return { state: stored.state, ...(stored.error ? { error: stored.error } : {}) }
+
+    const record = quotationDraftRecordFor(currentIdentity, source, now(), 'existing')
+    if (stored.data) {
+      // An abandoned write requires a new authorized read of the same order.
+      // Preserve any record that differs from the newly verified snapshot.
+      if (!previous || previous.orderId !== input.orderId || stored.data.updatedAt !== previous.record.updatedAt
+        || JSON.stringify(stored.data.values) !== JSON.stringify(record.values)) {
+        return failed('unsupported_capability', serverOrderRecoveryMessage)
+      }
+    } else {
+      localState.value = 'loading'
+      localStateMessage.value = ''
+      let dispatched = false
+      const entry = { orderId: input.orderId, record, write: undefined as Promise<OperationSnapshot<void>> | undefined }
+      serverRestores.set(key, entry)
+      entry.write = Promise.resolve()
+        .then(() => current() ? currentRepository.write(record, {
+            onlyIfAbsent: true,
+            stillCurrent: () => {
+              dispatched = current()
+              return dispatched
+            },
+          }) : cancelled())
+        .catch(() => failed('server_terminal', '未能确认原报价草稿已保存在本机。'))
+        .finally(() => {
+          entry.write = undefined
+          if (!dispatched && serverRestores.get(key) === entry) serverRestores.delete(key)
+        })
+      const result = await entry.write
+      if (!current() || result.state !== 'succeeded') {
+        if (currentGeneration === generation) {
+          if (dispatched || result.error?.category !== 'cancelled') {
+            serverRestores.set(key, entry)
+            localState.value = 'unavailable'
+            localStateMessage.value = serverOrderRecoveryMessage
+          } else {
+            localState.value = initialState
+          }
+        }
+        return current() ? result : cancelled()
+      }
     }
-    quantityTextBySelection.value = inputValuesFor(draft.value)
-    localState.value = 'restored'
-    localStateMessage.value = '已从服务器订单恢复分组；目录身份将重新核对后才允许编辑。'
-    return persist()
+    if (!current()) return cancelled()
+    serverRestores.delete(key)
+    origin.value = 'existing'
+    draft.value = source
+    quantityTextBySelection.value = inputValuesFor(source)
+    localState.value = 'saved_local'
+    localStateMessage.value = '报价分组草稿已保存在本机。'
+    input.onRestored()
+    return succeeded()
   }
 
   async function discardStoredDraftAndStartFresh(expectedState: 'invalid' | 'legacy_requires_action' | 'unscoped_requires_confirmation'): Promise<OperationSnapshot<void>> {

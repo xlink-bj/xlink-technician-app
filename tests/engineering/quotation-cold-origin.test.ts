@@ -163,9 +163,18 @@ it('same-process verified existing source survives scope reload',async()=>{
  const w=workspace();await w.load('scope-a');await w.store.loadQuotationOrderForEdit('order-scope-a');await w.store.quotationComposition.flushDraft();await w.load('scope-a');await w.store.refreshQuotationEngine();expect(w.store.quotationEditState.state).toBe('ready');expect(w.store.canSubmitQuotation).toBe(true);
 });
 
-it('failed local save of loaded existing order never relabels it new',async()=>{
- const w=workspace();await w.load('scope-a');w.storage.write=async()=>({state:'failed_terminal'});
- await w.store.loadQuotationOrderForEdit('order-scope-a');expect(w.store.quotationComposition.origin).toBe('existing');expect(w.store.quotationComposition.groups).toHaveLength(1);await w.store.submitQuotationOrder();expect(w.start).not.toHaveBeenCalled();expect(w.upsert).not.toHaveBeenCalled();expect(w.store.quotationComposition.origin).toBe('existing');
+it('keeps a failed existing-order save out of the editor and blocks submission', async () => {
+ const w = workspace();
+ await w.load('scope-a');
+ w.storage.write = async () => ({ state: 'failed_terminal' });
+ expect((await w.store.loadQuotationOrderForEdit('order-scope-a')).state).toBe('failed_terminal');
+ expect(w.store.quotationComposition.groups).toHaveLength(0);
+ expect(w.store.quotationComposition.quantityTextBySelection).toEqual({});
+ expect(w.store.quotationComposition.localState).toBe('unavailable');
+ expect(w.store.canSubmitQuotation).toBe(false);
+ await w.store.submitQuotationOrder();
+ expect(w.start).not.toHaveBeenCalled();
+ expect(w.upsert).not.toHaveBeenCalled();
 });
 
 it('legacy unknown remains unknown after editing, autosave and a second cold restart',async()=>{

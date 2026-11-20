@@ -18,6 +18,12 @@ export const useQuotationEngineStore = defineStore('quotationEngine', () => {
     result.value = null
   }
 
+  function publishVerified(verified: QuotationEngineResult): void {
+    generation += 1
+    result.value = verified
+    state.value = verified.state
+  }
+
   async function evaluate(input: {
     readonly draft: QuotationDraft
     readonly catalogContext: QuotationCatalogContext | null | undefined
@@ -50,5 +56,5 @@ export const useQuotationEngineStore = defineStore('quotationEngine', () => {
     }
   }
 
-  return { state, result, issueMessages, clear, evaluate }
+  return { state, result, issueMessages, clear, evaluate, publishVerified }
 })
