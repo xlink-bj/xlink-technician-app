@@ -15,10 +15,15 @@ const qaRoutes = [
   'pages/work-orders/material-sku-mock-review',
   'pages/work-orders/child-subflow-mock-review',
   'pages/dev/qa-console',
+  'pages/dev/g15-g16-attachments',
 ]
 const guardedBlock = /^\s*\/\/ #ifdef XLINK_DEV_QA\s*\r?\n([\s\S]*?)^\s*\/\/ #endif\s*\r?\n/m
 const conditionDirective = /^\s*(?:\/\/|<!--)\s*#(ifdef|ifndef|else|endif)\b\s*(.*?)\s*(?:-->)?\s*$/
 const detailFixtureGuards = {
+  'G15/G16': {
+    sourceEntries: {},
+    releaseMarkers: ['g15-g16-attachments', 'mock-g15-g16-saved-record-019', 'xlink:dev-only:g15-g16'],
+  },
   'G06/G07': {
     sourceEntries: {
       'src/pages/work-orders/detail.vue': ['dev-service-result-archives', 'ServiceResultArchiveCards', 'service-results', 'serviceArchiveMockView'],

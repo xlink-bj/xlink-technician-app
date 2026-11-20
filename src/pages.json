@@ -74,6 +74,10 @@
       }
     },
     {
+      "path": "pages/dev/g15-g16-attachments",
+      "style": { "navigationBarTitleText": "巡检附件 · Mock" }
+    },
+    {
       "path": "pages/dev/qa-console",
       "style": {
         "navigationBarTitleText": "开发 QA 控制台"

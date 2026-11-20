@@ -28,6 +28,7 @@
       <view v-if="mockMode === 'data'" class="qa-console__scenarios">
         <text class="qa-console__label">验收场景（以下入口只在 QA 控制台）</text>
         <navigator v-if="isMockJourneyAvailable()" :url="mockJourneyRoute()" class="qa-console__link mock-action-scenario" data-testid="mock-continuous-journey-entry">连续业务旅程 · MOCK-019 ↗</navigator>
+        <navigator v-if="mockAttachmentsEntryAvailable" url="/pages/dev/g15-g16-attachments?id=mock-work-order-019-continuous-journey&amp;node=mock-workflow-node-019-survey&amp;org=mock-g16-acting-org-01&amp;record=mock-g15-g16-saved-record-019&amp;editScope=saved-record-edit" class="qa-console__link mock-action-scenario" data-testid="g15-g16-attachments-entry">巡检附件 · G15/G16 ↗</navigator>
         <navigator v-if="session.status === 'authenticated' && devPipeWorkAvailable(session.session?.user.id, session.session?.currentRole?.id)" :url="devPipeWorkUrl()" class="qa-console__link mock-action-scenario" data-testid="pipe-work-mock-entry">管道作业 · 本机演示 ↗</navigator>
         <navigator v-if="session.status === 'authenticated' && devDeviceActionAvailable(devDeviceTask.workOrderId)" :url="devDeviceActionUrl()" class="qa-console__link mock-action-scenario" data-testid="device-action-mock-entry">设备作业 · 固定 Mock 任务 ↗</navigator>
         <navigator v-if="isMaterialSkuMockAvailable()" :url="materialSkuReviewUrl()" class="qa-console__link mock-action-scenario" data-testid="sku-mock-entry">材料 SPU/SKU · Mock ↗</navigator>
@@ -81,6 +82,7 @@ import LocalDraftDiagnosticsPanel from '@features/home/components/LocalDraftDiag
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useSessionStore } from '@shared/state'
+import { mockJourneyRoleId, mockJourneyUserId } from '@shared/mock-journey-identity'
 import MockCommercialFlowLinks from '@features/work-orders/quotation/MockCommercialFlowLinks.vue'
 import type { MockCommercialReviewPort } from '@features/work-orders/quotation/mock-commercial-review-port'
 
@@ -101,6 +103,9 @@ const mockCommercialReview: MockCommercialReviewPort = {
 // No commercial route links here. An explicit DEV-only URL opens this separate surface.
 // This guard is presentation-only; the adapter independently enforces Mock/write safety.
 const authorized = computed(() => import.meta.env.DEV && isBusinessMockDeveloperModeAvailable())
+const mockAttachmentsEntryAvailable = computed(() => session.status === 'authenticated'
+  && isMockJourneyAvailable() && String(session.session?.user.id) === mockJourneyUserId
+  && String(session.session?.currentRole?.id) === mockJourneyRoleId)
 const mockMode = ref<BusinessMockMode>(isBusinessMockMode())
 const mockSwitchInFlight = ref(false)
 const workOrders = useWorkOrderListStore()
