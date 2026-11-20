@@ -91,16 +91,29 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
   }
 
   process(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask>> {
+    return this.runTask(taskId, () => this.processExclusive(taskId))
+  }
+
+  retry(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask>> {
+    return this.runTask(taskId, () => this.retryExclusive(taskId))
+  }
+
+  private runTask(
+    taskId: MediaUploadTaskId,
+    execute: () => Promise<OperationSnapshot<MediaUploadTask>>,
+  ): Promise<OperationSnapshot<MediaUploadTask>> {
     const existing = this.inFlight.get(String(taskId))
     if (existing) return existing
-    const work = this.processExclusive(taskId).finally(() => {
+    // Register before reading or changing the checkpoint. Otherwise a retry
+    // could restore a stale queued state after another attempt finished.
+    const work = Promise.resolve().then(execute).finally(() => {
       if (this.inFlight.get(String(taskId)) === work) this.inFlight.delete(String(taskId))
     })
     this.inFlight.set(String(taskId), work)
     return work
   }
 
-  async retry(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask>> {
+  private async retryExclusive(taskId: MediaUploadTaskId): Promise<OperationSnapshot<MediaUploadTask>> {
     const current = await this.repository.read(taskId)
     if (current.state !== 'succeeded' || !current.data) {
       return current.state === 'succeeded'
@@ -118,7 +131,7 @@ export class MediaUploadQueue implements MediaUploadQueuePort {
       ? { state: 'source_uploaded', lastError: undefined }
       : { state: 'queued', lastError: undefined })
     if (queued.state !== 'succeeded' || !queued.data) return queued
-    return this.process(taskId)
+    return this.processExclusive(taskId)
   }
 
   async discard(taskId: MediaUploadTaskId): Promise<OperationSnapshot<void>> {

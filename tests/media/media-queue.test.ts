@@ -303,6 +303,41 @@ describe('G4-E shared durable media queue', () => {
     expect(left.data?.uploadedRef?.url).toBe(right.data?.uploadedRef?.url)
   })
 
+  it('does not replay an uploaded task when overlapping retries see the same failed checkpoint', async () => {
+    const upload = { upload: vi.fn<UploadPort['upload']>()
+      .mockResolvedValueOnce({
+        state: 'failed_retryable',
+        error: createOperationError('network_retryable', 'Known failure before upload'),
+      })
+      .mockImplementation(async item => succeeded(uploaded(item))) }
+    const { queue, storage } = createQueue(upload)
+    const enqueued = await queue.enqueue({ scope, media: media('overlapping-retry') })
+    const taskId = enqueued.data!.taskId
+    expect((await queue.process(taskId)).state).toBe('failed_retryable')
+
+    let releaseSecondWrite!: () => void
+    const holdSecondWrite = new Promise<void>(resolve => { releaseSecondWrite = resolve })
+    const writes = vi.mocked(storage.storage.write)
+    const write = writes.getMockImplementation()!
+    let retryCheckpoints = 0
+    writes.mockImplementation(async (key, value) => {
+      if ((value as MediaUploadTask).state === 'queued' && ++retryCheckpoints === 2) await holdSecondWrite
+      return write(key, value)
+    })
+
+    const first = queue.retry(taskId)
+    const second = queue.retry(taskId)
+    const firstResult = await first
+    releaseSecondWrite()
+    const secondResult = await second
+
+    expect(firstResult).toMatchObject({ state: 'succeeded', data: { state: 'uploaded', attempts: 2 } })
+    expect(secondResult).toEqual(firstResult)
+    expect((await queue.listForAction(scope)).data).toEqual([firstResult.data])
+    expect(upload.upload).toHaveBeenCalledTimes(2) // initial failure plus one explicit retry
+    expect(retryCheckpoints).toBe(1)
+  })
+
   it('retains retryable failures across a new queue instance and retries only explicitly', async () => {
     const storage = storageFor()
     const durable = new InMemoryDurableMediaStore()
