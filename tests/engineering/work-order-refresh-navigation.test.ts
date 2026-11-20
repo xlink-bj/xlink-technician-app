@@ -1,3 +1,4 @@
+import { useG05RefusalCard } from '@app/g05-refusal-card'
 import { readFileSync } from 'node:fs'
 import ts from 'typescript'
 import { compileScript, parse } from '@vue/compiler-sfc'
@@ -37,6 +38,8 @@ async function mounted() {
   const source = compileScript(parse(readFileSync('src/pages/work-orders/work-orders.vue', 'utf8')).descriptor, { id: 'refresh-navigation-test', inlineTemplate: true, templateOptions: { compilerOptions: { isCustomElement: tag => ['view', 'text', 'button', 'navigator', 'scroll-view'].includes(tag) } } }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
   const imports: Record<string, any> = {
+    '@dcloudio/uni-app': { onHide() {}, onShow() {}, onUnload() {} },
+    '@app/g05-refusal-card': { useG05RefusalCard },
     vue: Vue, '@features/home/access': { hasAuthenticatedSession: (s: string) => s === 'authenticated' },
     '@shared/config': { isProductionReadOnlyRuntime: () => false },
     '@features/work-orders/card': { workOrderCardToneFor: () => '', workOrderCardIconFor: () => '', workOrderCardIconRoleFor: () => '' },

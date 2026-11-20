@@ -66,19 +66,19 @@
       />
 
       <AppWorkOrderEmptyState
-        v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0"
+        v-else-if="workOrders.loadState === 'succeeded' && loadedCount === 0"
         @action="refresh"
       />
 
       <view v-else-if="workOrders.loadState === 'succeeded' || isRefreshing" class="list-content">
         <AppSectionHeading class="list-section-heading" title="当前工单" subtitle="按当前账号权限展示" data-testid="ds02b-list-heading">
-          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">已加载 {{ workOrders.items.length }} 条</text></template>
+          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">已加载 {{ loadedCount }} 条</text></template>
         </AppSectionHeading>
         <view v-if="isRefreshing" class="inline-refresh" aria-label="正在刷新工单">
           <view class="inline-refresh-indicator" />
         </view>
         <view
-          v-for="item in workOrders.visibleItems"
+          v-for="item in cardItems"
           :key="String(item.id)"
           class="work-order-card"
           :hover-class="canOpenDetail(item) ? 'work-order-card-hover' : 'none'"
@@ -115,7 +115,7 @@
               </view>
               <text v-if="item.customerName" class="card-customer">{{ item.customerName }}</text>
               <view
-                v-if="canOpenDetail(item) || item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
+                v-if="g05.isFixture(item) || canOpenDetail(item) || item.communityOrderCount !== undefined || listActionFor(item).contactAvailable || listActionFor(item).acceptOrder"
                 class="card-footer"
               >
                 <AppMetaTag v-if="item.communityOrderCount !== undefined" class="nearby-chip" tone="info" :label="`同小区 ${item.communityOrderCount}`" />
@@ -138,6 +138,11 @@
                     aria-hidden="true"
                   />
                   <text class="card-phone-label">联系</text>
+                </view>
+                <view v-if="g05.isFixture(item)" class="card-accept-control" @tap.stop>
+                  <AppButton size="compact" variant="secondary" data-testid="g05-card-action" @tap="openG05(item)">
+                    {{ g05.canOffer() ? '拒单' : '查拒单回执' }}
+                  </AppButton>
                 </view>
                 <view v-if="listActionFor(item).acceptOrder" class="card-accept-control" @tap.stop>
                   <AppButton
@@ -162,13 +167,28 @@
 
       <AppLoadingState v-else variant="inline" label="正在准备工单" />
 
-      <view v-if="acceptCandidate" class="accept-confirm-backdrop" @tap="cancelAccept">
+      <view v-if="acceptCandidate || g05Mode !== 'closed'" class="accept-confirm-backdrop" @tap="g05Mode === 'closed' ? cancelAccept() : g05.close()">
         <view class="accept-confirm-card" @tap.stop>
-          <text class="accept-confirm-title">确认接单</text>
-          <text class="accept-confirm-copy">该工单存在待确认事项，确认后将进入工单处理流程。</text>
-          <view class="accept-confirm-actions">
+          <text class="accept-confirm-title">{{ g05Mode === 'closed' ? '确认接单' : g05Mode === 'edit' ? '确认拒单' : '拒单回执' }}</text>
+          <text v-if="g05Mode === 'closed'" class="accept-confirm-copy">该工单存在待确认事项，确认后将进入工单处理流程。</text>
+          <template v-else>
+            <text class="accept-confirm-copy">工单 {{ cardNumber(g05.row.value?.displayNumber ?? '') }} · 本次派工</text>
+            <template v-if="g05Mode === 'edit'">
+              <text class="accept-confirm-copy">拒单原因</text>
+              <textarea v-model="g05Reason" class="g05-reason" aria-label="拒单原因" placeholder="请填写无法承接的原因"
+                :maxlength="-1" data-testid="g05-reason" />
+            </template>
+            <text v-if="g05Mode === 'receipt'" class="accept-confirm-copy">已确认拒单 · 拒单原因</text>
+            <scroll-view v-if="g05Message" scroll-y class="g05-message"><text data-testid="g05-feedback">{{ g05Message }}</text></scroll-view>
+          </template>
+          <view v-if="g05Mode === 'closed'" class="accept-confirm-actions">
             <button class="accept-confirm-button accept-confirm-button--secondary" @tap="cancelAccept">取消</button>
             <button class="accept-confirm-button accept-confirm-button--primary" @tap="confirmAccept">确认接单</button>
+          </view>
+          <view v-else class="accept-confirm-actions">
+            <button class="accept-confirm-button accept-confirm-button--secondary" @tap="g05.close()">{{ g05Mode === 'edit' ? '取消' : '关闭' }}</button>
+            <button v-if="g05Mode === 'edit'" class="accept-confirm-button accept-confirm-button--primary" @tap="g05.confirm()">确认拒单</button>
+            <button v-if="g05Mode === 'lookup'" class="accept-confirm-button accept-confirm-button--primary" @tap="g05.read()">查询原回执</button>
           </view>
         </view>
       </view>
@@ -179,6 +199,8 @@
 </template>
 
 <script setup lang="ts">
+import { onHide, onShow, onUnload } from '@dcloudio/uni-app'
+import { useG05RefusalCard } from '@app/g05-refusal-card'
 import { workKindLabels } from '@features/work-orders/work-kind'
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
@@ -225,6 +247,25 @@ function isCurrentAcceptResult(generation: number, scope: string | null): boolea
 }
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
+const pageVisible = ref(true)
+const g05 = useG05RefusalCard(() => session.session, () => pageVisible.value && canAccess.value
+  && workOrders.loadState === 'succeeded' && workOrders.category === 'all'
+  && workOrders.workKind === 'all' && !workOrders.searchText, () => workOrders.items)
+const { mode: g05Mode, reason: g05Reason, message: g05Message } = g05
+const cardItems = computed(() => g05.row.value ? [g05.row.value, ...workOrders.visibleItems] : workOrders.visibleItems)
+const loadedCount = computed(() => workOrders.items.length + (g05.row.value ? 1 : 0))
+function openG05(item: WorkOrderSummary) {
+  if (!g05.isFixture(item)) return
+  invalidatePendingAccept()
+  g05.open(item)
+}
+function leaveG05() { pageVisible.value = false; g05.close() }
+onShow(() => { pageVisible.value = true })
+onHide(leaveG05)
+onUnload(leaveG05)
+onBeforeUnmount(leaveG05)
+watch([() => session.status, () => workOrderReadScopeKey(session.session), () => g05.row.value],
+  () => g05.close(), { flush: 'sync' })
 const isLoading = computed(() => workOrders.loadState === 'loading')
 const isRefreshing = computed(() => isLoading.value && workOrders.items.length > 0)
 const showLoadingSkeleton = ref(false)
@@ -314,6 +355,8 @@ async function dialContact(item: Parameters<typeof workOrders.dialContact>[0]): 
 }
 
 function listActionFor(item: WorkOrderSummary) {
+  // This isolated row has no ordinary accept, contact or detail capability.
+  if (item.id === g05.reservedId) return { detailAccessible: false, contactAvailable: false, acceptOrder: undefined }
   const action = workOrderListActionFor(item, session.session)
   return productionReadOnly
     ? { detailAccessible: action.detailAccessible, contactAvailable: false }
@@ -383,4 +426,6 @@ function cancelAccept(): void {
 
 <style lang="scss">
 @import "@brand-ui/work-order-list.scss";
+.g05-reason { box-sizing: border-box; width: 100%; height: 80px; border: 1px solid var(--app-border, #ccc); border-radius: 6px; padding: 8px; margin-top: 6px; font: inherit; }
+.g05-message { max-height: 24vh; margin-top: 8px; overflow-wrap: anywhere; white-space: pre-wrap; }
 </style>
