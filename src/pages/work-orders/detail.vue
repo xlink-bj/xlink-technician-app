@@ -124,6 +124,13 @@
       <!-- #ifdef XLINK_DEV_QA -->
       <AppButton v-if="readView === 'home' && constructionMockEnabled(String(detail.id))" variant="secondary"
         data-testid="construction-read-entry" @tap="openConstructionRead">查看施工日志</AppButton>
+      <MaterialFulfillmentPanel v-if="materialFulfillmentVisible"
+        :state="materialFulfillmentState" @read="readMaterialFulfillment" />
+      <!-- #ifdef H5 -->
+      <MaterialFulfillmentWorkflow v-if="materialWorkflowScope()"
+        :display-number="workOrderNumberDisplay(detail.displayNumber)"
+        :current-scope="materialWorkflowScope" :bind-workflow="bindDevMaterialWorkflow" />
+      <!-- #endif -->
       <!-- #endif -->
       <WorkOrderArchiveCards v-if="readView === 'home'"
         :work-order-id="String(detail.id)" :activities="activities"
@@ -340,6 +347,14 @@ import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { childOrderConstructionProgress, detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
 // #ifdef XLINK_DEV_QA
 import { constructionMockEnabled } from '@app/dev-construction-read'
+import { isMaterialFulfillmentMockAvailable, materialFulfillmentMock } from '@app/dev-material-fulfillment-read'
+import MaterialFulfillmentPanel from '@features/work-orders/downstream/MaterialFulfillmentPanel.vue'
+import { useMaterialFulfillmentRead } from '@features/work-orders/downstream/material-fulfillment-read'
+import { useWorkOrderListStore } from '@features/work-orders/list'
+// #ifdef H5
+import { bindDevMaterialWorkflow, isDevMaterialWorkflowActor } from '@app/dev-material-fulfillment-workflow'
+import MaterialFulfillmentWorkflow from '@features/work-orders/downstream/MaterialFulfillmentWorkflow.vue'
+// #endif
 // #endif
 import WorkOrderArchiveCards from '@features/work-orders/WorkOrderArchiveCards.vue'
 import AppointmentArchive from '@features/work-orders/AppointmentArchive.vue'
@@ -525,6 +540,29 @@ const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
 const readView = ref<DetailReadView>('home')
+// #ifdef XLINK_DEV_QA
+const materialWorkOrderList = useWorkOrderListStore()
+function materialFulfillmentScope() {
+  const workOrderId = String(detail.value?.id ?? '')
+  const actorScope = workOrderReadScopeKey(session.session)
+  if (productionReadOnly || session.status !== 'authenticated' || !actorScope
+    || readView.value !== 'home' || preAcceptBlocked.value || workOrder.loadState !== 'succeeded'
+    || parseWorkOrderId(routeValue.value) !== workOrderId
+    || !isMaterialFulfillmentMockAvailable(workOrderId, session.session)
+    || !materialWorkOrderList.items.some(item => item.id === workOrderId)) return null
+  return { workOrderId, actorScope }
+}
+const materialFulfillmentVisible = computed(() => materialFulfillmentScope() !== null)
+const { state: materialFulfillmentState, read: readMaterialFulfillment } = useMaterialFulfillmentRead(
+  materialFulfillmentScope,
+  (id, mode) => materialFulfillmentMock.read(id, mode),
+)
+// #ifdef H5
+function materialWorkflowScope() {
+  return isDevMaterialWorkflowActor(session.session) ? materialFulfillmentScope() : null
+}
+// #endif
+// #endif
 const appointmentReadArchive = ref<InstanceType<typeof AppointmentArchive> | null>(null)
 const appointmentArchiveContext = computed(() => {
   const workOrderId = parseWorkOrderId(routeValue.value)
