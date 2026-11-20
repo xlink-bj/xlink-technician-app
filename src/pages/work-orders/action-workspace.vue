@@ -638,7 +638,17 @@ onShow(() => {
   isNavigating.value = false
   if(normalPage.show()&&routeReady.value&&session.status==='authenticated')void loadWorkspace()
 })
-onHide(normalPage.hide)
+function flushMountedQuotationDraft(): void {
+  if (mountedWorkspaceAction?.contentKind === 'quotation'
+    && workspace.ownsPage(mountedWorkspaceAction, workspacePageLease)) {
+    void workspace.flushDraft()
+  }
+}
+
+onHide(() => {
+  normalPage.hide()
+  flushMountedQuotationDraft()
+})
 onBackPress(options => closeSurveyConfirmation() || normalPage.backPress(options))
 
 onUnload(() => {
@@ -647,7 +657,8 @@ onUnload(() => {
   mockOrderReadRevision += 1
   journeyContextRequest += 1
   localJourneyContext.value = null
-  void workspace.flushDraft()
+  if (mountedWorkspaceAction?.contentKind === 'quotation' || workspace.descriptor?.contentKind === 'quotation') flushMountedQuotationDraft()
+  else void workspace.flushDraft()
 })
 
 watch(
@@ -662,6 +673,9 @@ watch(
 async function exit(): Promise<void> {
   if (closeSurveyConfirmation()) return
   if(await normalPage.exit())return
+  if (workspace.loadState === 'succeeded'
+    && (mountedWorkspaceAction?.contentKind === 'quotation' || workspace.descriptor?.contentKind === 'quotation')
+    && !workspace.ownsPage(mountedWorkspaceAction, workspacePageLease)) return
   exitFeedback.value = ''
   const result = await workspace.exit()
   if (result.state !== 'succeeded') exitFeedback.value = '本地草稿尚未安全保存，请保留页面后重试。'

@@ -1,8 +1,10 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 
+import { createSemanticStorageAdapter } from '@adapters/storage/storage-adapter'
 import {
   actionDraftIdentityFor,
+  actionDraftLegacyStorageKey,
   actionDraftStorageKey,
   createActionDraftRepository,
   type ActionDraftIdentity,
@@ -31,6 +33,7 @@ function memoryStorage(): StoragePort {
 
 function identityFor(input: {
   userId?: string
+  roleId?: string
   workOrderId?: string
   workflowNodeId?: string
 } = {}): ActionDraftIdentity {
@@ -40,7 +43,7 @@ function identityFor(input: {
     workflowNodeId: asOpaqueId<'WorkflowNodeRuntimeId'>(input.workflowNodeId ?? 'quotation-node-A'),
     actionIntent: 'place_order',
     contentKind: 'quotation',
-  })
+  }, input.roleId ? asOpaqueId<'RoleId'>(input.roleId) : undefined)
 }
 
 describe('G4-F quotation composition model and local draft recovery', () => {
@@ -217,6 +220,121 @@ describe('G4-F quotation composition model and local draft recovery', () => {
       'synthetic-procedure-base',
     ])
     expect(reopened.localStateMessage).toContain('已恢复本地报价分组草稿')
+  })
+
+  it('flushes the latest repair description when input arrives during an outstanding save', async () => {
+    const identity = identityFor({ roleId: 'technician' })
+    const first = useQuotationCompositionStore()
+    await first.initialize({ identity, repository, debounceMs: 60_000 })
+    const groupId = first.createGroup({ partDescription: '屋面原记录' }).data!
+
+    const write = repository.write.bind(repository)
+    let releaseWrite!: () => void
+    const stalled = new Promise<void>(resolve => { releaseWrite = resolve })
+    vi.spyOn(repository, 'write').mockImplementationOnce(async record => {
+      await stalled
+      return write(record)
+    })
+
+    const flush = first.flushDraft()
+    expect(first.updateGroupContext(groupId, { partDescription: '离开前补记屋面泛水渗漏' }).state).toBe('succeeded')
+    releaseWrite()
+    expect((await flush).state).toBe('succeeded')
+    first.clear()
+
+    const reopened = useQuotationCompositionStore(createPinia())
+    expect(await reopened.initialize({ identity, repository: createActionDraftRepository(storage) })).toBe('restored')
+    expect(reopened.groups[0].partDescription).toBe('离开前补记屋面泛水渗漏')
+  })
+
+  it('ends an exit flush after one catch-up and autosaves further edits', async () => {
+    vi.useFakeTimers()
+    const identity = identityFor()
+    const store = useQuotationCompositionStore()
+    await store.initialize({ identity, repository, debounceMs: 100 })
+    const groupId = store.createGroup({ partDescription: '初次描述' }).data!
+    const write = repository.write.bind(repository)
+    let releaseFirst!: () => void
+    let releaseSecond!: () => void
+    let signalSecondStarted!: () => void
+    const first = new Promise<void>(resolve => { releaseFirst = resolve })
+    const second = new Promise<void>(resolve => { releaseSecond = resolve })
+    const secondStarted = new Promise<void>(resolve => { signalSecondStarted = resolve })
+    const writes = vi.spyOn(repository, 'write')
+      .mockImplementationOnce(async record => { await first; return write(record) })
+      .mockImplementationOnce(async record => { signalSecondStarted(); await second; return write(record) })
+
+    const exitFlush = store.flushDraft()
+    store.updateGroupContext(groupId, { partDescription: '再次补记' })
+    releaseFirst()
+    await secondStarted
+    store.updateGroupContext(groupId, { partDescription: '最后一版描述' })
+    releaseSecond()
+    expect(await exitFlush).toMatchObject({ state: 'failed_terminal', error: { category: 'cancelled' } })
+    expect(writes).toHaveBeenCalledTimes(2)
+    expect(store.localState).toBe('dirty')
+
+    await vi.advanceTimersByTimeAsync(100)
+    expect(writes).toHaveBeenCalledTimes(3)
+    expect(store.localState).toBe('saved_local')
+    expect((await repository.read(identity)).data?.values).toMatchObject({
+      quotationDraft: { groups: [{ partDescription: '最后一版描述' }] },
+    })
+  })
+
+  it('requires the live account and role scope when the debounce fires', async () => {
+    vi.useFakeTimers()
+    let authorized = true
+    const store = useQuotationCompositionStore()
+    await store.initialize({ identity: identityFor(), repository, isScopeCurrent: () => authorized, debounceMs: 100 })
+    const writes = vi.spyOn(repository, 'write')
+    expect(store.createGroup({ partDescription: '未写入的描述' }).state).toBe('succeeded')
+    authorized = false
+
+    await vi.advanceTimersByTimeAsync(100)
+    expect(writes).not.toHaveBeenCalled()
+    expect(store.localState).toBe('unavailable')
+    expect(await store.flushDraft()).toMatchObject({ state: 'failed_terminal', error: { category: 'session_invalid' } })
+  })
+
+  it('cold-restores twenty independent repair notes only at their exact identity', async () => {
+    const storedBytes = new Map<string, string>()
+    const openRepository = () => createActionDraftRepository(createSemanticStorageAdapter({
+      get: async key => storedBytes.get(key) ?? null,
+      set: async (key, value) => { storedBytes.set(key, value) },
+      remove: async key => { storedBytes.delete(key) },
+      listKeys: async () => [...storedBytes.keys()],
+    }))
+    const entries = Array.from({ length: 20 }, (_, index) => ({
+      identity: identityFor({ roleId: 'technician', workOrderId: `repair-${index + 1}`, workflowNodeId: `repair-task-${index + 1}` }),
+      description: `第 ${index + 1} 单的现场渗漏记录`,
+    }))
+    const editingRepository = openRepository()
+    const editor = useQuotationCompositionStore()
+    for (const { identity, description } of entries) {
+      expect(await editor.initialize({ identity, repository: editingRepository })).toBe('fresh')
+      expect(editor.createGroup({ partDescription: description }).state).toBe('succeeded')
+      expect((await editor.flushDraft()).state).toBe('succeeded')
+    }
+    editor.clear()
+
+    const reopened = useQuotationCompositionStore(createPinia())
+    const persistedRepository = openRepository()
+    const firstIdentity = entries[0].identity
+    for (const otherIdentity of [
+      { ...firstIdentity, userId: asOpaqueId<'UserId'>('another-account') },
+      { ...firstIdentity, roleId: asOpaqueId<'RoleId'>('another-role') },
+      { ...firstIdentity, workOrderId: entries[1].identity.workOrderId },
+      { ...firstIdentity, workflowNodeId: entries[1].identity.workflowNodeId },
+    ]) {
+      expect(await reopened.initialize({ identity: otherIdentity, repository: persistedRepository })).toBe('fresh')
+      expect(reopened.groups).toEqual([])
+    }
+    expect((await persistedRepository.listForUser(firstIdentity.userId, firstIdentity.roleId)).data?.entries).toHaveLength(20)
+    for (const { identity, description } of entries) {
+      expect(await reopened.initialize({ identity, repository: persistedRepository })).toBe('restored')
+      expect(reopened.groups.map(group => group.partDescription)).toEqual([description])
+    }
   })
 
   it('restores grouped schema v2 losslessly and writes v4 after a local edit', async () => {
@@ -414,6 +532,52 @@ describe('G4-F quotation composition model and local draft recovery', () => {
     }
     expect(decodeQuotationDraftRecord(quotationDraftRecordFor(currentIdentity, duplicatePackage, '2026-09-22T09:00:00.000Z'), currentIdentity).state).toBe('invalid')
   })
+
+  it.each(['page-transfer', 'role-change'] as const)(
+    'keeps a legacy draft intact when %s occurs during the repository ownership read',
+    async change => {
+      const identity = identityFor()
+      const legacyKey = { namespace: 'draft' as const, key: actionDraftLegacyStorageKey(identity) }
+      const record = {
+        ...quotationDraftRecordFor(identity, createEmptyQuotationDraft(String(identity.workOrderId), String(identity.workflowNodeId)),
+          '2026-09-22T09:00:00.000Z'),
+        values: { schemaVersion: 5 },
+      }
+      await storage.write(legacyKey, record)
+      let lease = {}
+      let authorized = true
+      const store = useQuotationCompositionStore()
+      expect(await store.initialize({
+        identity, repository, isScopeCurrent: () => authorized,
+        capturePageOwnership: () => { const owner = lease; return () => owner === lease },
+      })).toBe('invalid')
+
+      const remove = vi.spyOn(storage, 'remove')
+      const read = storage.read
+      let signalStarted!: () => void
+      let releaseRead!: () => void
+      const started = new Promise<void>(resolve => { signalStarted = resolve })
+      const stalled = new Promise<void>(resolve => { releaseRead = resolve })
+      vi.spyOn(storage, 'read').mockImplementation(async key => {
+        if (key.key === legacyKey.key) {
+          signalStarted()
+          await stalled
+        }
+        return read(key)
+      })
+      const discarding = store.discardInvalidDraft()
+      await started
+      if (change === 'page-transfer') lease = {}
+      else authorized = false
+      releaseRead()
+
+      expect(await discarding).toMatchObject({ state: 'failed_terminal',
+        error: { category: change === 'role-change' ? 'session_invalid' : 'cancelled' } })
+      expect.soft(remove).not.toHaveBeenCalled()
+      expect(await read(legacyKey)).toEqual(succeeded(record))
+      expect(store.localState).toBe(change === 'role-change' ? 'unavailable' : 'invalid')
+    },
+  )
 
   it('retains legacy flat v1 drafts without migration or overwrite until explicit user disposition', async () => {
     const identity = identityFor()

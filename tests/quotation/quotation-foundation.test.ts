@@ -14,7 +14,7 @@ import {
   resetMockCommandState,
   setBusinessMockMode,
 } from '@adapters/api/mock'
-import { actionContentKindForIntent, createActionDraftRepository } from '@runtimes/action'
+import { actionContentKindForIntent, actionDraftIdentityFor, createActionDraftRepository } from '@runtimes/action'
 import { evaluateWorkflowAction, projectDetailWorkflow, type WorkflowActor } from '@runtimes/workflow'
 import { useActionWorkspaceStore } from '@features/work-orders/action-workspace'
 import type {
@@ -272,6 +272,102 @@ describe('G4-F Phase 1A quotation action foundation', () => {
     expect(readDraft).not.toHaveBeenCalled()
     expect(fallback).not.toHaveBeenCalled()
     expect(realRequest).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['role-change', 'before-dispatch'],
+    ['page-transfer', 'before-dispatch'],
+    ['role-change', 'after-dispatch'],
+    ['page-transfer', 'after-dispatch'],
+  ] as const)('stops a departing quotation flush after %s (%s)', async (change, boundary) => {
+    const api = createTechnicianApiReadAdapter(createUniApiReadTransport({
+      apiBaseUrl: 'https://mock-review.invalid', getSessionRef: () => session.sessionRef,
+      request: vi.fn() as never, mockLatencyMs: 0,
+    }))
+    const storage = memoryStorage()
+    const repository = createActionDraftRepository(storage)
+    const appNavigation = navigation()
+    let activeSession = session
+    const workspace = useActionWorkspaceStore()
+    workspace.configure({
+      apiRead: api, commandApi: {} as TechnicianApiCommandPort, draftRepository: repository,
+      navigation: appNavigation, getSession: () => activeSession, debounceMs: 100,
+    })
+    const pageLease = {}
+    const action = { workOrderId, workflowNodeId, actionIntent: 'place_order', pageLease }
+    expect((await workspace.ensureLoaded(action)).state).toBe('succeeded')
+    const descriptor = workspace.descriptor
+    expect(workspace.ownsPage(descriptor, pageLease)).toBe(true)
+    const composition = workspace.quotationComposition
+    vi.useFakeTimers()
+    const groupId = composition.createGroup({ partDescription: '已发起保存的描述' }).data!
+    const write = storage.write
+    const writes = vi.spyOn(storage, 'write')
+    let signalStarted!: () => void
+    let releaseStorage!: () => void
+    const started = new Promise<void>(resolve => { signalStarted = resolve })
+    const stalled = new Promise<void>(resolve => { releaseStorage = resolve })
+    const waitForRelease = async () => { signalStarted(); await stalled }
+    if (boundary === 'before-dispatch') {
+      const read = storage.read
+      vi.spyOn(storage, 'read').mockImplementationOnce(async key => {
+        await waitForRelease()
+        return read(key)
+      })
+    } else {
+      writes.mockImplementationOnce(async (key, record) => {
+        await waitForRelease()
+        return write(key, record)
+      })
+    }
+
+    try {
+      const exit = workspace.exit()
+      await started
+      const dispatchedWrites = boundary === 'before-dispatch' ? 0 : 1
+      expect(writes).toHaveBeenCalledTimes(dispatchedWrites)
+      expect(composition.updateGroupContext(groupId, { partDescription: '离开前尚未写入的描述' }).state).toBe('succeeded')
+      if (change === 'role-change') {
+        activeSession = { ...session, currentRole: { id: asOpaqueId<'RoleId'>('different-role') } }
+      } else {
+        expect((await workspace.ensureLoaded({ ...action, pageLease: {} })).state).toBe('succeeded')
+        expect(workspace.descriptor).toBe(descriptor)
+      }
+      expect(workspace.ownsPage(descriptor, pageLease)).toBe(false)
+      releaseStorage()
+      expect(await exit).toMatchObject({ state: 'failed_terminal',
+        error: { category: change === 'role-change' ? 'session_invalid' : 'cancelled' } })
+      await vi.advanceTimersByTimeAsync(500)
+      expect.soft(writes).toHaveBeenCalledTimes(dispatchedWrites)
+      expect(composition.localState).not.toBe('saved_local')
+      expect(appNavigation.reset).not.toHaveBeenCalled()
+
+      const identity = actionDraftIdentityFor(descriptor!, session.currentRole!.id)
+      const saved = await repository.read(identity)
+      if (dispatchedWrites) {
+        expect(saved.data?.values).toMatchObject({
+          quotationDraft: { groups: [{ partDescription: '已发起保存的描述' }] },
+        })
+      } else {
+        expect.soft(saved.data).toBeNull()
+      }
+      if (change === 'page-transfer') {
+        expect((await workspace.exit()).state).toBe('succeeded')
+        expect(writes).toHaveBeenCalledTimes(dispatchedWrites + 1)
+        expect(composition.localState).toBe('saved_local')
+        expect(appNavigation.reset).toHaveBeenCalledOnce()
+        const reopened = useActionWorkspaceStore(createPinia())
+        reopened.configure({
+          apiRead: api, commandApi: {} as TechnicianApiCommandPort, draftRepository: createActionDraftRepository(storage),
+          navigation: navigation(), getSession: () => session,
+        })
+        expect((await reopened.ensureLoaded({ ...action, pageLease: {} })).state).toBe('succeeded')
+        expect(reopened.quotationComposition.groups[0]?.partDescription).toBe('离开前尚未写入的描述')
+      }
+    } finally {
+      workspace.clear()
+      vi.useRealTimers()
+    }
   })
 
   it('fails closed when Mock is off and the quotation fixture cannot be served', async () => {

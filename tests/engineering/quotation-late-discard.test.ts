@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
-import { actionDraftIdentityFor, createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
+import { actionDraftIdentityFor, actionDraftLegacyStorageKey, createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
 import type { StoragePort } from '@shared/ports'
 import { asOpaqueId, createOperationError, type OperationSnapshot } from '@shared/types'
 import { useQuotationCompositionStore } from '@features/work-orders/quotation/composition-store'
@@ -35,7 +35,7 @@ function fixture() {
     },
     listKeys: async () => succeeded([...values.keys()]),
   }
-  return { repository: createActionDraftRepository(storage), started, release, hold: () => { hold = true }, fail: () => { fail = true } }
+  return { storage, repository: createActionDraftRepository(storage), started, release, hold: () => { hold = true }, fail: () => { fail = true } }
 }
 
 async function initializeInvalid(f: ReturnType<typeof fixture>, identity = identityFor('A')) {
@@ -102,13 +102,31 @@ describe('quotation explicit discard generation ownership', () => {
   })
 
   it('a second pending discard cannot clear fresh input after the first succeeds', async () => {
-    const f = fixture(), { store } = await initializeInvalid(f)
+    const f = fixture(), { store, identity } = await initializeInvalid(f)
+    const legacyKey = actionDraftLegacyStorageKey(identity)
+    const read = f.storage.read
+    let firstLegacyReads = 0
+    let entered!: () => void
+    let release!: () => void
+    const started = new Promise<void>(resolve => { entered = resolve })
+    const pending = new Promise<void>(resolve => { release = resolve })
+    vi.spyOn(f.storage, 'read').mockImplementation(async key => {
+      if (key.key === legacyKey && ++firstLegacyReads === 2) {
+        entered()
+        await pending
+      }
+      return read(key)
+    })
+    const remove = vi.spyOn(f.storage, 'remove')
     const first = store.discardInvalidDraft()
-    f.hold(); const second = store.discardInvalidDraft(); await f.started
+    const second = store.discardInvalidDraft()
+    await started
     expect((await first).state).toBe('succeeded')
     expect(store.createGroup({ repairParts: ['part-A'], partDescription: 'Input after first discard' }).state).toBe('succeeded')
-    const before = currentState(); f.release()
+    const before = currentState()
+    release()
     expect((await second).state).toBe('failed_terminal')
+    expect(remove).toHaveBeenCalledOnce()
     expect(currentState()).toEqual(before)
   })
 

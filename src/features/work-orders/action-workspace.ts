@@ -692,7 +692,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     }
 
     clearDraftTimer()
-    if (descriptor.value?.contentKind === 'quotation') {
+    if (descriptor.value?.contentKind === 'quotation' && commandSessionScopeCurrent()) {
       const flushed = await quotationComposition.flushDraft()
       if (!ownedStillCurrent()) return failure('cancelled', 'Owned appointment load was superseded')
       if (flushed.state !== 'succeeded') {
@@ -817,6 +817,7 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       }
       detail.value = read.data
       descriptor.value = nextDescriptor
+      const quotationAction = descriptor.value
       quotationContentState.value = 'loading'
       quotationCatalogBrowser.configure({
         readPort: configured.quotationCatalogRead ?? null,
@@ -840,6 +841,12 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
       await quotationComposition.initialize({
         identity,
         repository: configured.draftRepository,
+        isScopeCurrent: () => dependencies === configured && requestVersion === loadVersion
+          && descriptor.value === quotationAction && scopeUnchanged(),
+        capturePageOwnership: () => {
+          const pageLease = appointmentPageLease
+          return () => appointmentPageLease === pageLease
+        },
         repairPartOptions: repairPartsRead.state === 'succeeded' ? repairPartsRead.data?.items ?? [] : [],
         ...(configured.now ? { now: configured.now } : {}),
         ...(configured.debounceMs !== undefined ? { debounceMs: configured.debounceMs } : {}),
@@ -2548,7 +2555,8 @@ export const useActionWorkspaceStore = defineStore('actionWorkspace', () => {
     const exitingVersion = loadVersion
     const flushed = await flushDraft()
     if (flushed.state !== 'succeeded') return flushed
-    if (exitingVersion !== loadVersion || descriptor.value !== exitingAction) {
+    if (exitingVersion !== loadVersion || descriptor.value !== exitingAction
+      || (exitingAction?.contentKind === 'quotation' && appointmentPageLease !== exitingPageLease)) {
       return failure('cancelled', 'Action Workspace exit was superseded')
     }
     if (exitingAction && !commandSessionScopeCurrent()) {

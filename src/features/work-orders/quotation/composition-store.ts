@@ -54,12 +54,13 @@ function succeeded<T = void>(data?: T): OperationSnapshot<T> {
   return { state: 'succeeded', ...(data === undefined ? {} : { data }) }
 }
 
-function failed<T = void>(category: 'validation' | 'unsupported_capability' | 'server_terminal' | 'cancelled', message: string): OperationSnapshot<T> {
+function failed<T = void>(category: 'validation' | 'unsupported_capability' | 'server_terminal' | 'cancelled' | 'session_invalid', message: string): OperationSnapshot<T> {
   const error = createOperationError(category, message)
   return { state: 'failed_terminal', error }
 }
 
 const serverOrderRecoveryMessage = '请重新读取同一订单，核对本机保留的报价后继续。'
+const alwaysCurrent = () => true
 
 function selections(draft: QuotationDraft) {
   return draft.groups.flatMap((group) => [
@@ -88,6 +89,10 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   let debounceMs = 360
   let timer: ReturnType<typeof setTimeout> | undefined
   let generation = 0
+  let isDraftScopeCurrent = alwaysCurrent
+  let capturePageOwnership = () => alwaysCurrent
+  let dirtyPageIsCurrent = alwaysCurrent
+  let scopeRevoked = false
   let activeWrite: { readonly generation: number; readonly promise: Promise<OperationSnapshot<void>> } | null = null
   // Keep an unsettled or abandoned write fenced across page generations.
   const serverRestores = new Map<string, {
@@ -97,7 +102,8 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   }>()
 
   function canEdit(): boolean {
-    return ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(localState.value)
+    return !scopeRevoked && isDraftScopeCurrent()
+      && ['fresh', 'restored', 'dirty', 'saving', 'saved_local', 'save_failed'].includes(localState.value)
   }
 
   function clearTimer(): void {
@@ -110,6 +116,10 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     generation += 1
     repository = null
     identity = null
+    isDraftScopeCurrent = alwaysCurrent
+    capturePageOwnership = () => alwaysCurrent
+    dirtyPageIsCurrent = alwaysCurrent
+    scopeRevoked = false
     draft.value = null
     origin.value = 'unknown'
     localState.value = 'idle'
@@ -126,6 +136,8 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   async function initialize(input: {
     readonly identity: ActionDraftIdentity
     readonly repository: ActionDraftRepository
+    readonly isScopeCurrent?: () => boolean
+    readonly capturePageOwnership?: () => () => boolean
     readonly repairPartOptions?: readonly CodeOptionRead[]
     readonly now?: () => string
     readonly debounceMs?: number
@@ -134,6 +146,10 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     const currentGeneration = ++generation
     repository = input.repository
     identity = input.identity
+    isDraftScopeCurrent = input.isScopeCurrent ?? alwaysCurrent
+    capturePageOwnership = input.capturePageOwnership ?? (() => alwaysCurrent)
+    dirtyPageIsCurrent = alwaysCurrent
+    scopeRevoked = false
     now = input.now ?? (() => new Date().toISOString())
     debounceMs = input.debounceMs ?? 360
     draft.value = null
@@ -147,14 +163,14 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     const draftKey = actionDraftStorageKey(input.identity)
     const pendingRestore = serverRestores.get(draftKey)?.write
     if (pendingRestore) await pendingRestore
-    if (currentGeneration !== generation) return localState.value
+    if (writeScopeFailure(currentGeneration)) return localState.value
     if (serverRestores.has(draftKey)) {
       localState.value = 'unavailable'
       localStateMessage.value = serverOrderRecoveryMessage
       return localState.value
     }
     const stored = await input.repository.read<Readonly<Record<string, unknown>>>(input.identity)
-    if (currentGeneration !== generation) return localState.value
+    if (writeScopeFailure(currentGeneration)) return localState.value
     if (stored.state !== 'succeeded') {
       localState.value = 'unavailable'
       localStateMessage.value = '本地草稿存储暂不可用。为避免覆盖未确认的数据，当前无法编辑。'
@@ -167,7 +183,7 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
         // preserve the old record for a future authorized recovery workflow.
         const { roleId: _roleId, ...unscopedIdentity } = input.identity
         const legacy = await input.repository.read<Readonly<Record<string, unknown>>>(unscopedIdentity)
-        if (currentGeneration !== generation) return localState.value
+        if (writeScopeFailure(currentGeneration)) return localState.value
         if (legacy.state !== 'succeeded') {
           localState.value = 'unavailable'
           localStateMessage.value = '无法确认历史草稿是否存在，暂不创建当前角色的新草稿。'
@@ -207,13 +223,18 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
 
   function scheduleSave(): void {
     clearTimer()
-    timer = setTimeout(() => {
+    const targetGeneration = generation
+    const ownsPage = dirtyPageIsCurrent
+    const scheduled = setTimeout(() => {
+      if (timer !== scheduled) return
       timer = undefined
-      void persist()
+      void persist(targetGeneration, ownsPage)
     }, debounceMs)
+    timer = scheduled
   }
 
   function markDirty(): void {
+    dirtyPageIsCurrent = capturePageOwnership()
     localState.value = 'dirty'
     localStateMessage.value = ''
     scheduleSave()
@@ -474,12 +495,30 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     return succeeded()
   }
 
-  async function persist(): Promise<OperationSnapshot<void>> {
+  function writeScopeFailure(targetGeneration: number, ownsPage = alwaysCurrent): OperationSnapshot<void> | null {
+    if (generation !== targetGeneration) return failed('cancelled', '报价草稿页面已变化，未确认保存。')
+    if (scopeRevoked || !isDraftScopeCurrent()) {
+      if (!scopeRevoked) {
+        scopeRevoked = true
+        clearTimer()
+        draft.value = null
+        quantityTextBySelection.value = {}
+        quantityErrorBySelection.value = {}
+        localState.value = 'unavailable'
+        localStateMessage.value = '账号或角色已变化，请重新进入报价工作台。'
+      }
+      return failed('session_invalid', '账号或角色已变化，禁止保存旧报价草稿。')
+    }
+    return ownsPage() ? null : failed('cancelled', '报价草稿页面已变化，未确认保存。')
+  }
+
+  async function persist(currentGeneration: number, ownsPage: () => boolean): Promise<OperationSnapshot<void>> {
+    const rejected = writeScopeFailure(currentGeneration, ownsPage)
+    if (rejected) return rejected
     clearTimer()
     const currentRepository = repository
     const currentIdentity = identity
     const currentDraft = draft.value
-    const currentGeneration = generation
     if (!currentRepository || !currentIdentity || !currentDraft) {
       return failed('unsupported_capability', '报价草稿当前不可保存')
     }
@@ -491,10 +530,27 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
     const writeVersion = currentDraft.draftVersion
     const record = quotationDraftRecordFor(currentIdentity, currentDraft, now(), origin.value)
     localState.value = 'saving'
+    let dispatched = false
     const write = {
       generation: currentGeneration,
-      promise: currentRepository.write(record).then((result) => {
-        if (currentGeneration !== generation) return result
+      promise: currentRepository.write(record, {
+        stillCurrent: () => {
+          dispatched = !writeScopeFailure(currentGeneration, ownsPage)
+          return dispatched
+        },
+      }).then((result) => {
+        const afterWrite = writeScopeFailure(currentGeneration)
+        if (afterWrite) return afterWrite
+        if (!dispatched) {
+          const cancelled = writeScopeFailure(currentGeneration, ownsPage)
+          if (cancelled) {
+            // No storage write was sent. Keep the buffer dirty; only edits
+            // made by the current page can restart its autosave.
+            localState.value = 'dirty'
+            if (draft.value?.draftVersion !== writeVersion && dirtyPageIsCurrent()) scheduleSave()
+            return cancelled
+          }
+        }
         if (draft.value?.draftVersion !== writeVersion) {
           localState.value = 'dirty'
           scheduleSave()
@@ -515,14 +571,29 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   }
 
   async function flushDraft(): Promise<OperationSnapshot<void>> {
-    clearTimer()
-    if (activeWrite?.generation === generation) {
-      const inFlight = await activeWrite.promise
-      if (localState.value === 'dirty' || localState.value === 'save_failed') return persist()
-      return inFlight
+    const targetGeneration = generation
+    const ownsPage = capturePageOwnership()
+    // One catch-up write is enough for a normal exit. Further edits keep
+    // autosaving and require a fresh exit attempt, so continuous input cannot
+    // keep this transition waiting for an unbounded sequence of writes.
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const beforeWrite = writeScopeFailure(targetGeneration, ownsPage)
+      if (beforeWrite) return beforeWrite
+      clearTimer()
+      const inFlight = activeWrite?.generation === targetGeneration ? activeWrite.promise : undefined
+      if (!inFlight && localState.value !== 'dirty' && localState.value !== 'save_failed') return succeeded()
+
+      const result = await (inFlight ?? persist(targetGeneration, ownsPage))
+      const afterWrite = writeScopeFailure(targetGeneration, ownsPage)
+      if (afterWrite) return afterWrite
+      if (activeWrite?.generation === targetGeneration || localState.value === 'dirty') continue
+      if (localState.value === 'save_failed') {
+        if (attempt === 0 && (inFlight || result.state === 'succeeded')) continue
+        if (result.state === 'succeeded') return failed('server_terminal', '本地草稿最新版本保存失败，请重试。')
+      }
+      return result
     }
-    if (localState.value === 'dirty' || localState.value === 'save_failed') return persist()
-    return succeeded()
+    return failed('cancelled', '报价草稿仍在修改，请停止编辑后重试。')
   }
 
   async function restoreServerOrderDraft(input: {
@@ -609,13 +680,19 @@ export const useQuotationCompositionStore = defineStore('quotationComposition', 
   }
 
   async function discardStoredDraftAndStartFresh(expectedState: 'invalid' | 'legacy_requires_action' | 'unscoped_requires_confirmation'): Promise<OperationSnapshot<void>> {
+    const currentGeneration = generation
+    const ownsPage = capturePageOwnership()
+    const rejected = writeScopeFailure(currentGeneration, ownsPage)
+    if (rejected) return rejected
     if (!repository || !identity || localState.value !== expectedState) {
       return failed('validation', '当前没有需要显式处理的旧草稿')
     }
-    const currentGeneration = generation
     const currentIdentity = identity
     const currentRepository = repository
-    const removed = await currentRepository.remove(currentIdentity)
+    const removed = await currentRepository.remove(currentIdentity, () =>
+      !writeScopeFailure(currentGeneration, ownsPage) && localState.value === expectedState)
+    const afterRemove = writeScopeFailure(currentGeneration, ownsPage)
+    if (afterRemove) return afterRemove
     if (removed.state !== 'succeeded') return removed
     if (generation !== currentGeneration || identity !== currentIdentity || repository !== currentRepository || localState.value !== expectedState) {
       return failed('unsupported_capability', '报价草稿页面已变化，未重置当前草稿。')

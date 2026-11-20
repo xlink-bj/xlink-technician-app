@@ -33,7 +33,7 @@ export interface ActionDraftRegistrySnapshot {
 }
 
 interface ActionDraftWriteOptions {
-  readonly onlyIfAbsent: true
+  readonly onlyIfAbsent?: true
   readonly stillCurrent: () => boolean
 }
 
@@ -45,7 +45,7 @@ export interface ActionDraftRepository {
     record: ActionDraftRecord<TState>,
     options?: ActionDraftWriteOptions,
   ): Promise<OperationSnapshot<void>>
-  remove(identity: ActionDraftIdentity): Promise<OperationSnapshot<void>>
+  remove(identity: ActionDraftIdentity, stillCurrent?: () => boolean): Promise<OperationSnapshot<void>>
   /** Supplying a role returns ONLY that role's provenanced drafts; unscoped
    * legacy drafts are never silently associated with any active role. */
   listForUser(userId: UserId, roleId?: RoleId): Promise<OperationSnapshot<ActionDraftRegistrySnapshot>>
@@ -153,6 +153,10 @@ function entryFor(
   }
 }
 
+function cancelledRemoval(): OperationSnapshot<void> {
+  return { state: 'failed_terminal', error: createOperationError('cancelled', 'Draft removal was superseded') }
+}
+
 export class SemanticActionDraftRepository implements ActionDraftRepository {
   constructor(private readonly storage: StoragePort) {}
 
@@ -217,8 +221,10 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
   private async removeLegacyIfOwned(
     key: string,
     identity: ActionDraftIdentity,
+    stillCurrent?: () => boolean,
   ): Promise<OperationSnapshot<void>> {
     const stored = await this.storage.read<unknown>({ namespace: 'draft', key })
+    if (stillCurrent && !stillCurrent()) return cancelledRemoval()
     if (stored.state !== 'succeeded') return stored as OperationSnapshot<void>
     if (stored.data === null || !validDraftRecord(stored.data, identity)) {
       // A missing, malformed, or differently-owned legacy record is not ours
@@ -228,13 +234,21 @@ export class SemanticActionDraftRepository implements ActionDraftRepository {
     return this.storage.remove({ namespace: 'draft', key })
   }
 
-  async remove(identity: ActionDraftIdentity): Promise<OperationSnapshot<void>> {
-    const results: Array<OperationSnapshot<void>> = [
-      // Canonical v2 keys are collision-free and can be removed directly.
-      await this.storage.remove({ namespace: 'draft', key: actionDraftStorageKey(identity) }),
-    ]
+  async remove(identity: ActionDraftIdentity, stillCurrent?: () => boolean): Promise<OperationSnapshot<void>> {
+    const canonical = { namespace: 'draft' as const, key: actionDraftStorageKey(identity) }
+    const results: Array<OperationSnapshot<void>> = []
+    // Keep historical cleanup order for unguarded callers. An explicitly
+    // guarded discard verifies legacy ownership before deleting the canonical key.
+    if (!stillCurrent) results.push(await this.storage.remove(canonical))
     for (const key of actionDraftLegacyStorageKeys(identity)) {
-      results.push(await this.removeLegacyIfOwned(key, identity))
+      if (stillCurrent && !stillCurrent()) return cancelledRemoval()
+      const result = await this.removeLegacyIfOwned(key, identity, stillCurrent)
+      if (stillCurrent && result.state !== 'succeeded') return result
+      results.push(result)
+    }
+    if (stillCurrent) {
+      if (!stillCurrent()) return cancelledRemoval()
+      results.push(await this.storage.remove(canonical))
     }
     return results.find((result) => result.state !== 'succeeded') ?? results[0]
   }
