@@ -48,6 +48,10 @@
       "style": { "navigationBarTitleText": "施工日志" }
     },
     {
+      "path": "pages/work-orders/pipe-work-mock",
+      "style": { "navigationBarTitleText": "管道作业" }
+    },
+    {
       "path": "pages/work-orders/device-action-mock",
       "style": { "navigationBarTitleText": "设备采集" }
     },

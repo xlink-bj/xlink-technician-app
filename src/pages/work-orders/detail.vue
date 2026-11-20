@@ -105,6 +105,9 @@
 
       </view>
 
+      <!-- #ifdef XLINK_DEV_QA -->
+      <ServiceMockPanel :read-current="readServiceMockInput" />
+      <!-- #endif -->
 
       <view v-if="devMockCompletedDynamicFormNode && completedDevMockDynamicFormReceiptGate?.status === 'pending'" class="app-surface">
         <AppStatus tone="warning" quiet message="上次操作结果待核对，请进入原表单工作台查看。" />
@@ -131,6 +134,7 @@
         :display-number="workOrderNumberDisplay(detail.displayNumber)"
         :current-scope="materialWorkflowScope" :bind-workflow="bindDevMaterialWorkflow" />
       <!-- #endif -->
+      <PipeVerificationMock v-if="readView === 'home'" :mock="pipeVerificationMock" />
       <!-- #endif -->
       <WorkOrderArchiveCards v-if="readView === 'home'"
         :work-order-id="String(detail.id)" :activities="activities"
@@ -272,6 +276,11 @@
           </view>
         </view>
 
+        <!-- #ifdef XLINK_DEV_QA -->
+        <ServiceMockPanel v-if="readView === 'customer'" :read-current="readServiceMockInput"
+          @refresh="refreshCustomerInformation" />
+        <!-- #endif -->
+
         <view v-if="readView === 'quotation'" class="tab-panel quotation-read-panel" data-testid="production-quotation-read-panel">
           <view v-if="!orderArchiveSummary(quotationBrowse.page).complete" class="quotation-read-intro">
             <text class="tab-empty-copy">当前仅展示已读取的订单，完整数量待确认。</text>
@@ -346,6 +355,10 @@ import { r1ReadFieldDisplayValue } from '@features/work-orders/r1-record-read-fi
 import { onSelectedRoleVisibilityRevoked } from '@shared/form/selected-role-visibility'
 import { computed, inject as injectHistoryReader, onBeforeUnmount, ref, watch } from 'vue'
 import { onBackPress, onLoad, onShow } from '@dcloudio/uni-app'
+// #ifdef XLINK_DEV_QA
+import ServiceMockPanel from '@app/dev-service-mock/ServiceMockPanel.vue'
+import type { ServiceMockInput } from '@app/dev-service-mock/service-mock'
+// #endif
 import { setActionWorkspacePageTitle as setDetailPageTitle } from '@app/action-page-title'
 
 import { mockJourneyContext } from '@app/mock-journey'
@@ -369,6 +382,8 @@ import { isMaterialFulfillmentMockAvailable, materialFulfillmentMock } from '@ap
 import MaterialFulfillmentPanel from '@features/work-orders/downstream/MaterialFulfillmentPanel.vue'
 import { useMaterialFulfillmentRead } from '@features/work-orders/downstream/material-fulfillment-read'
 import { useWorkOrderListStore } from '@features/work-orders/list'
+import { createDevPipeVerificationMock } from '@app/dev-pipe-verification'
+import PipeVerificationMock from '@features/work-orders/pipe-verification/PipeVerificationMock.vue'
 // #ifdef H5
 import { bindDevMaterialWorkflow, isDevMaterialWorkflowActor } from '@app/dev-material-fulfillment-workflow'
 import MaterialFulfillmentWorkflow from '@features/work-orders/downstream/MaterialFulfillmentWorkflow.vue'
@@ -410,6 +425,11 @@ const workOrder = useWorkOrderDetailStore()
 const quotationBrowse = useQuotationOrderBrowseStore()
 const routeReady = ref(false)
 const routeValue = ref<unknown>(undefined)
+// #ifdef XLINK_DEV_QA
+const serviceMockPageVisible = ref(false)
+onShow(() => { serviceMockPageVisible.value = true })
+onHide(() => { serviceMockPageVisible.value = false })
+// #endif
 const canAccess = computed(() => hasAuthenticatedSession(session.status, session.session))
 const productionReadOnly = isProductionReadOnlyRuntime()
 const detail = computed(() => workOrder.detail)
@@ -595,6 +615,13 @@ onBeforeUnmount(stopServiceArchiveHash)
 // #endif
 // #ifdef XLINK_DEV_QA
 const materialWorkOrderList = useWorkOrderListStore()
+const pipeVerificationMock = createDevPipeVerificationMock(() => ({
+  session: session.status === 'authenticated' ? session.session : null,
+  routeOrderId: String(parseWorkOrderId(routeValue.value) ?? ''),
+  readOrderId: workOrder.loadState === 'succeeded' ? String(detail.value?.id ?? '') : '',
+  isCurrentlyListed: materialWorkOrderList.loadState === 'succeeded'
+    && materialWorkOrderList.items.some(item => item.id === detail.value?.id),
+}))
 function materialFulfillmentScope() {
   const workOrderId = String(detail.value?.id ?? '')
   const actorScope = workOrderReadScopeKey(session.session)
@@ -782,6 +809,20 @@ function refreshCustomerInformation(): void {
     || detail.value?.id !== id || workOrder.loadState !== 'succeeded') return
   void workOrder.loadFromRoute(id)
 }
+
+// #ifdef XLINK_DEV_QA
+function readServiceMockInput(): ServiceMockInput | null {
+  const view = readView.value
+  const current = detail.value
+  if (!serviceMockPageVisible.value || !current || session.status !== 'authenticated'
+    || workOrder.loadState !== 'succeeded' || preAcceptBlocked.value
+    || (view !== 'home' && view !== 'customer')) return null
+  return {
+    detail: current, session: session.session, routeOrderId: parseWorkOrderId(routeValue.value) ?? undefined,
+    view, visible: true, taskNodeId: workflowProjection.value.currentTask?.nodeId,
+  }
+}
+// #endif
 
 async function loadChildForms(parentNodeId: string): Promise<void> {
   await workOrder.loadChildWorkflowForms(parentNodeId)
