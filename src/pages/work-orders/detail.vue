@@ -148,7 +148,11 @@
       </view>
 
       <view v-else class="app-record-card information-card">
-        <view class="archive-detail-heading"><text class="tab-empty-title">{{ readView === 'follow-up' ? '全部跟进记录' : readView === 'customer' ? '客户资料' : '正式订单 · 只读' }}</text></view>
+        <view class="archive-detail-heading" :class="{ 'customer-read-heading': readView === 'customer' }">
+          <text class="tab-empty-title">{{ readView === 'follow-up' ? '全部跟进记录' : readView === 'customer' ? '客户资料' : '正式订单 · 只读' }}</text>
+          <AppButton v-if="readView === 'customer'" variant="text" size="compact"
+            data-testid="customer-information-refresh" @tap="refreshCustomerInformation">重新读取</AppButton>
+        </view>
 
         <view v-if="readView === 'follow-up'" class="tab-panel">
           <view v-if="activities.length > 0" class="activity-list">
@@ -663,6 +667,13 @@ async function retry(): Promise<void> {
   await workOrder.retry()
 }
 
+function refreshCustomerInformation(): void {
+  const id = parseWorkOrderId(routeValue.value)
+  if (readView.value !== 'customer' || session.status !== 'authenticated' || !id
+    || detail.value?.id !== id || workOrder.loadState !== 'succeeded') return
+  void workOrder.loadFromRoute(id)
+}
+
 async function loadChildForms(parentNodeId: string): Promise<void> {
   await workOrder.loadChildWorkflowForms(parentNodeId)
 }
@@ -757,4 +768,11 @@ function openConstructionRead() {
 
 <style lang="scss">
 @import "@brand-ui/detail.scss";
+
+.customer-read-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-xs);
+}
 </style>

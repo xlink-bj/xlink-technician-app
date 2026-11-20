@@ -9,10 +9,11 @@ function field(showType: string, roleIds: unknown = ['r'], extra: Record<string,
 }
 async function fixture(page: Page, origin: string, initialRole: string | null = 'r') {
   let role = initialRole, lastId = '', config = [field('4')], release = () => {}
+  const addresses = new Map<string, string>(), deniedDetails = new Set<string>()
   let markHeldA: ((request: Request) => void) | undefined
   const calls: { path: string; body: Record<string, string> }[] = [], unexpected: string[] = [], errors: string[] = []
   const row = (id: string) => ({ _id: id, tenantId: 'synthetic-authority', name: '合成客户' + id, orderNum: 'SYNTHETIC-ROLE-' + id,
-    state: 1, status: 104, serviceType: '40', phone: '13800000000', memo: '根备注' + id, exts: { sourceType: '', memo: '扩展备注' + id } })
+    state: 1, status: 104, serviceType: '40', phone: '13800000000', address: addresses.get(id), memo: '根备注' + id, exts: { sourceType: '', memo: '扩展备注' + id } })
   page.on('pageerror', e => errors.push(e.message))
   await page.routeWebSocket('**/*', socket => { if (new URL(socket.url()).origin.replace('ws:', 'http:') === origin) socket.connectToServer(); else { unexpected.push('WS'); socket.close() } })
   await page.route('**/*', async route => {
@@ -28,7 +29,9 @@ async function fixture(page: Page, origin: string, initialRole: string | null = 
     if (path === 'function/changeRole') return ok({ data: { functionList: [{ order: 0, exts: { tabDisplay: '1' }, action: '/pages/serviceAppointment/serviceAppointments' }] } })
     if (path === 'basic/serviceAppointment/query') return ok({ data: [row('A'), row('B')], total: 2, page: 1, rows: 20 })
     if (['basic/serviceAppointment/queryById/A', 'basic/serviceAppointment/queryById/B'].includes(path)) {
-      lastId = path.endsWith('/A') ? 'A' : 'B'; return ok({ status: 1, success: true, data: { serviceAppointment: row(lastId), workflowNode: [] } })
+      lastId = path.endsWith('/A') ? 'A' : 'B'
+      if (deniedDetails.has(lastId)) return route.fulfill({ status: 403, json: { success: false } })
+      return ok({ status: 1, success: true, data: { serviceAppointment: row(lastId), workflowNode: [] } })
     }
     if (isWorkOrderInformationRead(req, origin)) {
       const response = { data: structuredClone(config), total: config.length, page: 1, size: 200 }
@@ -47,7 +50,7 @@ async function fixture(page: Page, origin: string, initialRole: string | null = 
   const open = async (id = 'A') => { await page.locator('.card-customer').filter({ hasText: '合成客户' + id }).click(); await expect(page.locator('.summary-customer')).toHaveText('合成客户' + id); await page.getByTestId('customer-summary').click() }
   const back = async () => { if(page.url().includes('read=customer')) { await page.goBack(); await expect(page.getByTestId('work-order-archives')).toBeVisible() } await page.goBack(); await expect(page.locator('.work-orders-page')).toBeVisible() }
   const rows = page.getByTestId('configured-information-row')
-  return { calls, unexpected, errors, rows, open, back, login, config: (next: ReturnType<typeof field>[]) => { config = next },
+  return { calls, unexpected, errors, rows, open, back, login, addresses, deniedDetails, config: (next: ReturnType<typeof field>[]) => { config = next },
     role: (next: string | null) => { role = next }, holdA: () => new Promise<Request>(resolve => { markHeldA = resolve }), release: () => release() }
 }
 
@@ -63,6 +66,47 @@ for (const [showType, role, visible] of [['4', 'r', true], ['4', 'other', false]
     expect(h.unexpected).toEqual([]); expect(h.errors).toEqual([])
     await page.screenshot({ path: info.outputPath('selected-role.png') })
   } finally { h.release(); await info.attach('information-role-ledger', { body: JSON.stringify({ showType, role, calls: h.calls, unexpected: h.unexpected, errors: h.errors, realBackend: 'NOT_RUN', writes: 0 }), contentType: 'application/json' }) }
+})
+
+test('customer information re-reads an externally corrected service address for the same work order', async ({ page, baseURL }, info) => {
+  const h = await fixture(page, baseURL!)
+  h.config([
+    field('4', ['r'], { _id: 'service-address', name: 'address', nameDisp: '服务地址', preset: 1 }),
+    field('4', ['r'], { _id: 'service-phone', name: 'phone', nameDisp: '联系电话', preset: 1, type: 'phone' }),
+  ])
+  h.addresses.set('A', '合成原服务地址')
+  h.addresses.set('B', '另一工单地址')
+  await page.goto('/#/pages/index/index')
+  await h.login()
+  await h.open('A')
+  await expect(h.rows).toContainText(['合成原服务地址', '138****0000'])
+  const refresh = page.getByTestId('customer-information-refresh')
+  const addressReads = () => h.calls.filter(call => call.path.startsWith('basic/serviceAppointment/queryById/'))
+  const before = addressReads().length
+
+  h.addresses.set('A', '合成已更正服务地址')
+  await refresh.click()
+  await expect(page).toHaveURL(/id=A&read=customer/)
+  await expect(h.rows).toContainText(['合成已更正服务地址', '138****0000'])
+  await expect(page.locator('.customer-info-panel')).not.toContainText(/合成原服务地址|另一工单地址|13800000000/)
+  expect(addressReads()).toHaveLength(before + 1)
+  const target = await refresh.boundingBox()
+  expect(target).not.toBeNull()
+  expect(target!.height).toBeGreaterThanOrEqual(44)
+  await page.screenshot({ path: info.outputPath('same-order-readback.png') })
+
+  h.deniedDetails.add('A')
+  await refresh.click()
+  await expect(page.getByText('当前账号无权查看此工单。', { exact: true })).toBeVisible()
+  await expect(h.rows).toHaveCount(0)
+  await expect(refresh).toHaveCount(0)
+  expect(addressReads()).toHaveLength(before + 2)
+  expect(addressReads().every(call => call.path.endsWith('/A') && Object.keys(call.body).length === 0)).toBe(true)
+  expect(h.calls.some(call => /contacts|upsert|handleServiceAppointmentFieldValues|workflow\/process/i.test(call.path))).toBe(false)
+  expect(h.unexpected).toEqual([])
+  expect(h.errors).toEqual([])
+  await info.attach('g12-readback-ledger', { body: JSON.stringify({ sameWorkOrder: 'A', extraDetailReads: 2,
+    acceptedRead: true, deniedRead: true, contactsCalls: 0, writes: 0, external: 0 }), contentType: 'application/json' })
 })
 
 test('real detail rejects malformed/legacy role rules, stale A and logout/missing current role', async ({ page, baseURL }, info) => {
