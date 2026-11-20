@@ -1,4 +1,10 @@
 export type DeviceKind = 'pressure' | 'panorama'
+export interface PressureReading {
+  readonly startMpa: number
+  readonly endMpa: number
+  readonly holdMinutes: number
+}
+
 export type DeviceResult = {
   readonly kind: DeviceKind
   readonly source: 'dev_mock'
@@ -6,6 +12,8 @@ export type DeviceResult = {
   readonly dataComplete: boolean
   readonly measurement: 'unverified' | 'not_applicable'
   readonly samples?: readonly { readonly minute: number; readonly pressure: number; readonly unit: 'MPa' }[]
+  /** Operator-entered DEV demo values. They carry no device sampling evidence. */
+  readonly manualPressure?: PressureReading
   readonly panorama?: { readonly scene: string; readonly asset: string; readonly stitched: boolean }
 }
 export type DeviceEvent =

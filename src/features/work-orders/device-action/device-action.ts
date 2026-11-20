@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import type { ActionDraftIdentity, ActionDraftRepository } from '@runtimes/action'
-import type { DeviceActionPort, DeviceEvent, DeviceKind, DeviceResult } from '@shared/ports/device-action'
+import type { DeviceActionPort, DeviceEvent, DeviceKind, DeviceResult, PressureReading } from '@shared/ports/device-action'
 
 export interface DeviceActionState {
   readonly kind: DeviceKind
@@ -18,6 +18,24 @@ function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null
 }
 
+function isPressure(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
+export function validManualPressure(value: unknown): value is PressureReading {
+  const reading = record(value)
+  return !!reading && isPressure(reading.startMpa) && isPressure(reading.endMpa)
+    && typeof reading.holdMinutes === 'number' && Number.isSafeInteger(reading.holdMinutes) && reading.holdMinutes > 0
+}
+
+export function pressureSummary(result: DeviceResult | null): PressureReading | null {
+  if (result?.kind !== 'pressure') return null
+  if (result.manualPressure) return result.manualPressure
+  const first = result.samples?.[0], last = result.samples?.at(-1)
+  if (!first || !last || last.minute <= first.minute) return null
+  return { startMpa: first.pressure, endMpa: last.pressure, holdMinutes: last.minute - first.minute }
+}
+
 /** Persisted drafts are untrusted JSON, even when the storage API returned success. */
 export function validDeviceResult(value: unknown, kind: DeviceKind): value is DeviceResult {
   const result = record(value)
@@ -25,17 +43,19 @@ export function validDeviceResult(value: unknown, kind: DeviceKind): value is De
     || typeof result.completedAt !== 'string' || !Number.isFinite(Date.parse(result.completedAt))
     || typeof result.dataComplete !== 'boolean') return false
   if (kind === 'pressure') {
-    return result.measurement === 'unverified' && result.dataComplete === true
-      && Array.isArray(result.samples) && result.samples.length > 0
+    if (result.measurement !== 'unverified' || result.dataComplete !== true) return false
+    if (Object.hasOwn(result, 'manualPressure')) {
+      return !Object.hasOwn(result, 'samples') && validManualPressure(result.manualPressure)
+    }
+    return Array.isArray(result.samples) && result.samples.length > 0
       && result.samples.every(sample => {
         const point = record(sample)
         return point && Number.isInteger(point.minute) && Number(point.minute) >= 0
-          && typeof point.pressure === 'number' && Number.isFinite(point.pressure)
-          && point.pressure >= 0 && point.unit === 'MPa'
+          && isPressure(point.pressure) && point.unit === 'MPa'
       })
   }
   const panorama = record(result.panorama)
-  return result.measurement === 'not_applicable' && result.dataComplete === false
+  return !Object.hasOwn(result, 'manualPressure') && result.measurement === 'not_applicable' && result.dataComplete === false
     && !!panorama && typeof panorama.scene === 'string' && panorama.scene.length > 0
     && typeof panorama.asset === 'string' && panorama.asset.length > 0
     && panorama.stitched === true
@@ -90,7 +110,7 @@ export function createDeviceAction(input: {
     if (!live(ticket) || runId !== run || state.value.phase !== 'running') return
     if (event.type === 'progress') state.value = { ...state.value, progress: event.progress, message: event.label }
     if (event.type === 'finished') {
-      if (!validDeviceResult(event.result, state.value.kind)) {
+      if (!validDeviceResult(event.result, state.value.kind) || event.result.manualPressure) {
         interrupt('模拟结果不完整，未保存；请重新开始。')
         return
       }
@@ -113,6 +133,17 @@ export function createDeviceAction(input: {
     invalidate()
     state.value = { ...state.value, connected: false, phase: 'interrupted',
       result: null, localSaved: false, saving: false, message }
+  }
+  function enterManualPressure(reading: PressureReading): boolean {
+    if (!input.isCurrentScope() || state.value.kind !== 'pressure' || state.value.phase !== 'interrupted'
+      || !validManualPressure(reading)) return false
+    invalidate()
+    state.value = { ...state.value, phase: 'finished', progress: 100,
+      result: { kind: 'pressure', source: 'dev_mock', completedAt: new Date().toISOString(),
+        dataComplete: true, measurement: 'unverified',
+        manualPressure: { startMpa: reading.startMpa, endMpa: reading.endMpa, holdMinutes: reading.holdMinutes } },
+      message: '已录入手填结果，可核对后保存到本机。' }
+    return true
   }
   function dispose(): void { invalidate() }
   function showSaved(index: number): void {
@@ -141,7 +172,7 @@ export function createDeviceAction(input: {
       const results = [...(prior?.results ?? []), result]
       const values = { deviceActionV2: { kind, results } }
       const written = await input.repository.write({ version: 1, identity, values,
-        updatedAt: new Date().toISOString(), status: 'unfinished' })
+        updatedAt: new Date().toISOString(), status: 'unfinished' }, { stillCurrent: () => live(ticket) })
       if (!live(ticket)) return false
       if (written.state !== 'succeeded') throw Error('write_failed')
       const readback = await input.repository.read<typeof values>(identity)
@@ -182,5 +213,5 @@ export function createDeviceAction(input: {
       return false
     }
   }
-  return { state, select, connect, start, interrupt, dispose, showSaved, saveLocal, restore }
+  return { state, select, connect, start, interrupt, enterManualPressure, dispose, showSaved, saveLocal, restore }
 }

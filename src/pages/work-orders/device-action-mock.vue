@@ -31,14 +31,35 @@
         <AppButton v-if="state.phase === 'running'" variant="secondary" data-testid="device-cancel" @tap="action.interrupt()">取消本次作业</AppButton>
         <AppButton v-if="state.phase === 'running'" variant="text" data-testid="device-disconnect" @tap="mockPort?.disconnect()">模拟断连</AppButton>
         <button v-if="state.phase === 'finished'" class="device-quiet-action" data-testid="device-new" @tap="action.select(state.kind, true)">新建一次作业</button>
+        <AppButton v-if="canEnterManual && !manualOpen" variant="secondary" data-testid="device-manual-open" @tap="openManual">改为手填</AppButton>
+      </view>
+      <view v-if="canEnterManual && manualOpen" class="device-manual" data-testid="device-manual-form">
+        <AppField label="起始压力（MPa）" required data-testid="device-manual-start">
+          <AppInput v-model="manualDraft.start" input-type="digit" :maxlength="8" />
+        </AppField>
+        <AppField label="结束压力（MPa）" required data-testid="device-manual-end">
+          <AppInput v-model="manualDraft.end" input-type="digit" :maxlength="8" />
+        </AppField>
+        <AppField label="保压时间（分钟）" required data-testid="device-manual-hold">
+          <AppInput v-model="manualDraft.minutes" input-type="number" :maxlength="6" />
+        </AppField>
+        <AppButton variant="text" data-testid="device-manual-cancel" @tap="manualOpen = false">取消手填</AppButton>
       </view>
     </view>
     <view v-if="state.result" class="device-result" data-testid="device-result">
-      <view class="device-result-head"><text>本次结果</text><text>DEV Mock 合成</text></view>
+      <view class="device-result-head"><text>本次结果</text><text>{{ state.result.manualPressure ? '手填 · 本机演示' : 'DEV Mock 合成' }}</text></view>
       <template v-if="state.result.kind === 'pressure'">
-        <text class="device-result-value">{{ state.result.samples?.at(-1)?.pressure.toFixed(2) }} <text>MPa</text></text>
-        <text class="device-help">采样 0、1、2 分钟 · 合格判定待真实规则核实</text>
-        <view class="device-samples"><text v-for="sample in state.result.samples" :key="sample.minute">{{ sample.minute }} 分钟　{{ sample.pressure.toFixed(2) }} MPa</text></view>
+        <text class="device-help">结束压力</text>
+        <text class="device-result-value">{{ (pressure?.endMpa ?? state.result.samples?.at(-1)?.pressure)?.toFixed(2) }} <text>MPa</text></text>
+        <view v-if="pressure" class="device-pressure-summary" data-testid="device-pressure-summary">
+          <view><text>起始压力</text><text>{{ pressure.startMpa.toFixed(2) }} MPa</text></view>
+          <view><text>压降</text><text>{{ (pressure.startMpa - pressure.endMpa).toFixed(2) }} MPa</text></view>
+          <view><text>保压时间</text><text>{{ pressure.holdMinutes }} 分钟</text></view>
+        </view>
+        <text class="device-help">合格判定待真实规则核实</text>
+        <view v-if="state.result.samples" class="device-samples" data-testid="device-pressure-samples">
+          <text v-for="sample in state.result.samples" :key="sample.minute">{{ sample.minute }} 分钟　{{ sample.pressure.toFixed(2) }} MPa</text>
+        </view>
       </template>
       <template v-else>
         <view class="device-panorama-preview"><text>360°</text><text>全景占位预览</text></view>
@@ -46,7 +67,7 @@
       </template>
       <view class="device-facts">
         <view class="device-fact"><text>作业结束</text><text class="device-fact-value">是</text></view>
-        <view class="device-fact"><text>数据完整</text><text class="device-fact-value">{{ state.result.dataComplete ? '合成采样完整' : '缺真实文件' }}</text></view>
+        <view class="device-fact"><text>数据完整</text><text class="device-fact-value">{{ state.result.manualPressure ? '手填项目齐全' : state.result.dataComplete ? '合成采样完整' : '缺真实文件' }}</text></view>
         <view class="device-fact"><text>本机保存</text><text class="device-fact-value">{{ state.localSaved ? '已核对' : '未保存' }}</text></view>
         <view class="device-fact"><text>上传</text><text class="device-fact-value">未上传</text></view>
         <view class="device-fact"><text>业务确认</text><text class="device-fact-value">未确认</text></view>
@@ -56,13 +77,14 @@
       <view class="device-history-head"><text>本机保存记录</text><text>{{ state.history.length }} 次</text></view>
       <button v-for="(saved, index) in state.history" :key="saved.completedAt + index"
         class="device-history-row" :data-testid="'device-history-' + index" @tap="action.showSaved(index)">
-        <text>{{ saved.kind === 'pressure' ? '试压合成采样' : '全景占位预览' }} · {{ saved.completedAt.slice(0, 16).replace('T', ' ') }}</text><text>查看</text>
+        <text>{{ saved.kind === 'pressure' ? `第 ${index + 1} 轮 · ${saved.manualPressure ? '试压手填' : '试压合成采样'}` : '全景占位预览' }} · {{ saved.completedAt.slice(0, 16).replace('T', ' ') }}</text><text>查看</text>
       </button>
     </view>
     <text class="device-footnote">仅本机模拟，不控制真实设备；结果不会提交工单或推进流程。</text>
   </view>
   <template #actions>
-    <AppButton v-if="!state.connected && state.phase !== 'finished'" block data-testid="device-connect" :disabled="state.phase === 'connecting'" @tap="action.connect">{{ state.phase === 'connecting' ? '连接中…' : '连接设备' }}</AppButton>
+    <AppButton v-if="canEnterManual && manualOpen" block data-testid="device-manual-confirm" :disabled="!validManualPressure(manualReading)" @tap="action.enterManualPressure(manualReading)">核对手填结果</AppButton>
+    <AppButton v-else-if="!state.connected && state.phase !== 'finished'" block data-testid="device-connect" :disabled="state.phase === 'connecting'" @tap="action.connect">{{ state.phase === 'connecting' ? '连接中…' : '连接设备' }}</AppButton>
     <AppButton v-else-if="state.phase === 'ready'" block data-testid="device-start" @tap="action.start">{{ state.kind === 'pressure' ? '开始试压' : '开始拍摄' }}</AppButton>
     <AppButton v-else-if="state.phase === 'finished' && !state.localSaved" block data-testid="device-save" :disabled="state.saving" @tap="action.saveLocal">{{ state.saving ? '正在保存…' : '保存本机结果' }}</AppButton>
     <AppButton v-else block disabled>{{ state.localSaved ? '已保存本机' : '作业进行中' }}</AppButton>
@@ -76,13 +98,15 @@ import { onLoad, onUnload } from '@dcloudio/uni-app'
 import { createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
 import { createDefaultStoragePort } from '@app/composition'
 import { createDevMockDevicePort, devDeviceActionAvailable, devDeviceTask } from '@app/dev-device-action'
-import { createDeviceAction } from '@features/work-orders/device-action/device-action'
+import { createDeviceAction, pressureSummary, validManualPressure } from '@features/work-orders/device-action/device-action'
 import { useWorkOrderListStore } from '@features/work-orders/list'
 import { useWorkOrderDetailStore } from '@features/work-orders/detail'
 import { useSessionStore } from '@shared/state'
 import { sessionAuthorizationFingerprint } from '@shared/session-authorization'
 import { asOpaqueId } from '@shared/types'
 import AppButton from '@shared/ui/AppButton.vue'
+import AppField from '@shared/ui/AppField.vue'
+import AppInput from '@shared/ui/AppInput.vue'
 import ActionWorkspaceShell from '@shared/ui/ActionWorkspaceShell.vue'
 
 const session = useSessionStore(), list = useWorkOrderListStore(), detail = useWorkOrderDetailStore()
@@ -100,6 +124,21 @@ const state = computed(() => action.value?.state.value ?? { kind: 'pressure' as 
   progress: 0, connected: false, result: null, history: [], localSaved: false, saving: false, message: '' })
 const phaseLabel = computed(() => ({ select: '待连接', connecting: '连接中', ready: '已连接',
   running: '作业中', interrupted: '已中断', finished: '已结束' })[state.value.phase])
+const pressure = computed(() => pressureSummary(state.value.result))
+const canEnterManual = computed(() => state.value.kind === 'pressure' && state.value.phase === 'interrupted')
+const manualOpen = ref(false)
+const manualDraft = ref({ start: '', end: '', minutes: '' })
+const parseDecimal = (value: string) => /^\d+(?:\.\d{1,2})?$/.test(value.trim()) ? Number(value) : NaN
+const manualReading = computed(() => ({
+  startMpa: parseDecimal(manualDraft.value.start),
+  endMpa: parseDecimal(manualDraft.value.end),
+  holdMinutes: parseDecimal(manualDraft.value.minutes),
+}))
+function openManual(): void {
+  manualDraft.value = { start: '', end: '', minutes: '' }
+  manualOpen.value = true
+}
+watch(canEnterManual, available => { if (!available) manualOpen.value = false })
 
 watch(authorized, valid => {
   if (!valid) { action.value?.dispose(); action.value = null; mockPort.value = null; return }
@@ -145,6 +184,11 @@ onUnload(() => { action.value?.dispose(); action.value = null })
 .device-card-title,.device-result-head text:first-child { font-size:var(--app-font-section-title); font-weight:700; }
 .device-state,.device-result-head text:last-child { color:var(--app-color-primary); font-size:var(--app-font-meta); font-weight:700; }
 .device-actions { display:flex; flex-wrap:wrap; gap:12rpx; margin-top:26rpx; }
+.device-manual { display:flex; flex-direction:column; gap:14rpx; margin-top:18rpx; }
+.device-pressure-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12rpx; margin-bottom:18rpx; }
+.device-pressure-summary view { display:flex; flex-direction:column; gap:8rpx; }
+.device-pressure-summary text:first-child { color:var(--app-color-text-secondary); font-size:var(--app-font-meta); }
+.device-pressure-summary text:last-child { font-size:var(--app-font-body); font-weight:600; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
 .device-quiet-action { min-height:88rpx; margin:0; padding:0 24rpx; border:1px solid var(--app-color-primary); border-radius:var(--app-radius-control); background:var(--app-color-surface); color:var(--app-color-primary); font-size:var(--app-font-body); font-weight:600; }
 .device-quiet-action::after { border:0; }
 .device-progress { margin-top:24rpx; color:var(--app-color-text-secondary); font-size:var(--app-font-meta); }

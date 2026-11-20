@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { actionDraftStorageKey, createActionDraftRepository, type ActionDraftIdentity } from '@runtimes/action'
 import { createDevMockDevicePort } from '@adapters/device/dev-mock-device'
-import { createDeviceAction } from '@features/work-orders/device-action/device-action'
+import { createDeviceAction, pressureSummary, validDeviceResult } from '@features/work-orders/device-action/device-action'
 import type { DeviceActionPort, DeviceEvent } from '@shared/ports/device-action'
 import type { StoragePort, StorageKey } from '@shared/ports'
 import { asOpaqueId } from '@shared/types'
@@ -37,6 +37,7 @@ describe('DEV device Action Content', () => {
     await vi.advanceTimersByTimeAsync(1800)
     expect(action.state.value.phase).toBe('finished')
     expect(action.state.value.result?.samples).toHaveLength(3)
+    expect(pressureSummary(action.state.value.result)).toEqual({ startMpa: 0.81, endMpa: 0.79, holdMinutes: 2 })
     expect(action.state.value.result?.measurement).toBe('unverified')
     expect(await action.saveLocal()).toBe(true)
     const reopened = createDeviceAction({ identity: identity(), repository, port: createDevMockDevicePort(), isCurrentScope: () => true })
@@ -45,6 +46,8 @@ describe('DEV device Action Content', () => {
     expect(reopened.state.value.connected).toBe(false)
     expect(await createDeviceAction({ identity: identity('node-b'), repository, port: createDevMockDevicePort(), isCurrentScope: () => true }).restore()).toBe(false)
     expect(await createDeviceAction({ identity: identity('node-a', 'user-b'), repository, port: createDevMockDevicePort(), isCurrentScope: () => true }).restore()).toBe(false)
+    const anotherOrder = { ...identity(), workOrderId: asOpaqueId<'WorkOrderId'>('mock-device-order-b') }
+    expect(await createDeviceAction({ identity: anotherOrder, repository, port: createDevMockDevicePort(), isCurrentScope: () => true }).restore()).toBe(false)
   })
 
   it('keeps panorama preview separate from a real file or business confirmation', async () => {
@@ -99,10 +102,11 @@ describe('DEV device Action Content', () => {
     current = false
     emit!({ type: 'progress', progress: 75, label: 'late' })
     expect(action.state.value.progress).toBe(0)
+    expect(action.enterManualPressure({ startMpa: 0.9, endMpa: 0.84, holdMinutes: 8 })).toBe(false)
     expect(await action.saveLocal()).toBe(false)
   })
 
-  it('keeps pressure and panorama drafts separate and retains older attempts', async () => {
+  it('keeps a manually entered pressure round separate from the sampled round and panorama', async () => {
     vi.useFakeTimers()
     const repository = createActionDraftRepository(storage())
     const action = createDeviceAction({ identity: identity(), repository,
@@ -114,7 +118,15 @@ describe('DEV device Action Content', () => {
     action.showSaved(0)
     expect(action.state.value.localSaved).toBe(true)
     await action.select('pressure', true)
-    await action.connect(); action.start(); await vi.advanceTimersByTimeAsync(1800)
+    const reading = { startMpa: 0.9, endMpa: 0.84, holdMinutes: 8 }
+    expect(action.enterManualPressure(reading)).toBe(false)
+    await action.connect(); action.start(); action.interrupt()
+    expect(action.enterManualPressure({ ...reading, holdMinutes: 0 })).toBe(false)
+    expect(action.enterManualPressure({ ...reading, startMpa: NaN })).toBe(false)
+    expect(action.state.value.result).toBeNull()
+    expect(action.enterManualPressure(reading)).toBe(true)
+    expect(action.state.value.result?.samples).toBeUndefined()
+    expect(validDeviceResult({ ...action.state.value.result, samples: [] }, 'pressure')).toBe(false)
     expect(await action.saveLocal()).toBe(true)
     expect(action.state.value.history).toHaveLength(2)
     await action.select('panorama')
@@ -124,7 +136,10 @@ describe('DEV device Action Content', () => {
       port: createDevMockDevicePort(), isCurrentScope: () => true })
     expect(await reopened.restore()).toBe(true)
     expect(reopened.state.value.history).toHaveLength(2)
-    expect(reopened.state.value.result?.kind).toBe('pressure')
+    expect(reopened.state.value.result).toMatchObject({ kind: 'pressure', measurement: 'unverified', manualPressure: reading })
+    expect(pressureSummary(reopened.state.value.result)).toEqual(reading)
+    reopened.showSaved(0)
+    expect(pressureSummary(reopened.state.value.result)).toEqual({ startMpa: 0.81, endMpa: 0.79, holdMinutes: 2 })
     await reopened.select('panorama')
     expect(reopened.state.value.result?.kind).toBe('panorama')
     expect(reopened.state.value.history).toHaveLength(1)
