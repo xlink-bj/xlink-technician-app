@@ -12,29 +12,35 @@ import { workOrderCategories } from '@features/work-orders/list-categories'
 
 // Actual SFC template/events and actual Pinia load lifecycle. Visual primitives
 // and independent action eligibility are controls, never list authority.
-interface Host { type: string; props: Record<string, any>; children: Host[]; parent: Host | null }
-const node = (type: string): Host => ({ type, props: {}, children: [], parent: null })
+interface Host { type: string; props: Record<string, any>; children: Host[]; parent: Host | null; text: string }
+const node = (type: string, text = ''): Host => ({ type, props: {}, children: [], parent: null, text })
 const renderer = Vue.createRenderer<Host, Host>({
   patchProp(el, key, _previous, value) { el.props[key] = value },
   insert(el, parent, anchor = null) { if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1); el.parent = parent; const i = anchor ? parent.children.indexOf(anchor) : -1; if (i < 0) parent.children.push(el); else parent.children.splice(i, 0, el) },
   remove(el) { if (el.parent) el.parent.children.splice(el.parent.children.indexOf(el), 1); el.parent = null },
-  createElement: node, createText: () => node('#text'), createComment: () => node('#comment'),
-  setText() {}, setElementText() {}, parentNode: el => el.parent,
+  createElement: type => node(type), createText: text => node('#text', text), createComment: () => node('#comment'),
+  setText(el, text) { el.text = text }, setElementText(el, text) { el.text = text }, parentNode: el => el.parent,
   nextSibling: el => el.parent?.children[el.parent.children.indexOf(el) + 1] ?? null,
 })
-function find(el: Host): Host | undefined { if (el.props.class === 'work-order-card') return el; for (const c of el.children) { const found = find(c); if (found) return found } }
+function matching(el: Host, predicate: (child: Host) => boolean): Host[] {
+  return [...(predicate(el) ? [el] : []), ...el.children.flatMap(child => matching(child, predicate))]
+}
 const settle = async () => { for (let i = 0; i < 8; i++) { await Promise.resolve(); await Vue.nextTick() } }
 function deferred() { let resolve!: (value: any) => void; return { promise: new Promise<any>(r => { resolve = r }), resolve: (v: any) => resolve(v) } }
-async function mounted() {
+async function mounted({ empty = false, g05 = false } = {}) {
   const pinia = createPinia(); setActivePinia(pinia)
-  const session = Vue.reactive<any>({ status: 'authenticated', session: { sessionRef: 'synthetic', user: { id: 'user' }, currentRole: { id: 'role' }, capabilityNames: [] } })
+  const actor = g05
+    ? { sessionRef: 'local-mock-only-session', user: { id: 'synthetic-user' }, currentRole: { id: 'synthetic-role' }, roleVersion: 'local-dev-role-version-1', capabilityNames: [] }
+    : { sessionRef: 'synthetic', user: { id: 'user' }, currentRole: { id: 'role' }, capabilityNames: [] }
+  const session = Vue.reactive<any>({ status: 'authenticated', session: actor })
   const store = useWorkOrderListStore(), navigate = vi.fn(async () => {})
   const item = { id: 'synthetic-work', workflowNodes: [] }
   const success = (items = [item]) => ({ state: 'succeeded', data: { items, page: 1, pageSize: 20, totalCount: 40 } })
-  const read = vi.fn(async () => success())
+  const read = vi.fn(async () => empty ? success([]) : success())
   store.configureApi({ listWorkOrders: read } as never, () => session.session)
   store.configureNavigation({ navigate } as never)
-  const primitive = { __esModule: true, default: Vue.defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => Vue.h('primitive', ctx.attrs, ctx.slots.default?.()) }) }
+  const primitive = { __esModule: true, default: Vue.defineComponent({ inheritAttrs: false, setup: (_, ctx) => () => Vue.h('primitive', ctx.attrs, [ctx.slots.default?.(), ctx.slots.trailing?.()]) }) }
+  const emptyState = { __esModule: true, default: Vue.defineComponent({ setup: () => () => Vue.h('work-order-empty') }) }
   const source = compileScript(parse(readFileSync('src/pages/work-orders/work-orders.vue', 'utf8')).descriptor, { id: 'refresh-navigation-test', inlineTemplate: true, templateOptions: { compilerOptions: { isCustomElement: tag => ['view', 'text', 'button', 'navigator', 'scroll-view'].includes(tag) } } }).content
   const js = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true } }).outputText
   const imports: Record<string, any> = {
@@ -51,9 +57,21 @@ async function mounted() {
     '@shared/ui/loading': { appLoadingSkeletonDelayMs: 120 },
   }
   const module = { exports: {} as { default: Vue.Component } }
-  new Function('require', 'module', 'exports', js)((key: string) => { if (key.endsWith('.vue')) return primitive; if (!(key in imports)) throw Error(key); return imports[key] }, module, module.exports)
+  new Function('require', 'module', 'exports', js)((key: string) => {
+    if (key.endsWith('/AppWorkOrderEmptyState.vue')) return emptyState
+    if (key.endsWith('.vue')) return primitive
+    if (!(key in imports)) throw Error(key)
+    return imports[key]
+  }, module, module.exports)
   const root = node('root'), app = renderer.createApp(module.exports.default); app.use(pinia); app.mount(root); await settle()
-  return { store, session, navigate, read, success, card: () => find(root), close: () => app.unmount() }
+  const byClass = (name: string) => matching(root, el => el.props.class === name)
+  return {
+    store, session, navigate, read, success, byClass,
+    card: () => byClass('work-order-card')[0],
+    fixtureAction: () => matching(root, el => el.props['data-testid'] === 'g05-card-action'),
+    emptyState: () => matching(root, el => el.type === 'work-order-empty'),
+    close: () => app.unmount(),
+  }
 }
 describe('normal list cached-card navigation during a new intent', () => {
   it('disables semantics and repeated real tap handlers until fresh search succeeds', async () => {
@@ -98,6 +116,41 @@ describe('normal list cached-card navigation during a new intent', () => {
       expect(h.store.items.map(item => item.id)).toEqual(['synthetic-work', 'synthetic-page2'])
       expect(h.card()!.props['aria-disabled']).toBe(false)
     } finally { pending.resolve(h.success()); h.close() }
+  })
+
+  it('keeps the ordinary empty state, count and pagination independent of the G05 fixture', async () => {
+    vi.stubEnv('VITE_XLINK_ENVIRONMENT', 'dev')
+    vi.stubEnv('VITE_XLINK_MOCK', 'true')
+    vi.stubEnv('VITE_XLINK_H5_MOCK_E2E', 'true')
+    vi.stubEnv('VITE_XLINK_G05_REFUSAL', 'true')
+    const h = await mounted({ empty: true, g05: true })
+    try {
+      expect(h.store.loadState).toBe('succeeded')
+      expect(h.store.page).toBe(1)
+      expect(h.store.hasMore).toBe(true)
+      expect(h.emptyState()).toHaveLength(1)
+      expect(h.byClass('work-order-card')).toHaveLength(0)
+      expect(h.byClass('list-loaded-count')).toHaveLength(0)
+      expect(h.byClass('state-action load-more')).toHaveLength(0)
+
+      h.read.mockResolvedValueOnce(h.success())
+      await h.store.refresh(); await settle()
+      expect(h.emptyState()).toHaveLength(0)
+      expect(h.store.items.map(item => item.id)).toEqual(['synthetic-work'])
+      expect(h.byClass('work-order-card')).toHaveLength(2)
+      expect(h.fixtureAction()).toHaveLength(1)
+      expect(h.byClass('list-loaded-count')[0].text).toBe('已加载 1 条')
+
+      const next = h.success([{ id: 'synthetic-page2', workflowNodes: [] }])
+      h.read.mockResolvedValueOnce({ ...next, data: { ...next.data, page: 2, totalCount: 2 } })
+      await h.byClass('state-action load-more')[0].props.onTap(); await settle()
+      expect(h.read).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }))
+      expect(h.store.items.map(item => item.id)).toEqual(['synthetic-work', 'synthetic-page2'])
+      expect(h.byClass('work-order-card')).toHaveLength(3)
+      expect(h.fixtureAction()).toHaveLength(1)
+      expect(h.byClass('list-loaded-count')[0].text).toBe('已加载 2 条')
+      expect(h.byClass('state-action load-more')).toHaveLength(0)
+    } finally { h.close(); vi.unstubAllEnvs() }
   })
   it.each(['role', 'logout'])('does not navigate old cards after %s invalidates a pending read', async kind => {
     const h = await mounted(), pending = deferred(); const old = h.card()!

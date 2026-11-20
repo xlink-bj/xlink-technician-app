@@ -66,13 +66,13 @@
       />
 
       <AppWorkOrderEmptyState
-        v-else-if="workOrders.loadState === 'succeeded' && loadedCount === 0"
+        v-else-if="workOrders.loadState === 'succeeded' && workOrders.items.length === 0"
         @action="refresh"
       />
 
       <view v-else-if="workOrders.loadState === 'succeeded' || isRefreshing" class="list-content">
         <AppSectionHeading class="list-section-heading" title="当前工单" subtitle="按当前账号权限展示" data-testid="ds02b-list-heading">
-          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">已加载 {{ loadedCount }} 条</text></template>
+          <template #trailing><text v-if="workOrders.loadState === 'succeeded'" class="list-loaded-count">已加载 {{ workOrders.items.length }} 条</text></template>
         </AppSectionHeading>
         <view v-if="isRefreshing" class="inline-refresh" aria-label="正在刷新工单">
           <view class="inline-refresh-indicator" />
@@ -249,11 +249,10 @@ const canAccess = computed(() => hasAuthenticatedSession(session.status, session
 const productionReadOnly = isProductionReadOnlyRuntime()
 const pageVisible = ref(true)
 const g05 = useG05RefusalCard(() => session.session, () => pageVisible.value && canAccess.value
-  && workOrders.loadState === 'succeeded' && workOrders.category === 'all'
+  && workOrders.loadState === 'succeeded' && workOrders.items.length > 0 && workOrders.category === 'all'
   && workOrders.workKind === 'all' && !workOrders.searchText, () => workOrders.items)
 const { mode: g05Mode, reason: g05Reason, message: g05Message } = g05
 const cardItems = computed(() => g05.row.value ? [g05.row.value, ...workOrders.visibleItems] : workOrders.visibleItems)
-const loadedCount = computed(() => workOrders.items.length + (g05.row.value ? 1 : 0))
 function openG05(item: WorkOrderSummary) {
   if (!g05.isFixture(item)) return
   invalidatePendingAccept()
@@ -426,6 +425,6 @@ function cancelAccept(): void {
 
 <style lang="scss">
 @import "@brand-ui/work-order-list.scss";
-.g05-reason { box-sizing: border-box; width: 100%; height: 80px; border: 1px solid var(--app-border, #ccc); border-radius: 6px; padding: 8px; margin-top: 6px; font: inherit; }
+.g05-reason { box-sizing: border-box; width: 100%; height: 80px; border: 1px solid var(--app-color-border); border-radius: var(--app-radius-control); padding: 8px; margin-top: 6px; font: inherit; }
 .g05-message { max-height: 24vh; margin-top: 8px; overflow-wrap: anywhere; white-space: pre-wrap; }
 </style>
