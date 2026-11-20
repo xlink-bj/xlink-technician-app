@@ -143,8 +143,19 @@
             :read-revision="appointmentReadVersion"
             :actor-scope="workOrderReadScopeKey(session.session)" :summary="true" />
         </template>
+        <!-- #ifdef XLINK_DEV_QA -->
+        <template #service-results>
+          <ServiceResultArchiveCards v-if="serviceArchiveCards.length" :cards="serviceArchiveCards" :record-route="openServiceArchiveRoute" />
+        </template>
+        <!-- #endif -->
       </WorkOrderArchiveCards>
 
+      <!-- #ifdef XLINK_DEV_QA -->
+      <view v-else-if="readView === serviceArchiveMockView" data-testid="dev-service-archive-detail">
+        <ServiceResultArchiveCards v-if="serviceArchiveCards.length" :cards="serviceArchiveCards" show-details :retry="retryServiceArchive" />
+        <AppStatus v-else tone="warning" quiet message="当前工单档案不可查看。" />
+      </view>
+      <!-- #endif -->
       <view v-else-if="readView === 'appointment'">
         <AppointmentArchive ref="appointmentReadArchive" :key="appointmentReadVersion" :work-order-id="String(detail.id)" :nodes="appointmentNodes"
           :read-revision="appointmentReadVersion"
@@ -347,6 +358,13 @@ import { actionWorkspaceRouteFor } from '@features/work-orders/action-workspace'
 import { childOrderConstructionProgress, detailReadView, detailReadTitle, detailReadRoute, followUpReadMessage, orderArchiveSummary, type DetailReadView } from '@features/work-orders/detail-archive'
 // #ifdef XLINK_DEV_QA
 import { constructionMockEnabled } from '@app/dev-construction-read'
+import {
+  readServiceArchiveMock, serviceArchiveMockRequest, serviceArchiveMockRoute, serviceArchiveMockTitle,
+  serviceArchiveMockRequestForHash, serviceArchiveMockView, type ServiceArchiveMockRequest,
+} from '@app/dev-service-result-archives'
+import { onHide } from '@dcloudio/uni-app'
+import ServiceResultArchiveCards from '@features/work-orders/ServiceResultArchiveCards.vue'
+import type { ServiceResultArchiveKind } from '@features/work-orders/detail-archive'
 import { isMaterialFulfillmentMockAvailable, materialFulfillmentMock } from '@app/dev-material-fulfillment-read'
 import MaterialFulfillmentPanel from '@features/work-orders/downstream/MaterialFulfillmentPanel.vue'
 import { useMaterialFulfillmentRead } from '@features/work-orders/downstream/material-fulfillment-read'
@@ -539,7 +557,42 @@ const allowLocalMockPreview = computed(() => {
 const preAcceptBlocked = computed(() => Boolean(
   detail.value?.workflowNodes?.some((node) => node.category === 'accept' && node.lifecycle === 'active'),
 ))
-const readView = ref<DetailReadView>('home')
+type PageReadView = DetailReadView
+  // #ifdef XLINK_DEV_QA
+  | typeof serviceArchiveMockView
+  // #endif
+const readView = ref<PageReadView>('home')
+// #ifdef XLINK_DEV_QA
+const serviceArchiveRequest = ref<ServiceArchiveMockRequest | null>(null)
+const serviceArchiveRetried = ref(false)
+const serviceArchiveActor = computed(() => session.status === 'authenticated' ? workOrderReadScopeKey(session.session) : null)
+watch([serviceArchiveRequest, serviceArchiveActor], () => { serviceArchiveRetried.value = false }, { flush: 'sync' })
+const serviceArchiveCards = computed(() => {
+  const id = parseWorkOrderId(routeValue.value)
+  if (!serviceArchiveActor.value || !id || detail.value?.id !== id || workOrder.loadState !== 'succeeded') return []
+  if (readView.value === serviceArchiveMockView && !serviceArchiveRequest.value) return []
+  return readServiceArchiveMock(id, session.session, serviceArchiveRequest.value, serviceArchiveRetried.value)
+})
+function openServiceArchiveRoute(kind: ServiceResultArchiveKind, recordId: string): string {
+  return serviceArchiveMockRoute(String(detail.value?.id ?? ''), kind, recordId)
+}
+function retryServiceArchive(): void {
+  if (serviceArchiveRequest.value && serviceArchiveCards.value.some(card => card.state === 'failed')) serviceArchiveRetried.value = true
+}
+function syncServiceArchiveHash(): void {
+  const id = parseWorkOrderId(routeValue.value)
+  const next = id ? serviceArchiveMockRequestForHash(window.location.hash, id) : null
+  const current = serviceArchiveRequest.value
+  if (current?.kind === next?.kind && current?.recordId === next?.recordId) return
+  serviceArchiveRequest.value = next
+  updateDetailPageTitle()
+}
+function stopServiceArchiveHash(): void {
+  if (typeof window !== 'undefined') window.removeEventListener('hashchange', syncServiceArchiveHash)
+}
+onHide(stopServiceArchiveHash)
+onBeforeUnmount(stopServiceArchiveHash)
+// #endif
 // #ifdef XLINK_DEV_QA
 const materialWorkOrderList = useWorkOrderListStore()
 function materialFulfillmentScope() {
@@ -663,6 +716,10 @@ onLoad((options) => {
   appointmentEditorContext.value = null
   routeValue.value = options?.id
   readView.value = detailReadView(options?.read)
+  // #ifdef XLINK_DEV_QA
+  serviceArchiveRequest.value = serviceArchiveMockRequest(options)
+  if (serviceArchiveRequest.value) readView.value = serviceArchiveMockView
+  // #endif
   selectedOrderId.value = typeof options?.order === 'string' ? options.order : ''
   selectedAppointmentNodeId.value = typeof options?.node === 'string' ? options.node : ''
   selectedAppointmentRecordId.value = typeof options?.record === 'string' ? options.record : ''
@@ -671,9 +728,23 @@ onLoad((options) => {
 })
 
 function updateDetailPageTitle(): void {
-  if (routeReady.value) setDetailPageTitle(detailReadTitle(readView.value, Boolean(selectedOrderId.value)))
+  if (!routeReady.value) return
+  // #ifdef XLINK_DEV_QA
+  if (readView.value === serviceArchiveMockView) {
+    setDetailPageTitle(serviceArchiveRequest.value ? serviceArchiveMockTitle(serviceArchiveRequest.value.kind) : '工单详情')
+    return
+  }
+  // #endif
+  setDetailPageTitle(detailReadTitle(readView.value, Boolean(selectedOrderId.value)))
 }
 onShow(() => {
+  // #ifdef XLINK_DEV_QA
+  if (readView.value === serviceArchiveMockView && typeof window !== 'undefined') {
+    // H5 retains this page when only the hash query changes.
+    window.addEventListener('hashchange', syncServiceArchiveHash)
+    syncServiceArchiveHash()
+  }
+  // #endif
   updateDetailPageTitle()
   // A foreground event must not remount a pending editor for this exact
   // actor and record. The read-only parent still refreshes after returning.

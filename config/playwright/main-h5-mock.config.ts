@@ -18,6 +18,7 @@ const optInFixtureFlags = [
   'VITE_XLINK_R1_CATEGORY_FIXTURES',
   'VITE_XLINK_G05_REFUSAL',
   'VITE_XLINK_G05_MISS_FIRST_RECEIPT',
+  'VITE_XLINK_G06_G07_ARCHIVES',
 ] as const
 
 const enabledOptInFixtureEnv = Object.fromEntries(

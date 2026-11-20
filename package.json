@@ -39,7 +39,7 @@
     "test:h5-review": "playwright test",
     "capture:survey-review": "playwright test tests/h5-review/survey.spec.ts",
     "build:mp-weixin": "node scripts/check-c1-release-qa-pages.mjs release-context && uni build -p mp-weixin && node scripts/check-c1-release-qa-pages.mjs mp-weixin && node scripts/verify-mp-app-bootstrap.mjs && node scripts/check-mp-wxss.mjs && node scripts/verify-mp-workspace-bindings.mjs",
-    "build:app": "node scripts/check-c1-release-qa-pages.mjs source && node scripts/check-c1-release-qa-pages.mjs release-context && uni build -p app",
+    "build:app": "node scripts/check-c1-release-qa-pages.mjs source && node scripts/check-c1-release-qa-pages.mjs release-context && uni build -p app && node scripts/check-c1-release-qa-pages.mjs app",
     "inspect:form-schema": "node scripts/inspect-inspection-contract.mjs",
     "verify:quotation-prod-read": "node scripts/verify-quotation-prod-read.mjs",
     "verify:r1-order-contract-read": "node scripts/verify-r1-order-contract-read.mjs",

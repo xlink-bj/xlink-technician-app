@@ -16,6 +16,32 @@ const qaRoutes = [
   'pages/dev/qa-console',
 ]
 const guardedBlock = /^\s*\/\/ #ifdef XLINK_DEV_QA\s*\r?\n([\s\S]*?)^\s*\/\/ #endif\s*\r?\n/m
+const conditionDirective = /^\s*(?:\/\/|<!--)\s*#(ifdef|ifndef|else|endif)\b\s*(.*?)\s*(?:-->)?\s*$/
+const detailFixtureGuards = {
+  'G06/G07': {
+    sourceEntries: {
+      'src/pages/work-orders/detail.vue': ['dev-service-result-archives', 'ServiceResultArchiveCards', 'service-results', 'serviceArchiveMockView'],
+      'src/features/work-orders/WorkOrderArchiveCards.vue': ['service-results'],
+      'src/app/composition.ts': ['dev-service-result-archives', 'serviceArchiveMockObserver'],
+    },
+    releaseMarkers: [
+      'g06-g07-service-archive', 'synthetic-g06-g07-observer', 'dev-service-archive-detail',
+      'mock-g06-acceptance-04009', 'mock-g07-warranty-04009', 'YS-04009-01', 'ZB-04009-01',
+    ],
+  },
+  'G08/G09': {
+    sourceEntries: {
+      'src/pages/work-orders/detail.vue': [
+        'dev-material-fulfillment-read', 'dev-material-fulfillment-workflow', 'MaterialFulfillmentPanel',
+        'MaterialFulfillmentWorkflow', 'materialFulfillmentScope', 'materialWorkflowScope',
+      ],
+    },
+    releaseMarkers: [
+      'material-fulfillment-read', 'material-workflow-open', 'material-submit-order',
+      'material-confirm-receipt', 'CL-DEMO-001', 'PS-DEMO-001', 'SH-DEMO-001',
+    ],
+  },
+}
 
 function fail(message) {
   throw new Error(`C1 release QA page boundary FAIL: ${message}`)
@@ -25,7 +51,65 @@ function read(relativePath) {
   return readFileSync(resolve(root, relativePath), 'utf8')
 }
 
+function sourceWithoutDevQa(source) {
+  const excluded = []
+  const releaseLines = []
+  for (const line of source.split(/\r?\n/)) {
+    const directive = conditionDirective.exec(line)
+    if (!directive) {
+      if (!excluded.includes(true)) releaseLines.push(line)
+      continue
+    }
+    const [, instruction, condition] = directive
+    // Retain both branches of platform conditions. Only the DEV guard can
+    // exclude a source line from the release analysis for all targets.
+    if (instruction === 'endif') {
+      if (!excluded.length) fail('unmatched conditional compiler block')
+      excluded.pop()
+    } else if (instruction === 'else') {
+      if (!excluded.length) fail('unmatched conditional compiler else')
+      const last = excluded.length - 1
+      if (excluded[last] !== null) excluded[last] = !excluded[last]
+    } else {
+      excluded.push(condition === 'XLINK_DEV_QA' ? instruction === 'ifdef' : null)
+    }
+  }
+  if (excluded.length) fail('unclosed conditional compiler block')
+  return releaseLines.join('\n')
+}
+
+function checkDetailFixtureSource() {
+  for (const [label, { sourceEntries }] of Object.entries(detailFixtureGuards)) {
+    for (const [path, markers] of Object.entries(sourceEntries)) {
+      const source = read(path)
+      const releaseSource = sourceWithoutDevQa(source)
+      for (const marker of markers) {
+        if (!source.includes(marker) || releaseSource.includes(marker)) fail(`${label} marker ${marker} must stay behind the DEV compiler guard in ${path}`)
+      }
+    }
+  }
+}
+
+function checkDetailFixtureReleaseSources(sources, target) {
+  if (!sources.length) fail(`${target} compiler output missing`)
+  for (const [label, { releaseMarkers }] of Object.entries(detailFixtureGuards)) {
+    for (const marker of releaseMarkers) {
+      if (sources.some(source => source.includes(marker))) fail(`${label} marker ${marker} leaked into ${target}`)
+    }
+    console.log(`${label} ${target} compiler exclusion: PASS`)
+  }
+}
+
+function readCompiledSources(dir) {
+  return readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
+    const path = join(dir, entry.name)
+    if (entry.isDirectory()) return readCompiledSources(path)
+    return /\.(?:js|json|html|wxml)$/.test(entry.name) ? [readFileSync(path, 'utf8')] : []
+  })
+}
+
 function checkSource() {
+  checkDetailFixtureSource()
   const raw = read('src/pages.json')
   const match = guardedBlock.exec(raw)
   if (!match) fail('approved QA routes must be protected by XLINK_DEV_QA')
@@ -105,6 +189,7 @@ function checkH5(expectDev) {
   if (!entrypoints.length) fail('H5 application entrypoint missing')
   const jsSources = files.filter(file => file.endsWith('.js'))
     .map(file => readFileSync(join(assetDir, file), 'utf8'))
+  if (!expectDev) checkDetailFixtureReleaseSources(jsSources, 'H5 release')
   const entrySources = entrypoints.map(file => readFileSync(join(assetDir, file), 'utf8'))
   for (const route of qaRoutes) {
     if (entrySources.some(source => source.includes(route)) !== expectDev) {
@@ -138,6 +223,7 @@ function checkMp(expectDev) {
   if (JSON.stringify(pages) !== JSON.stringify(expectedPages)) {
     fail('MP-WEIXIN route table differs from the source build profile')
   }
+  if (!expectDev) checkDetailFixtureReleaseSources(readCompiledSources(dir), 'MP-WEIXIN release')
   console.log(`C1 MP-WEIXIN QA boundary: PASS (${qaRoutes.length} routes ${expectDev ? 'present in DEV' : 'absent in release'})`)
 }
 
@@ -158,6 +244,10 @@ switch (target) {
     break
   case 'mp-weixin':
     checkMp(expectDev)
+    break
+  case 'app':
+    if (expectDev) fail('App artifact check is release-only')
+    checkDetailFixtureReleaseSources(readCompiledSources(resolve(root, 'dist/build/app')), 'App release')
     break
   default:
     fail(`unknown target ${target}`)

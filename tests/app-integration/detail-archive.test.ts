@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { childOrderConstructionProgress, detailReadRoute, detailReadTitle, detailReadView, followUpReadMessage, orderArchiveSummary } from '@features/work-orders/detail-archive'
+import { childOrderConstructionProgress, detailReadRoute, detailReadTitle, detailReadView, followUpReadMessage, orderArchiveSummary, serviceResultArchiveCards, type ScopedServiceResultArchiveRead, type ServiceResultArchiveReads } from '@features/work-orders/detail-archive'
 import { workOrderActivities } from '@adapters/api/read-models/work-order-activity'
 import type { QuotationOrderBrowseItem, WorkOrderDetail } from '@shared/ports'
+import { createOperationError } from '@shared/types'
 
 const order = (id: string, updateTime?: string): QuotationOrderBrowseItem => ({
   id, type: 1, serviceAppointmentId: 'work', updateTime, groups: [], contentSupported: true, pdfState: 'present_no_access',
@@ -74,5 +75,56 @@ describe('individual Order construction progress', () => {
     for (const processState of [undefined, -2, -1, 0, 4, 99, 2.5, Number.NaN]) {
       expect(childOrderConstructionProgress('work', { ...activeOrder, processState })).toBe('暂不可确认')
     }
+  })
+})
+
+describe('candidate service result archives', () => {
+  const scope = 'session-role-scope'
+  const record = { kind: 'acceptance', workOrderId: 'work', id: 'acceptance-1', summary: '已核对维修范围及现场施工结果。' } as const
+  const read = (result: ScopedServiceResultArchiveRead['result']): ScopedServiceResultArchiveRead =>
+    ({ workOrderId: 'work', actorScope: scope, result })
+  const accepted = read({ state: 'succeeded', data: record })
+  const empty = read({ state: 'succeeded', data: null })
+  const cards = (reads: ServiceResultArchiveReads | undefined, workOrderId = 'work', actorScope = scope) =>
+    serviceResultArchiveCards(workOrderId, actorScope, reads)
+
+  it('shows independent objects in one work order and keeps successful empty explicit', () => {
+    expect(cards({ acceptance: accepted, warranty: empty })).toEqual([
+      { kind: 'acceptance', title: '正式验收结果', state: 'present', text: record.summary, record: { id: record.id } },
+      { kind: 'warranty', title: '已发质保卡', state: 'empty', text: '暂无已发质保卡' },
+    ])
+    const issued = read({ state: 'succeeded', data: { ...record, kind: 'warranty', id: 'card-1', summary: '质保卡已发放。' } })
+    expect(cards({ warranty: issued })).toEqual([
+      { kind: 'warranty', title: '已发质保卡', state: 'present', text: '质保卡已发放。', record: { id: 'card-1' } },
+    ])
+  })
+
+  it('keeps missing evidence and stale work order or actor scope out of the archive', () => {
+    expect(cards(undefined)).toEqual([])
+    expect(cards({ acceptance: accepted }, 'other-work')).toEqual([])
+    expect(cards({ acceptance: accepted }, 'work', 'other-role')).toEqual([])
+    expect(serviceResultArchiveCards('work', null, { acceptance: accepted })).toEqual([])
+    expect(cards({ acceptance: read({ state: 'idle' }) })).toEqual([])
+    expect(cards({ acceptance: read({ state: 'failed_terminal', error: createOperationError('unsupported_capability', 'no mapping') }) })).toEqual([])
+  })
+
+  it('does not disclose previous data on denial, invalid session, or read failure', () => {
+    for (const category of ['authorization_denied', 'session_invalid', 'server_terminal', 'network_retryable'] as const) {
+      const state = category === 'network_retryable' ? 'failed_retryable' : 'failed_terminal'
+      const error = createOperationError(category, 'raw server detail')
+      const denied = category === 'authorization_denied' || category === 'session_invalid'
+      expect(cards({ acceptance: read({ state, error, data: record }), warranty: empty })).toEqual([
+        { kind: 'acceptance', title: '正式验收结果', state: denied ? 'denied' : 'failed',
+          text: denied ? '当前账号无权查看正式验收结果' : '正式验收结果读取失败' },
+        { kind: 'warranty', title: '已发质保卡', state: 'empty', text: '暂无已发质保卡' },
+      ])
+    }
+  })
+
+  it('fails closed for missing or contradictory success data and hides stale loading content', () => {
+    for (const data of [undefined, { ...record, kind: 'warranty' as const }, { ...record, workOrderId: 'other-work' }, { ...record, id: '' }, { ...record, summary: ' ' }]) {
+      expect(cards({ acceptance: read({ state: 'succeeded', data }) })[0]).toMatchObject({ state: 'failed', text: '正式验收结果读取失败' })
+    }
+    expect(cards({ acceptance: read({ state: 'loading', data: record }) })[0]).toMatchObject({ state: 'loading', text: '正在读取正式验收结果…' })
   })
 })

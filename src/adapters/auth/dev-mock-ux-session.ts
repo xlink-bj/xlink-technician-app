@@ -8,8 +8,8 @@ import { mockJourneyRoleId, mockJourneyUserId } from '@shared/mock-journey-ident
  * Caller MUST enable this only through validated isolated DEV Mock config.
  * R1-shaped Work Order / Catalog fixtures still run through normal ports.
  */
-export function createDevMockUxSessionPort(): AuthSessionPort {
-  const fixture: SessionSnapshot = {
+export function createDevMockUxSessionPort(fixtureOverride?: SessionSnapshot): AuthSessionPort {
+  const fixture: SessionSnapshot = fixtureOverride ?? {
     sessionRef: asOpaqueId<'SessionRef'>('local-mock-only-session'),
     user: {
       id: asOpaqueId<'UserId'>(mockJourneyUserId),

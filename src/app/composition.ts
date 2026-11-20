@@ -34,6 +34,9 @@ import { createUniApiCommandTransport } from '@adapters/api/uni-api-command-tran
 import { createAuthSessionAdapter } from '@adapters/auth/auth-session-adapter'
 import { createUniAuthBackendDriver } from '@adapters/auth/uni-auth-backend'
 import { createDevMockUxSessionPort } from '@adapters/auth/dev-mock-ux-session'
+// #ifdef XLINK_DEV_QA
+import { serviceArchiveMockObserver } from './dev-service-result-archives'
+// #endif
 import { createSemanticStorageAdapter } from '@adapters/storage/storage-adapter'
 import { createUniStorageDriver } from '@adapters/storage/uni-storage-driver'
 import { createPlatformAdapters } from '@adapters/platform/platform-adapters'
@@ -79,7 +82,13 @@ export function createConfigurationBlockedAuthSession(issues: readonly string[])
 export function createDefaultAuthSessionPort(): AuthSessionPort {
   const config = loadApplicationRuntimeConfig()
   if (!config.ok) return createConfigurationBlockedAuthSession(config.issues)
-  if (config.value.devMockUxSession) return createDevMockUxSessionPort()
+  if (config.value.devMockUxSession) {
+    // #ifdef XLINK_DEV_QA
+    const observer = serviceArchiveMockObserver()
+    if (observer) return createDevMockUxSessionPort(observer)
+    // #endif
+    return createDevMockUxSessionPort()
+  }
 
   const storage = createSemanticStorageAdapter(createUniStorageDriver())
   const backend = createUniAuthBackendDriver({

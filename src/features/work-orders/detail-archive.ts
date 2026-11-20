@@ -1,4 +1,5 @@
 import type { QuotationOrderBrowseItem, ReadPage, WorkOrderDetail } from '@shared/ports'
+import type { OperationSnapshot } from '@shared/types'
 
 export type DetailReadView = 'home' | 'follow-up' | 'customer' | 'quotation' | 'appointment'
 export function detailReadView(value: unknown): DetailReadView {
@@ -67,4 +68,74 @@ export function followUpReadMessage(detail: WorkOrderDetail): string {
 
 export function detailReadRoute(id: string, view: DetailReadView, orderId?: string): string {
   return `/pages/work-orders/detail?id=${encodeURIComponent(id)}&read=${view}${orderId ? `&order=${encodeURIComponent(orderId)}` : ''}`
+}
+
+const serviceResultArchiveKinds = ['acceptance', 'warranty'] as const
+export type ServiceResultArchiveKind = typeof serviceResultArchiveKinds[number]
+
+export interface ServiceResultArchiveRecord {
+  readonly kind: ServiceResultArchiveKind
+  readonly workOrderId: string
+  readonly id: string
+  readonly summary: string
+  readonly details?: readonly { readonly label: string; readonly value: string }[]
+}
+
+/** Candidate input for an object-specific reader. actorScope binds the read to
+ * the active role/session; it does not grant access. The reader must prove that
+ * the record is the formal result or issued card for this work order. Only a
+ * complete, authorized read can return a successful null. */
+export interface ScopedServiceResultArchiveRead {
+  readonly workOrderId: string
+  readonly actorScope: string
+  readonly result: OperationSnapshot<ServiceResultArchiveRecord | null>
+}
+
+export type ServiceResultArchiveReads = Readonly<Partial<Record<ServiceResultArchiveKind, ScopedServiceResultArchiveRead>>>
+
+export interface ServiceResultArchiveCard {
+  readonly kind: ServiceResultArchiveKind
+  readonly title: string
+  readonly state: 'present' | 'empty' | 'denied' | 'failed' | 'loading'
+  readonly text: string
+  readonly record?: Pick<ServiceResultArchiveRecord, 'id' | 'details'>
+}
+
+const serviceResultArchiveCopy = {
+  acceptance: { title: '正式验收结果', empty: '暂无正式验收结果' },
+  warranty: { title: '已发质保卡', empty: '暂无已发质保卡' },
+} as const
+
+/**
+ * The ordinary detail page has no proven reader for these archives. Without
+ * active, matching read evidence the candidate contributes no archive card.
+ */
+export function serviceResultArchiveCards(
+  workOrderId: string,
+  actorScope: string | null | undefined,
+  reads: ServiceResultArchiveReads | undefined,
+): readonly ServiceResultArchiveCard[] {
+  if (!workOrderId || !actorScope || !reads) return []
+  return serviceResultArchiveKinds.flatMap((kind): ServiceResultArchiveCard[] => {
+    const read = reads[kind]
+    if (read?.workOrderId !== workOrderId || read.actorScope !== actorScope) return []
+    const { title, empty } = serviceResultArchiveCopy[kind]
+    const { state, data, error } = read.result
+    const card = (state: ServiceResultArchiveCard['state'], text: string) => [{ kind, title, state, text }]
+
+    if (state === 'idle' || error?.category === 'cancelled' || error?.category === 'unsupported_capability') return []
+    if (error?.category === 'authorization_denied' || error?.category === 'session_invalid') {
+      return card('denied', `当前账号无权查看${title}`)
+    }
+    if (state === 'loading') return card('loading', `正在读取${title}…`)
+    if (state === 'succeeded' && !error) {
+      if (data === null) return card('empty', empty)
+      if (data?.workOrderId === workOrderId && data.kind === kind
+        && typeof data.id === 'string' && data.id.trim()
+        && typeof data.summary === 'string' && data.summary.trim()) {
+        return [{ kind, title, state: 'present', text: data.summary, record: { id: data.id, details: data.details } }]
+      }
+    }
+    return card('failed', `${title}读取失败`)
+  })
 }

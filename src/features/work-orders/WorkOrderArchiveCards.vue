@@ -74,8 +74,9 @@
       </view>
     </view>
 
-    <!-- Other business archives need a verified node/record/read capability.
-         A fixed unknown-status placeholder does not establish applicability. -->
+    <!-- #ifdef XLINK_DEV_QA -->
+    <slot name="service-results" />
+    <!-- #endif -->
   </view>
 </template>
 
